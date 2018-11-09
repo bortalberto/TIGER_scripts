@@ -96,7 +96,8 @@ class communication: ##The directory are declared here to avoid multiple declara
         array_to_send = self.gemroc_LV_XX.command_words
 
 
-        command_echo = self.send_GEMROC_CFG_CMD_PKT(self.GEMROC_ID, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS, self.DEST_PORT_NO)
+        command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
+                                                    self.DEST_PORT_NO)
         ##print 'CMD_GEMROC_LV_CFG_WR'
 
         ## creating an instance of the GEMROC DAQ configuration settings object
@@ -114,7 +115,7 @@ class communication: ##The directory are declared here to avoid multiple declara
 
         ##acr 2018-03-16 added yesterday while debugging DAQ_CFG readback, removed today: gemroc_DAQ_XX.extract_parameters_from_UDP_packet()
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
-        command_echo = self.send_GEMROC_DAQ_CMD(self.GEMROC_ID, self.gemroc_DAQ_XX, COMMAND_STRING)
+        command_echo = self.send_GEMROC_DAQ_CMD(self.gemroc_DAQ_XX, COMMAND_STRING)
         self.enable_pattern_array = array.array('I', [0x0, 0x1, 0x3, 0x7, 0xf, 0x1f, 0x3f, 0x7f, 0xff])  # acr 2018-08-08
         # self.enable_pattern_array_test = array.array('I',[0x0, 0x3, 0x9, 0xA, 0x41, 0x42, 0x81, 0x82,  0xC0]) #Test 2 Tigers
         self.enable_pattern_array_test = array.array('I', [0x0, 0xc8, 0x4a, 0x0b,  0xca, 0xc3, 0x4b, 0xcb])  # Test 3,4,5 Tigers
@@ -131,13 +132,13 @@ class communication: ##The directory are declared here to avoid multiple declara
 
         self.receiveSock.bind((self.HOST_IP, self.HOST_PORT_RECEIVE))
 
-    def send_GEMROC_CFG_CMD_PKT(self,TARGET_GEMROC_ID_param, COMMAND_STRING_PARAM, array_to_send_param, DEST_IP_ADDRESS_PARAM,
+    def send_GEMROC_CFG_CMD_PKT(self, COMMAND_STRING_PARAM, array_to_send_param, DEST_IP_ADDRESS_PARAM,
                                 DEST_PORT_NO_PARAM):
 
         buffer_to_send = struct.pack('>' + str(len(array_to_send_param)) + 'L', *array_to_send_param)
         self.flush_socket()
         self.clientSock.sendto(buffer_to_send, (DEST_IP_ADDRESS_PARAM, DEST_PORT_NO_PARAM))
-        cmd_message = "\nTarget GEMROC: %d; CMD sent (%s): \n" % (TARGET_GEMROC_ID_param, COMMAND_STRING_PARAM)
+        cmd_message = "\nTarget GEMROC: %d; CMD sent (%s): \n" % (self.GEMROC_ID, COMMAND_STRING_PARAM)
         self.log_file.write(cmd_message)
         self.log_file.write(binascii.b2a_hex(buffer_to_send))
         command_echo_f = self.receiveSock.recv(self.BUFSIZE)
@@ -595,114 +596,114 @@ class communication: ##The directory are declared here to avoid multiple declara
     #     self.display_and_log_IVT(command_echo_ivt, display_enable_param, log_enable_param, log_filename_param)
     #     return
 
-    def GEMROC_IVT_read_and_log(self, GEMROC_ID_param, display_enable_param, log_enable_param,
-                                log_filename_param):
-        self.gemroc_LV_XX.set_target_GEMROC(GEMROC_ID_param)
+    def GEMROC_IVT_read_and_log(self, display_enable_param, log_enable_param, log_filename_param):
+        self.gemroc_LV_XX.set_target_GEMROC(self.GEMROC_ID)
         COMMAND_STRING = 'CMD_GEMROC_LV_IVT_READ'
         self.gemroc_LV_XX.set_gemroc_cmd_code(COMMAND_STRING, 1)
         self.gemroc_LV_XX.update_command_words()
         array_to_send = self.gemroc_LV_XX.command_words
         DEST_IP_ADDRESS = self.DEST_IP_ADDRESS
         DEST_PORT_NO = self.DEST_PORT_NO
-        command_echo_ivt = self.send_GEMROC_CFG_CMD_PKT(GEMROC_ID_param, COMMAND_STRING, array_to_send,
-                                                   self.DEST_IP_ADDRESS, self.DEST_PORT_NO)
-        # print '\nGEMROC_ID: %d: CMD_GEMROC_LV_IVT_READ' %GEMROC_ID_param
+        command_echo_ivt = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
+                                                        self.DEST_PORT_NO)
+        # print '\nGEMROC_ID: %d: CMD_GEMROC_LV_IVT_READ' %self.GEMROC_ID
         self.display_and_log_IVT(command_echo_ivt, display_enable_param, log_enable_param, log_filename_param)
         return
 
 
-    def send_GEMROC_LV_CMD(self, GEMROC_ID_param, COMMAND_STRING_PARAM):
-        self.gemroc_LV_XX.set_target_GEMROC(GEMROC_ID_param)
+    def send_GEMROC_LV_CMD(self, COMMAND_STRING_PARAM):
+        self.gemroc_LV_XX.set_target_GEMROC(self.GEMROC_ID)
         self.gemroc_LV_XX.set_gemroc_cmd_code(COMMAND_STRING_PARAM, 1)
         self.gemroc_LV_XX.update_command_words()
         array_to_send = self.gemroc_LV_XX.command_words
-        command_echo = self.send_GEMROC_CFG_CMD_PKT(GEMROC_ID_param, COMMAND_STRING_PARAM, array_to_send, self.DEST_IP_ADDRESS,
-                                               self.DEST_PORT_NO)
+        command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING_PARAM, array_to_send, self.DEST_IP_ADDRESS,
+                                                    self.DEST_PORT_NO)
         return command_echo
 
 
-    def FEBPwrEnPattern_set(self, GEMROC_ID_param, FEB_PWREN_pattern_param):
-        self.gemroc_LV_XX.set_target_GEMROC(GEMROC_ID_param)
+    def FEBPwrEnPattern_set(self, FEB_PWREN_pattern_param):
+        self.gemroc_LV_XX.set_target_GEMROC(self.GEMROC_ID)
         self.gemroc_LV_XX.set_FEB_PWR_EN_pattern(FEB_PWREN_pattern_param)
         COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
-        command_echo = self.send_GEMROC_LV_CMD(GEMROC_ID_param, COMMAND_STRING)
+        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
         return command_echo
 
 
-    def set_FEB_timing_delays(self, GEMROC_ID_param, FEB3_TDly, FEB2_TDly, FEB1_TDly, FEB0_TDly):
-        self.gemroc_LV_XX.set_target_GEMROC(GEMROC_ID_param)
+    def set_FEB_timing_delays(self, FEB3_TDly, FEB2_TDly, FEB1_TDly, FEB0_TDly):
+        self.gemroc_LV_XX.set_target_GEMROC(self.GEMROC_ID)
         self.gemroc_LV_XX.set_timing_toFEB_delay(FEB3_TDly, FEB2_TDly, FEB1_TDly, FEB0_TDly)
         COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
-        command_echo = self.send_GEMROC_LV_CMD(GEMROC_ID_param, COMMAND_STRING)
+        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
         COMMAND_STRING = 'CMD_GEMROC_TIMING_DELAYS_UPDATE'
-        command_echo = self.send_GEMROC_LV_CMD(GEMROC_ID_param, COMMAND_STRING)
+        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
         return command_echo
 
 
     # acr 2018-03-06 changed order of parameters of send_GEMROC_DAQ_CMD
-    def send_GEMROC_DAQ_CMD(self, GEMROC_ID_param, gemroc_DAQ_inst_param, COMMAND_STRING_PARAM):
-        gemroc_DAQ_inst_param.set_target_GEMROC(GEMROC_ID_param)
+    def send_GEMROC_DAQ_CMD(self, gemroc_DAQ_inst_param, COMMAND_STRING_PARAM):
+        gemroc_DAQ_inst_param.set_target_GEMROC(self.GEMROC_ID)
         gemroc_DAQ_inst_param.set_gemroc_cmd_code(COMMAND_STRING_PARAM, 1)
         gemroc_DAQ_inst_param.update_command_words()
         array_to_send = gemroc_DAQ_inst_param.command_words
-        command_echo = self.send_GEMROC_CFG_CMD_PKT(GEMROC_ID_param, COMMAND_STRING_PARAM, array_to_send, self.DEST_IP_ADDRESS,
-                                               self.DEST_PORT_NO)
+        command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING_PARAM, array_to_send, self.DEST_IP_ADDRESS,
+                                                    self.DEST_PORT_NO)
         return command_echo
 
     # acr 2018-04-23
-    def send_GEMROC_DAQ_CMD_num_rep(self,GEMROC_ID_param, gemroc_DAQ_inst_param, COMMAND_STRING_PARAM, num_of_repetitions_param):
-        gemroc_DAQ_inst_param.set_target_GEMROC(GEMROC_ID_param)
+    def send_GEMROC_DAQ_CMD_num_rep(self, gemroc_DAQ_inst_param, COMMAND_STRING_PARAM, num_of_repetitions_param):
+        gemroc_DAQ_inst_param.set_target_GEMROC(self.GEMROC_ID)
         gemroc_DAQ_inst_param.set_gemroc_cmd_code(COMMAND_STRING_PARAM, num_of_repetitions_param)
         gemroc_DAQ_inst_param.update_command_words()
         print '\n gemroc_DAQ_inst_param.number_of_repetitions = %03X' % gemroc_DAQ_inst_param.number_of_repetitions
         array_to_send = gemroc_DAQ_inst_param.command_words
-        command_echo = self.send_GEMROC_CFG_CMD_PKT(GEMROC_ID_param, COMMAND_STRING_PARAM, array_to_send, self.DEST_IP_ADDRESS, self.DEST_PORT_NO)
+        command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING_PARAM, array_to_send, self.DEST_IP_ADDRESS,
+                                                    self.DEST_PORT_NO)
         return command_echo
 
 
-    def ResetTgtGEMROC_ALL_TIGER_GCfgReg(self, GEMROC_ID_param, gemroc_DAQ_inst_param):
+    def ResetTgtGEMROC_ALL_TIGER_GCfgReg(self, gemroc_DAQ_inst_param):
         COMMAND_STRING = 'CMD_GEMROC_DAQ_TIGER_GCFGREG_RESET'
-        command_echo = self.send_GEMROC_DAQ_CMD(GEMROC_ID_param, gemroc_DAQ_inst_param, COMMAND_STRING)
+        command_echo = self.send_GEMROC_DAQ_CMD(gemroc_DAQ_inst_param, COMMAND_STRING)
         print'\n CMD_GEMROC_DAQ_TIGER_GCFGREG_RESET'
         time.sleep(1)
 
 
-    def WriteTgtGEMROC_TIGER_GCfgReg_fromfile(self, GCFGReg_setting_inst, GEMROC_ID_param, TIGER_ID_param,
-                                              GCFGReg_def_fname_param):
+    def WriteTgtGEMROC_TIGER_GCfgReg_fromfile(self, GCFGReg_setting_inst, TIGER_ID_param, GCFGReg_def_fname_param, verbose=True):
 
-        GCFGReg_setting_inst.reload_gcfg_settings_from_file(
-            GCFGReg_def_fname_param)  ## acr 2018-02-23 new method to reaload from a default file
-        GCFGReg_setting_inst.set_target_GEMROC(GEMROC_ID_param)
+        GCFGReg_setting_inst.reload_gcfg_settings_from_file(GCFGReg_def_fname_param)  ## acr 2018-02-23 new method to reaload from a default file
+        GCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
         GCFGReg_setting_inst.set_target_TIGER(TIGER_ID_param)
         COMMAND_STRING = 'WR'
         GCFGReg_setting_inst.set_command_code(COMMAND_STRING)
         GCFGReg_setting_inst.update_command_words()
-        self.log_file.write('\nList of Global Config Register settings to TIGER%d of RESPONDING GEMROC%d:' % (
-        TIGER_ID_param, GEMROC_ID_param))
-        classes_test_functions.print_log_GReg_members(GCFGReg_setting_inst, 1, self.log_file)
-        returned_array = classes_test_functions.get_GReg_GEMROC_words(GCFGReg_setting_inst)
-        # keep print '\nGCFG_168_137: ' + "%08X" %returned_array[0]
-        # keep print '\nGCFG_136_105: ' + "%08X" %returned_array[1]
-        # keep print '\nGCFG_104_73:  ' + "%08X" %returned_array[2]
-        # keep print '\nGCFG_72_41:   ' + "%08X" %returned_array[3]
-        # keep print '\nGCFG_40_9:    ' + "%08X" %returned_array[4]
-        # keep print '\nGCFG_8_m23:   ' + "%08X" %returned_array[5]
-        # keep print '\nG_reg_inst WR bitstring_TO_format:'
-        print('\nList of Global Config Register settings to TIGER%d of RESPONDING GEMROC%d in Torino string format:' % (
-        TIGER_ID_param, GEMROC_ID_param))
+        if verbose:
+            self.log_file.write('\nList of Global Config Register settings to TIGER%d of RESPONDING GEMROC%d:' % (
+            TIGER_ID_param, self.GEMROC_ID))
+            classes_test_functions.print_log_GReg_members(GCFGReg_setting_inst, 1, self.log_file)
+            returned_array = classes_test_functions.get_GReg_GEMROC_words(GCFGReg_setting_inst)
+            # keep print '\nGCFG_168_137: ' + "%08X" %returned_array[0]
+            # keep print '\nGCFG_136_105: ' + "%08X" %returned_array[1]
+            # keep print '\nGCFG_104_73:  ' + "%08X" %returned_array[2]
+            # keep print '\nGCFG_72_41:   ' + "%08X" %returned_array[3]
+            # keep print '\nGCFG_40_9:    ' + "%08X" %returned_array[4]
+            # keep print '\nGCFG_8_m23:   ' + "%08X" %returned_array[5]
+            # keep print '\nG_reg_inst WR bitstring_TO_format:'
+            print('\nList of Global Config Register settings to TIGER%d of RESPONDING GEMROC%d in Torino string format:' % (
+            TIGER_ID_param, self.GEMROC_ID))
+            classes_test_functions.print_GReg_bitstring_TO_format(returned_array, 1, self.log_file)
         self.log_file.write(
             '\nList of Global Config Register settings to TIGER%d of RESPONDING GEMROC%d in Torino string format:' % (
-            TIGER_ID_param, GEMROC_ID_param))
-        classes_test_functions.print_GReg_bitstring_TO_format(returned_array, 1, self.log_file)
+            TIGER_ID_param, self.GEMROC_ID))
+
         array_to_send = GCFGReg_setting_inst.command_words
         command_echo = self.send_TIGER_GCFG_Reg_CMD_PKT(TIGER_ID_param, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
                                                    self.DEST_PORT_NO)
         return command_echo
 
 
-    def set_FE_TPEnable(self, GCFGReg_setting_inst, GEMROC_ID_param, TIGER_ID_param, FE_TPEnable_param):
+    def set_FE_TPEnable(self, GCFGReg_setting_inst, TIGER_ID_param, FE_TPEnable_param):
         GCFGReg_setting_inst.set_FE_TPEnable(FE_TPEnable_param)
-        GCFGReg_setting_inst.set_target_GEMROC(GEMROC_ID_param)
+        GCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
         GCFGReg_setting_inst.set_target_TIGER(TIGER_ID_param)
         COMMAND_STRING = 'WR'
         GCFGReg_setting_inst.set_command_code(COMMAND_STRING)
@@ -711,13 +712,13 @@ class communication: ##The directory are declared here to avoid multiple declara
         command_echo = self.send_TIGER_GCFG_Reg_CMD_PKT(TIGER_ID_param, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
                                                    self.DEST_PORT_NO)
         print('\nFE_TPEnable of Global CFG reg of TIGER%d of RESPONDING GEMROC%d: set to %d' % (
-        TIGER_ID_param, GEMROC_ID_param, FE_TPEnable_param))
+        TIGER_ID_param, self.GEMROC_ID, FE_TPEnable_param))
         self.log_file.write('\nFE_TPEnable of Global CFG reg of TIGER%d of RESPONDING GEMROC%d: set to %d' % (
-        TIGER_ID_param, GEMROC_ID_param, FE_TPEnable_param))
+        TIGER_ID_param, self.GEMROC_ID, FE_TPEnable_param))
         return command_echo
 
-    def ReadTgtGEMROC_TIGER_GCfgReg(self, GCFGReg_setting_inst, GEMROC_ID_param, TIGER_ID_param):
-        GCFGReg_setting_inst.set_target_GEMROC(GEMROC_ID_param)
+    def ReadTgtGEMROC_TIGER_GCfgReg(self, GCFGReg_setting_inst, TIGER_ID_param):
+        GCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
         GCFGReg_setting_inst.set_target_TIGER(TIGER_ID_param)
         COMMAND_STRING = 'RD'
         GCFGReg_setting_inst.set_command_code(COMMAND_STRING)
@@ -730,11 +731,11 @@ class communication: ##The directory are declared here to avoid multiple declara
         return command_echo
 
 
-    def WriteTgtGEMROC_TIGER_ChCfgReg_fromfile(self, ChCFGReg_setting_inst, GEMROC_ID_param, TIGER_ID_param, channel_ID_param,
+    def WriteTgtGEMROC_TIGER_ChCfgReg_fromfile(self, ChCFGReg_setting_inst, TIGER_ID_param, channel_ID_param,
                                                ChCFGReg_def_fname_param):
         ChCFGReg_setting_inst.reload_chcfg_settings_from_file(
             ChCFGReg_def_fname_param)  ## acr 2018-02-23 new method to reaload from a default file
-        ChCFGReg_setting_inst.set_target_GEMROC(GEMROC_ID_param)
+        ChCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
         ChCFGReg_setting_inst.set_target_TIGER(TIGER_ID_param)
         ChCFGReg_setting_inst.set_to_ALL_param(
             0)  ## let's do multiple configuration under script control rather than under GEMROC NIOS2 processor control
@@ -757,8 +758,8 @@ class communication: ##The directory are declared here to avoid multiple declara
         return command_echo
 
 
-    def ReadTgtGEMROC_TIGER_ChCfgReg(self, ChCFGReg_setting_inst, GEMROC_ID_param, TIGER_ID_param, channel_ID_param, verbose_mode):
-        ChCFGReg_setting_inst.set_target_GEMROC(GEMROC_ID_param)
+    def ReadTgtGEMROC_TIGER_ChCfgReg(self, ChCFGReg_setting_inst, TIGER_ID_param, channel_ID_param, verbose_mode):
+        ChCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
         ChCFGReg_setting_inst.set_target_TIGER(TIGER_ID_param)
         ChCFGReg_setting_inst.set_target_channel(channel_ID_param)
         COMMAND_STRING = 'RD'
@@ -786,9 +787,9 @@ class communication: ##The directory are declared here to avoid multiple declara
         return command_echo
 
 
-    def Set_GEMROC_TIGER_ch_TPEn(self, ChCFGReg_setting_inst, GEMROC_ID_param, TIGER_ID_param, Channel_ID_param,
-                                 TP_disable_FE_param, TriggerMode_param):
-        ChCFGReg_setting_inst.set_target_GEMROC(GEMROC_ID_param)
+    def Set_GEMROC_TIGER_ch_TPEn(self, ChCFGReg_setting_inst, TIGER_ID_param, Channel_ID_param, TP_disable_FE_param,
+                                 TriggerMode_param):
+        ChCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
         ChCFGReg_setting_inst.set_target_TIGER(TIGER_ID_param)
         ChCFGReg_setting_inst.set_to_ALL_param(            0)  ## let's do multiple configuration under script control rather than under GEMROC NIOS2 processor control
         COMMAND_STRING = 'WR'
@@ -815,9 +816,9 @@ class communication: ##The directory are declared here to avoid multiple declara
         return last_command_echo
 
 
-    def Set_Vth_T1(self,ChCFGReg_setting_inst, GEMROC_ID_param, TIGER_ID_param, Channel_ID_param, VthT1_param):
+    def Set_Vth_T1(self, ChCFGReg_setting_inst, TIGER_ID_param, Channel_ID_param, VthT1_param):
         # self.log_file.write("\n Setting VTH to {}, TIGER {}, CH {} \n".format(VthT1_param,TIGER_ID_param,Channel_ID_param))
-        ChCFGReg_setting_inst.set_target_GEMROC(GEMROC_ID_param)
+        ChCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
         ChCFGReg_setting_inst.set_target_TIGER(TIGER_ID_param)
         ChCFGReg_setting_inst.set_to_ALL_param(0)  ## let's do multiple configuration under script control rather than under GEMROC NIOS2 processor control
         ChCFGReg_setting_inst.set_Vth_T1(VthT1_param)
@@ -838,9 +839,9 @@ class communication: ##The directory are declared here to avoid multiple declara
                                                              self.DEST_PORT_NO)
         last_command_echo = command_echo
         return last_command_echo
-    def Set_Vth_T1V2(self,ChCFGReg_setting_inst, GEMROC_ID_param, TIGER_ID_param, Channel_ID_param, VthT1_param):
+    def Set_Vth_T1V2(self, ChCFGReg_setting_inst, TIGER_ID_param, Channel_ID_param, VthT1_param):
         self.log_file.write("\n Setting VTH to {}, TIGER {}, CH {} \n".format(VthT1_param,TIGER_ID_param,Channel_ID_param))
-        ChCFGReg_setting_inst.set_target_GEMROC(GEMROC_ID_param)
+        ChCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
         ChCFGReg_setting_inst.set_target_TIGER(TIGER_ID_param)
         ChCFGReg_setting_inst.set_to_ALL_param(0)  ## let's do multiple configuration under script control rather than under GEMROC NIOS2 processor control
         ChCFGReg_setting_inst.set_Vth_T1(VthT1_param)
@@ -856,8 +857,8 @@ class communication: ##The directory are declared here to avoid multiple declara
         last_command_echo = command_echo
         return last_command_echo
 
-    def set_AVcasp_global(self, GCFGReg_setting_inst, GEMROC_ID_param, TIGER_ID_param, AVcasp_global_param):
-        GCFGReg_setting_inst.set_target_GEMROC(GEMROC_ID_param)
+    def set_AVcasp_global(self, GCFGReg_setting_inst, TIGER_ID_param, AVcasp_global_param):
+        GCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
         GCFGReg_setting_inst.set_target_TIGER(TIGER_ID_param)
         GCFGReg_setting_inst.set_AVcasp_global(AVcasp_global_param)
         COMMAND_STRING = 'WR'
@@ -867,30 +868,30 @@ class communication: ##The directory are declared here to avoid multiple declara
         command_echo = self.send_TIGER_GCFG_Reg_CMD_PKT(TIGER_ID_param, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
                                                    self.DEST_PORT_NO)
         print('\nAVcasp_global of Global CFG reg of TIGER%d of RESPONDING GEMROC%d: set to %d' % (
-        TIGER_ID_param, GEMROC_ID_param, AVcasp_global_param))
+        TIGER_ID_param, self.GEMROC_ID, AVcasp_global_param))
         self.log_file.write('\nAVcasp_global of Global CFG reg of TIGER%d of RESPONDING GEMROC%d: set to %d' % (
-        TIGER_ID_param, GEMROC_ID_param, AVcasp_global_param))
+        TIGER_ID_param, self.GEMROC_ID, AVcasp_global_param))
         return command_echo
 
-    def SynchReset_to_TgtFEB(self, gemroc_DAQ_inst, GEMROC_ID_param, TargetFEB_param, To_ALL_param):
-        gemroc_DAQ_inst.set_target_GEMROC(GEMROC_ID_param)
+    def SynchReset_to_TgtFEB(self, gemroc_DAQ_inst, TargetFEB_param, To_ALL_param):
+        gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
         gemroc_DAQ_inst.set_target_TCAM_ID(TargetFEB_param, To_ALL_param)
         COMMAND_STRING = 'CMD_GEMROC_DAQ_TIGER_SYNCH_RST'
-        command_echo = self.send_GEMROC_DAQ_CMD(GEMROC_ID_param, gemroc_DAQ_inst, COMMAND_STRING)
+        command_echo = self.send_GEMROC_DAQ_CMD(gemroc_DAQ_inst, COMMAND_STRING)
         return command_echo
 
 
-    def SynchReset_to_TgtTCAM(self, gemroc_DAQ_inst, GEMROC_ID_param, TargetTCAM_param, To_ALL_param):
-        gemroc_DAQ_inst.set_target_GEMROC(GEMROC_ID_param)
+    def SynchReset_to_TgtTCAM(self, gemroc_DAQ_inst, TargetTCAM_param, To_ALL_param):
+        gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
         gemroc_DAQ_inst.set_target_TCAM_ID(TargetTCAM_param, To_ALL_param)
         COMMAND_STRING = 'CMD_GEMROC_DAQ_TCAM_SYNCH_RST'
-        command_echo = self.send_GEMROC_DAQ_CMD(GEMROC_ID_param, gemroc_DAQ_inst, COMMAND_STRING)
+        command_echo = self.send_GEMROC_DAQ_CMD(gemroc_DAQ_inst, COMMAND_STRING)
         return command_echo
 
     ###-------Enables coommunication with a pattern of TIGER--and starts data trasmission-----------------------------###
 
-    # def DAQ_set_and_TL_start(self, gemroc_DAQ_inst, GEMROC_ID_param, TCAM_Enable_pattern_param, Per_FEB_TP_Enable_pattern_param):
-    #     gemroc_DAQ_inst.set_target_GEMROC(GEMROC_ID_param)
+    # def DAQ_set_and_TL_start(self, gemroc_DAQ_inst, self.GEMROC_ID, TCAM_Enable_pattern_param, Per_FEB_TP_Enable_pattern_param):
+    #     gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
     #     gemroc_DAQ_inst.set_EN_TM_TCAM_pattern(TCAM_Enable_pattern_param)
     #     gemroc_DAQ_inst.set_TP_width(5)
     #     gemroc_DAQ_inst.set_AUTO_TP_EN_pattern(0x0)
@@ -899,13 +900,13 @@ class communication: ##The directory are declared here to avoid multiple declara
     #     gemroc_DAQ_inst.set_TP_Pos_nNeg(1)
     #     gemroc_DAQ_inst.set_TP_period(8)
     #     COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
-    #     command_echo = self.send_GEMROC_DAQ_CMD(GEMROC_ID_param, gemroc_DAQ_inst, COMMAND_STRING)
+    #     command_echo = self.send_GEMROC_DAQ_CMD(self.GEMROC_ID, gemroc_DAQ_inst, COMMAND_STRING)
     #     return command_echo
 
 
 
-    def DAQ_set_Pause_Mode(self,gemroc_DAQ_inst, GEMROC_ID_param, DAQ_PauseMode_Enable_param):
-        gemroc_DAQ_inst.set_target_GEMROC(GEMROC_ID_param)
+    def DAQ_set_Pause_Mode(self, gemroc_DAQ_inst, DAQ_PauseMode_Enable_param):
+        gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
         Dbg_funct_ctrl_bits_U4_localcopy = gemroc_DAQ_inst.get_Dbg_functions_ctrl_bits_LoNibble()
         Dbg_funct_ctrl_bits_U4_localcopy &= 0x7
         Dbg_funct_ctrl_bits_U4_localcopy |= ((DAQ_PauseMode_Enable_param & 0x1) << 3)  # acr 2018-04-24 keep a copy of the "debug functions control bits"; initialize it to 0
@@ -913,32 +914,32 @@ class communication: ##The directory are declared here to avoid multiple declara
         # gemroc_DAQ_inst.set_Dbg_functions_ctrl_bits_LoNibble(Dbg_funct_ctrl_bits_U4_localcopy)
         gemroc_DAQ_inst.set_Dbg_functions_ctrl_bits_LoNibble(Dbg_funct_ctrl_bits_U4_localcopy)
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
-        command_echo = self.send_GEMROC_DAQ_CMD(GEMROC_ID_param, gemroc_DAQ_inst, COMMAND_STRING)
+        command_echo = self.send_GEMROC_DAQ_CMD(gemroc_DAQ_inst, COMMAND_STRING)
         return command_echo
 
-    def DAQ_Toggle_Set_Pause_bit(self,gemroc_DAQ_inst, GEMROC_ID_param):
-        gemroc_DAQ_inst.set_target_GEMROC(GEMROC_ID_param)
+    def DAQ_Toggle_Set_Pause_bit(self, gemroc_DAQ_inst):
+        gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
         Dbg_funct_ctrl_bits_U4_localcopy = gemroc_DAQ_inst.get_Dbg_functions_ctrl_bits_LoNibble()
         Dbg_funct_ctrl_bits_U4_localcopy &= 0xB
         print '\n Dbg_funct_ctrl_bits_U4_localcopy = %d' % Dbg_funct_ctrl_bits_U4_localcopy
         # gemroc_DAQ_inst.set_Dbg_functions_ctrl_bits_LoNibble(Dbg_funct_ctrl_bits_U4_localcopy)
         gemroc_DAQ_inst.set_Dbg_functions_ctrl_bits_LoNibble(Dbg_funct_ctrl_bits_U4_localcopy)
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
-        command_echo = self.send_GEMROC_DAQ_CMD(GEMROC_ID_param, gemroc_DAQ_inst, COMMAND_STRING)
+        command_echo = self.send_GEMROC_DAQ_CMD(gemroc_DAQ_inst, COMMAND_STRING)
         Dbg_funct_ctrl_bits_U4_localcopy |= 0x4
         print '\n Dbg_funct_ctrl_bits_U4_localcopy = %d' % Dbg_funct_ctrl_bits_U4_localcopy
         gemroc_DAQ_inst.set_Dbg_functions_ctrl_bits_LoNibble(Dbg_funct_ctrl_bits_U4_localcopy)
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
-        command_echo = self.send_GEMROC_DAQ_CMD(GEMROC_ID_param, gemroc_DAQ_inst, COMMAND_STRING)
+        command_echo = self.send_GEMROC_DAQ_CMD(gemroc_DAQ_inst, COMMAND_STRING)
         Dbg_funct_ctrl_bits_U4_localcopy &= 0xB
         print '\n Dbg_funct_ctrl_bits_U4_localcopy = %d' % Dbg_funct_ctrl_bits_U4_localcopy
         gemroc_DAQ_inst.set_Dbg_functions_ctrl_bits_LoNibble(Dbg_funct_ctrl_bits_U4_localcopy)
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
-        command_echo = self.send_GEMROC_DAQ_CMD(GEMROC_ID_param, gemroc_DAQ_inst, COMMAND_STRING)
+        command_echo = self.send_GEMROC_DAQ_CMD(gemroc_DAQ_inst, COMMAND_STRING)
         return command_echo
 
-    def DAQ_set_DAQck_source(self,gemroc_DAQ_inst, GEMROC_ID_param, DAQck_source_param):
-        gemroc_DAQ_inst.set_target_GEMROC(GEMROC_ID_param)
+    def DAQ_set_DAQck_source(self, gemroc_DAQ_inst, DAQck_source_param):
+        gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
         # Dbg_funct_ctrl_bits_U4_localcopy = gemroc_DAQ_inst.get_Dbg_functions_ctrl_bits_LoNibble()
         Dbg_funct_ctrl_bits_U4_localcopy = gemroc_DAQ_inst.get_Dbg_functions_ctrl_bits_LoNibble()
         Dbg_funct_ctrl_bits_U4_localcopy &= 0xE
@@ -947,11 +948,11 @@ class communication: ##The directory are declared here to avoid multiple declara
         # gemroc_DAQ_inst.set_Dbg_functions_ctrl_bits_LoNibble(Dbg_funct_ctrl_bits_U4_localcopy)
         gemroc_DAQ_inst.set_Dbg_functions_ctrl_bits_LoNibble(Dbg_funct_ctrl_bits_U4_localcopy)
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
-        command_echo = self.send_GEMROC_DAQ_CMD(GEMROC_ID_param, gemroc_DAQ_inst, COMMAND_STRING)
+        command_echo = self.send_GEMROC_DAQ_CMD(gemroc_DAQ_inst, COMMAND_STRING)
         return command_echo
 
-    def DAQ_set_TP_from_Ext_Trig(self,gemroc_DAQ_inst, GEMROC_ID_param, Enab_nDisab_TP_from_Ext_Trig_param):
-        gemroc_DAQ_inst.set_target_GEMROC(GEMROC_ID_param)
+    def DAQ_set_TP_from_Ext_Trig(self, gemroc_DAQ_inst, Enab_nDisab_TP_from_Ext_Trig_param):
+        gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
         Dbg_funct_ctrl_bits_U4_localcopy = gemroc_DAQ_inst.get_Dbg_functions_ctrl_bits_LoNibble()
         Dbg_funct_ctrl_bits_U4_localcopy &= 0xD
         Dbg_funct_ctrl_bits_U4_localcopy |= ((Enab_nDisab_TP_from_Ext_Trig_param & 0x1) << 1)  # acr 2018-04-24
@@ -959,14 +960,14 @@ class communication: ##The directory are declared here to avoid multiple declara
         # gemroc_DAQ_inst.set_Dbg_functions_ctrl_bits_LoNibble(Dbg_funct_ctrl_bits_U4_localcopy)
         gemroc_DAQ_inst.set_Dbg_functions_ctrl_bits_LoNibble(Dbg_funct_ctrl_bits_U4_localcopy)
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
-        command_echo = self.send_GEMROC_DAQ_CMD(GEMROC_ID_param, gemroc_DAQ_inst, COMMAND_STRING)
+        command_echo = self.send_GEMROC_DAQ_CMD(gemroc_DAQ_inst, COMMAND_STRING)
         return command_echo
 
-    def MENU_set_L1_Lat_TM_Win_in_B3Ck_cycles(self, gemroc_DAQ_inst, GEMROC_ID_param, L1_lat_B3clk_param, TM_window_in_B3clk_param):  # acr 2018-07-23
-        gemroc_DAQ_inst.set_target_GEMROC(GEMROC_ID_param)
+    def MENU_set_L1_Lat_TM_Win_in_B3Ck_cycles(self, gemroc_DAQ_inst, L1_lat_B3clk_param, TM_window_in_B3clk_param):  # acr 2018-07-23
+        gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
         gemroc_DAQ_inst.set_L1_Lat_TM_Win_in_B3Ck_cycles(L1_lat_B3clk_param, TM_window_in_B3clk_param)
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
-        command_echo = self.send_GEMROC_DAQ_CMD(GEMROC_ID_param, gemroc_DAQ_inst, COMMAND_STRING)
+        command_echo = self.send_GEMROC_DAQ_CMD(gemroc_DAQ_inst, COMMAND_STRING)
         return command_echo
 
     def set_Periodic_L1_EN_pattern(self,gemroc_DAQ_inst,Enab_nDisab_Periodic_L1_param):  # acr 2018-07-11 created definition
@@ -979,8 +980,9 @@ class communication: ##The directory are declared here to avoid multiple declara
 
     ## ACR 2018-07-23 END
 
-    def DAQ_set(self,gemroc_DAQ_inst, GEMROC_ID_param, TCAM_Enable_pattern_param, Per_FEB_TP_Enable_pattern_param, TP_repeat_burst_param, TP_Num_in_burst_param, TL_nTM_ACQ_param, Periodic_L1_Enable_param):
-        gemroc_DAQ_inst.set_target_GEMROC(GEMROC_ID_param)
+    def DAQ_set(self, gemroc_DAQ_inst, TCAM_Enable_pattern_param, Per_FEB_TP_Enable_pattern_param,
+                TP_repeat_burst_param, TP_Num_in_burst_param, TL_nTM_ACQ_param, Periodic_L1_Enable_param):
+        gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
         gemroc_DAQ_inst.set_EN_TM_TCAM_pattern(TCAM_Enable_pattern_param)
         gemroc_DAQ_inst.set_TP_width(5)
         gemroc_DAQ_inst.set_AUTO_TP_EN_pattern(0x0)
@@ -991,17 +993,17 @@ class communication: ##The directory are declared here to avoid multiple declara
         gemroc_DAQ_inst.set_TP_Pos_nNeg(1)
         gemroc_DAQ_inst.set_TP_period(8)
         number_of_repetitions = ((TP_repeat_burst_param & 0X1) << 9) + TP_Num_in_burst_param
-        print 'DAQSET {0} {1} {2} {3} {4} {5} '.format(TCAM_Enable_pattern_param,Per_FEB_TP_Enable_pattern_param, TP_repeat_burst_param, TP_Num_in_burst_param, TL_nTM_ACQ_param,Periodic_L1_Enable_param) 
+        print 'DAQSET {0} {1} {2} {3} {4} {5} '.format(TCAM_Enable_pattern_param,Per_FEB_TP_Enable_pattern_param, TP_repeat_burst_param, TP_Num_in_burst_param, TL_nTM_ACQ_param,Periodic_L1_Enable_param)
         print '\n number_of_repetitions = %03X' % number_of_repetitions
         print '\n number_of_repetitions = %d' % number_of_repetitions
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
-        # acr 2018-04-023 command_echo = send_GEMROC_DAQ_CMD(GEMROC_ID_param, gemroc_DAQ_inst, COMMAND_STRING)
-        command_echo = self.send_GEMROC_DAQ_CMD_num_rep(GEMROC_ID_param, gemroc_DAQ_inst, COMMAND_STRING, number_of_repetitions)
+        # acr 2018-04-023 command_echo = send_GEMROC_DAQ_CMD(self.GEMROC_ID, gemroc_DAQ_inst, COMMAND_STRING)
+        command_echo = self.send_GEMROC_DAQ_CMD_num_rep(gemroc_DAQ_inst, COMMAND_STRING, number_of_repetitions)
         return command_echo
 
-    def DAQ_TIGER_SET(self, gemroc_DAQ_inst, GEMROC_ID_param, TCAM_Enable_pattern_param, Per_FEB_TP_Enable_pattern_param=0,
-                TP_repeat_burst_param=0, TP_Num_in_burst_param=0, TL_nTM_ACQ_param=1, Periodic_L1_Enable_param=0):
-        gemroc_DAQ_inst.set_target_GEMROC(GEMROC_ID_param)
+    def DAQ_TIGER_SET(self, gemroc_DAQ_inst, TCAM_Enable_pattern_param, Per_FEB_TP_Enable_pattern_param=0,
+                      TP_repeat_burst_param=0, TP_Num_in_burst_param=0, TL_nTM_ACQ_param=1, Periodic_L1_Enable_param=0):
+        gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
         gemroc_DAQ_inst.set_EN_TM_TCAM_pattern(TCAM_Enable_pattern_param)
         gemroc_DAQ_inst.set_TP_width(5)
         gemroc_DAQ_inst.set_AUTO_TP_EN_pattern(0x0)
@@ -1018,48 +1020,47 @@ class communication: ##The directory are declared here to avoid multiple declara
         print '\n number_of_repetitions = %03X' % number_of_repetitions
         print '\n number_of_repetitions = %d' % number_of_repetitions
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
-        # acr 2018-04-023 command_echo = send_GEMROC_DAQ_CMD(GEMROC_ID_param, gemroc_DAQ_inst, COMMAND_STRING)
-        command_echo = self.send_GEMROC_DAQ_CMD_num_rep(GEMROC_ID_param, gemroc_DAQ_inst, COMMAND_STRING,
-                                                        number_of_repetitions)
+        # acr 2018-04-023 command_echo = send_GEMROC_DAQ_CMD(self.GEMROC_ID, gemroc_DAQ_inst, COMMAND_STRING)
+        command_echo = self.send_GEMROC_DAQ_CMD_num_rep(gemroc_DAQ_inst, COMMAND_STRING, number_of_repetitions)
         return command_echo
 
     ###-------Enables coommunication with a pattern of TIGER-----------------------------------------------------------###
-    def TCAM_enable (self,gemroc_DAQ_inst,GEMROC_ID_param,TCAM_Enable_pattern_param):
-        gemroc_DAQ_inst.set_target_GEMROC(GEMROC_ID_param)
+    def TCAM_enable(self, gemroc_DAQ_inst, TCAM_Enable_pattern_param):
+        gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
         gemroc_DAQ_inst.set_EN_TM_TCAM_pattern(TCAM_Enable_pattern_param)
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
-        command_echo = self.send_GEMROC_DAQ_CMD(GEMROC_ID_param, gemroc_DAQ_inst, COMMAND_STRING)
+        command_echo = self.send_GEMROC_DAQ_CMD(gemroc_DAQ_inst, COMMAND_STRING)
         return command_echo
 
 ###----##Start and stop data trasmission----------------------------------------------------------------------------###
 
-    def TL_start(self, gemroc_DAQ_inst, GEMROC_ID_param):
-        gemroc_DAQ_inst.set_target_GEMROC(GEMROC_ID_param)
+    def TL_start(self, gemroc_DAQ_inst):
+        gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
         gemroc_DAQ_inst.set_TL_nTM_ACQ(1)
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
-        command_echo = self.send_GEMROC_DAQ_CMD(GEMROC_ID_param, gemroc_DAQ_inst, COMMAND_STRING)
+        command_echo = self.send_GEMROC_DAQ_CMD(gemroc_DAQ_inst, COMMAND_STRING)
         return command_echo
 
-    def TL_stop (self, gemroc_DAQ_inst, GEMROC_ID_param):
-        gemroc_DAQ_inst.set_target_GEMROC(GEMROC_ID_param)
+    def TL_stop(self, gemroc_DAQ_inst):
+        gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
         gemroc_DAQ_inst.set_TL_nTM_ACQ(0)
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
-        command_echo = self.send_GEMROC_DAQ_CMD(GEMROC_ID_param, gemroc_DAQ_inst, COMMAND_STRING)
+        command_echo = self.send_GEMROC_DAQ_CMD(gemroc_DAQ_inst, COMMAND_STRING)
         return command_echo
 ###-----------------------------------------------------------------------------------------------------------------###
 
-    def Set_OV_OC_OT_PWR_CUT_EN_FLAGS(self, gemroc_inst_param, GEMROC_ID_param, FEB_OVC_EN_pattern_param,
-                                      FEB_OVV_EN_pattern_param, FEB_OVT_EN_pattern_param, ROC_OVT_EN_param):
+    def Set_OV_OC_OT_PWR_CUT_EN_FLAGS(self, gemroc_inst_param, FEB_OVC_EN_pattern_param, FEB_OVV_EN_pattern_param,
+                                      FEB_OVT_EN_pattern_param, ROC_OVT_EN_param):
         gemroc_inst_param.FEB_OVC_EN_pattern = FEB_OVC_EN_pattern_param & 0xF
         gemroc_inst_param.FEB_OVV_EN_pattern = FEB_OVV_EN_pattern_param & 0xF
         gemroc_inst_param.FEB_OVT_EN_pattern = FEB_OVT_EN_pattern_param & 0xF
         gemroc_inst_param.ROC_OVT_EN = ROC_OVT_EN_param & 0x1
         COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
-        command_echo = self.send_GEMROC_LV_CMD(GEMROC_ID_param, COMMAND_STRING)
+        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
         return command_echo
 
 
-    def Set_OVVA_LIMIT(self, gemroc_inst_param, GEMROC_ID_param, FEB3_OVVA_thr_param, FEB2_OVVA_thr_param, FEB1_OVVA_thr_param,
+    def Set_OVVA_LIMIT(self, gemroc_inst_param, FEB3_OVVA_thr_param, FEB2_OVVA_thr_param, FEB1_OVVA_thr_param,
                        FEB0_OVVA_thr_param):
         Vout_atten_factor = 0.5
         V_ADC_data_shift = 4
@@ -1089,11 +1090,11 @@ class communication: ##The directory are declared here to avoid multiple declara
         gemroc_inst_param.A_OVV_LIMIT_FEB1 = FEB1_OVVA_thr_Unsigned8
         gemroc_inst_param.A_OVV_LIMIT_FEB0 = FEB0_OVVA_thr_Unsigned8
         COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
-        command_echo = self.send_GEMROC_LV_CMD(GEMROC_ID_param, COMMAND_STRING)
+        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
         return command_echo
 
 
-    def Set_OVVD_LIMIT(self, gemroc_inst_param, GEMROC_ID_param, FEB3_OVVD_thr_param, FEB2_OVVD_thr_param, FEB1_OVVD_thr_param,
+    def Set_OVVD_LIMIT(self, gemroc_inst_param, FEB3_OVVD_thr_param, FEB2_OVVD_thr_param, FEB1_OVVD_thr_param,
                        FEB0_OVVD_thr_param):
         Vout_atten_factor = 0.5
         V_ADC_data_shift = 4
@@ -1123,11 +1124,11 @@ class communication: ##The directory are declared here to avoid multiple declara
         gemroc_inst_param.D_OVV_LIMIT_FEB1 = FEB1_OVVD_thr_Unsigned8
         gemroc_inst_param.D_OVV_LIMIT_FEB0 = FEB0_OVVD_thr_Unsigned8
         COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
-        command_echo = self.send_GEMROC_LV_CMD(GEMROC_ID_param, COMMAND_STRING)
+        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
         return command_echo
 
 
-    def Set_OVCA_LIMIT(self, gemroc_inst_param, GEMROC_ID_param, FEB3_OVCA_thr_param, FEB2_OVCA_thr_param, FEB1_OVCA_thr_param,
+    def Set_OVCA_LIMIT(self, gemroc_inst_param, FEB3_OVCA_thr_param, FEB2_OVCA_thr_param, FEB1_OVCA_thr_param,
                        FEB0_OVCA_thr_param):
         IADC_conv_fact_INA_GAIN_50 = 8.13
         IADC_conv_fact_INA_GAIN_200 = 8.13 / 4  ## mA per LSB
@@ -1160,11 +1161,11 @@ class communication: ##The directory are declared here to avoid multiple declara
         gemroc_inst_param.A_OVC_LIMIT_FEB1 = FEB1_OVCA_thr_U9
         gemroc_inst_param.A_OVC_LIMIT_FEB0 = FEB0_OVCA_thr_U9
         COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
-        command_echo = self.send_GEMROC_LV_CMD(GEMROC_ID_param, COMMAND_STRING)
+        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
         return command_echo
 
 
-    def Set_OVCD_LIMIT(self, gemroc_inst_param, GEMROC_ID_param, FEB3_OVCD_thr_param, FEB2_OVCD_thr_param, FEB1_OVCD_thr_param,
+    def Set_OVCD_LIMIT(self, gemroc_inst_param, FEB3_OVCD_thr_param, FEB2_OVCD_thr_param, FEB1_OVCD_thr_param,
                        FEB0_OVCD_thr_param):
         IADC_conv_fact_INA_GAIN_50 = 8.13
         IADC_conv_fact_INA_GAIN_200 = 8.13 / 4  ## mA per LSB
@@ -1197,11 +1198,11 @@ class communication: ##The directory are declared here to avoid multiple declara
         gemroc_inst_param.D_OVC_LIMIT_FEB1 = FEB1_OVCD_thr_U9
         gemroc_inst_param.D_OVC_LIMIT_FEB0 = FEB0_OVCD_thr_U9
         COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
-        command_echo = self.send_GEMROC_LV_CMD(GEMROC_ID_param, COMMAND_STRING)
+        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
         return command_echo
 
 
-    def Set_OVTF_LIMIT(self, gemroc_inst_param, GEMROC_ID_param, FEB3_OVTF_thr_param, FEB2_OVTF_thr_param, FEB1_OVTF_thr_param,
+    def Set_OVTF_LIMIT(self, gemroc_inst_param, FEB3_OVTF_thr_param, FEB2_OVTF_thr_param, FEB1_OVTF_thr_param,
                        FEB0_OVTF_thr_param):
         T_ref_PT1000 = 25.0
         V_ADC_at_25C = 247.2
@@ -1254,11 +1255,11 @@ class communication: ##The directory are declared here to avoid multiple declara
         gemroc_inst_param.OVT_LIMIT_FEB1 = FEB1_OVTF_thr_Unsigned8
         gemroc_inst_param.OVT_LIMIT_FEB0 = FEB0_OVTF_thr_Unsigned8
         COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
-        command_echo = self.send_GEMROC_LV_CMD(GEMROC_ID_param, COMMAND_STRING)
+        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
         return command_echo
 
 
-    def set_ROC_OVT_LIMIT(self, gemroc_inst_param, GEMROC_ID_param, ROC_OVT_thr_param):
+    def set_ROC_OVT_LIMIT(self, gemroc_inst_param, ROC_OVT_thr_param):
         ## ACR 2018-03-15 please note that for this measurement 1 LSB = 1 Centigrade (approximately)
         if ROC_OVT_thr_param <= 63:
             ROC_OVT_thr_Unsigned6 = ROC_OVT_thr_param
@@ -1266,7 +1267,7 @@ class communication: ##The directory are declared here to avoid multiple declara
             ROC_OVT_thr_Unsigned6 = 63
         gemroc_inst_param.ROC_OVT_LIMIT = ROC_OVT_thr_Unsigned6
         COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
-        command_echo = self.send_GEMROC_LV_CMD(GEMROC_ID_param, COMMAND_STRING)
+        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
         return command_echo
 
 
@@ -1345,13 +1346,13 @@ class communication: ##The directory are declared here to avoid multiple declara
             self.log_file.write('\nTIMING_DLY_FEB0 : %d' % ((L_array[10] >> 0) & 0x3F))
 
 
-    def Read_GEMROC_LV_CfgReg(self, gemroc_inst_param, GEMROC_ID_param):
+    def Read_GEMROC_LV_CfgReg(self):
         COMMAND_STRING = 'CMD_GEMROC_LV_CFG_RD'
-        command_echo = self.send_GEMROC_LV_CMD(GEMROC_ID_param, COMMAND_STRING)
+        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
         return command_echo
 
-    def set_sampleandhold_mode(self, ChCFGReg_setting_inst, GEMROC_ID_param, TIGER_ID_param, Channel_ID_param):
-        ChCFGReg_setting_inst.set_target_GEMROC(GEMROC_ID_param)
+    def set_sampleandhold_mode(self, ChCFGReg_setting_inst, TIGER_ID_param, Channel_ID_param):
+        ChCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
         ChCFGReg_setting_inst.set_target_TIGER(TIGER_ID_param)
         ChCFGReg_setting_inst.set_to_ALL_param(0)  ## let's do multiple configuration under script control rather than under GEMROC NIOS2 processor control
         COMMAND_STRING = 'WR'
@@ -1439,12 +1440,12 @@ class communication: ##The directory are declared here to avoid multiple declara
             self.log_file.write('\nEXT_nINT_B3clk: %d' % ((L_array[3] >> 12) & 0x1))  # acr 2018-04-26
 
 
-    def Read_GEMROC_DAQ_CfgReg(self, gemroc_inst_param, GEMROC_ID_param):
+    def Read_GEMROC_DAQ_CfgReg(self, gemroc_inst_param):
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_RD'
-        command_echo = self.send_GEMROC_DAQ_CMD(GEMROC_ID_param, gemroc_inst_param, COMMAND_STRING)
+        command_echo = self.send_GEMROC_DAQ_CMD(gemroc_inst_param, COMMAND_STRING)
         return command_echo
 
-    def Load_VTH_fromfile(self, ChCFGReg_setting_inst, GEMROC_ID_param, TIGER_ID_param, number_sigma, offset, save_on_LOG=False):
+    def Load_VTH_fromfile(self, ChCFGReg_setting_inst, TIGER_ID_param, number_sigma, offset, save_on_LOG=False):
         file_p=self.conf_folder+sep+"GEMROC{}_Chip{}.thr".format(self.GEMROC_ID,TIGER_ID_param)
         self.log_file.write("\n Setting VTH from file in  TIGER {}\n".format(TIGER_ID_param))
 
@@ -1461,7 +1462,7 @@ class communication: ##The directory are declared here to avoid multiple declara
 
         print ("Thr={}".format(thr))
         for i in range(0, 64):
-            binascii.b2a_hex(self.Set_Vth_T1(ChCFGReg_setting_inst,GEMROC_ID_param,TIGER_ID_param,i,int(thr[i])))
+            binascii.b2a_hex(self.Set_Vth_T1(ChCFGReg_setting_inst, TIGER_ID_param, i, int(thr[i])))
 
 
         if save_on_LOG:
@@ -1470,7 +1471,7 @@ class communication: ##The directory are declared here to avoid multiple declara
 
         return 0
 
-    def Load_VTH_fromfile_autotuned(self,ChCFGReg_setting_inst, GEMROC_ID_param, TIGER_ID_param):
+    def Load_VTH_fromfile_autotuned(self, ChCFGReg_setting_inst, TIGER_ID_param):
         file_p=self.conf_folder+sep+"GEMROC{}_TIGER_{}_autotuned.thr".format(self.GEMROC_ID,TIGER_ID_param)
         self.log_file.write("\n Setting VTH from file autotuned in  TIGER {}\n".format(TIGER_ID_param))
 
@@ -1486,16 +1487,16 @@ class communication: ##The directory are declared here to avoid multiple declara
 
         print ("Thr={}".format(thr))
         for i in range(0, 64):
-            binascii.b2a_hex(self.Set_Vth_T1(ChCFGReg_setting_inst,GEMROC_ID_param,TIGER_ID_param,i,int(thr[i])))
+            binascii.b2a_hex(self.Set_Vth_T1(ChCFGReg_setting_inst, TIGER_ID_param, i, int(thr[i])))
 
         name="."+sep+"log_folder"+sep+"THR_LOG{}_TIGER_{}.txt".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"),TIGER_ID_param)
         np.savetxt(name,np.c_[thr])
 
         return 0
-    def Load_VTH_fromMatrix(self,ChCFGReg_setting_inst, GEMROC_ID_param, TIGER_ID_param,vthr_matrix):
+    def Load_VTH_fromMatrix(self, ChCFGReg_setting_inst, TIGER_ID_param, vthr_matrix):
         for i in range(0, 64):
-            binascii.b2a_hex(self.Set_Vth_T1(ChCFGReg_setting_inst, GEMROC_ID_param, TIGER_ID_param, i,
-                                             int(vthr_matrix[TIGER_ID_param, i])))
+            binascii.b2a_hex(
+                self.Set_Vth_T1(ChCFGReg_setting_inst, TIGER_ID_param, i, int(vthr_matrix[TIGER_ID_param, i])))
 
         name = "." + sep + "log_folder" + sep + "THR_LOG{}_TIGER_{}.txt".format(
             datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"), TIGER_ID_param)
@@ -1504,36 +1505,36 @@ class communication: ##The directory are declared here to avoid multiple declara
 
 
 
-    def TP_ENABLE(self,gemroc_DAQ_inst,GEMROC_ID_param,TP_PATTERN): #Enable test pulses from FPGA
-        gemroc_DAQ_inst.set_target_GEMROC(GEMROC_ID_param)
+    def TP_ENABLE(self, gemroc_DAQ_inst, TP_PATTERN): #Enable test pulses from FPGA
+        gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
         gemroc_DAQ_inst.set_TP_width(5)
         gemroc_DAQ_inst.set_AUTO_TP_EN_pattern(0x0)
         gemroc_DAQ_inst.set_Periodic_TP_EN_pattern(TP_PATTERN)
         gemroc_DAQ_inst.set_TP_Pos_nNeg(1)
         gemroc_DAQ_inst.set_TP_period(8)
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
-        command_echo = self.send_GEMROC_DAQ_CMD(GEMROC_ID_param, gemroc_DAQ_inst, COMMAND_STRING)
+        command_echo = self.send_GEMROC_DAQ_CMD(gemroc_DAQ_inst, COMMAND_STRING)
         return command_echo
 
-    def DAQ_set_TP_from_L1Chk(self, gemroc_DAQ_inst, GEMROC_ID_param, Enab_nDisab_TP_from_L1Chk_param):  # acr 2018-07-11 created definition
-        gemroc_DAQ_inst.set_target_GEMROC(GEMROC_ID_param)
+    def DAQ_set_TP_from_L1Chk(self, gemroc_DAQ_inst, Enab_nDisab_TP_from_L1Chk_param):  # acr 2018-07-11 created definition
+        gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
         Dbg_funct_ctrl_bits_U4_HI_localcopy = gemroc_DAQ_inst.get_Dbg_functions_ctrl_bits_HiNibble()
         Dbg_funct_ctrl_bits_U4_HI_localcopy &= 0xD
         Dbg_funct_ctrl_bits_U4_HI_localcopy |= ((Enab_nDisab_TP_from_L1Chk_param & 0x1) << 1)
         print '\n Dbg_funct_ctrl_bits_U4_HI_localcopy = %d' % Dbg_funct_ctrl_bits_U4_HI_localcopy
         gemroc_DAQ_inst.set_Dbg_functions_ctrl_bits_HiNibble(Dbg_funct_ctrl_bits_U4_HI_localcopy)
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
-        command_echo = self.send_GEMROC_DAQ_CMD(GEMROC_ID_param, gemroc_DAQ_inst, COMMAND_STRING)
+        command_echo = self.send_GEMROC_DAQ_CMD(gemroc_DAQ_inst, COMMAND_STRING)
         return command_echo
 
     ## acr 2018-08-08 BEGIN
-    def XCVR_Loopback_Test(self, gemroc_DAQ_inst, GEMROC_ID_param, NumWordToSend_param):
-        gemroc_DAQ_inst.set_target_GEMROC(GEMROC_ID_param)
+    def XCVR_Loopback_Test(self, gemroc_DAQ_inst, NumWordToSend_param):
+        gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
         backup_copy_num_rep = gemroc_DAQ_inst.number_of_repetitions
         print '\nbackup copy of number_of_repetitions: %d' % backup_copy_num_rep
         COMMAND_STRING = 'CMD_GEMROC_DAQ_XCVR_LPBCK_TEST'
         # gemroc_DAQ_inst.set_command_code(COMMAND_STRING)
-        command_echo = self.send_GEMROC_DAQ_CMD_num_rep(GEMROC_ID_param, gemroc_DAQ_inst, COMMAND_STRING, NumWordToSend_param)
+        command_echo = self.send_GEMROC_DAQ_CMD_num_rep(gemroc_DAQ_inst, COMMAND_STRING, NumWordToSend_param)
         print '\ncurrent gemroc_DAQ_inst.number_of_repetitions: %d' % gemroc_DAQ_inst.number_of_repetitions
         gemroc_DAQ_inst.number_of_repetitions = backup_copy_num_rep
         print '\nrestored gemroc_DAQ_inst.number_of_repetitions: %d' % gemroc_DAQ_inst.number_of_repetitions
