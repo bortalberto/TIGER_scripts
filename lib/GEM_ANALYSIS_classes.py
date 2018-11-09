@@ -64,18 +64,18 @@ class analisys_conf: #Analysis class used for configurations
          for T in range (0,8):
              print("_-_-_-_-_-Configurating Tiger {}_-_-_-_-_-\n".format(T))
              default_filename = self.GEM_COM.conf_folder+sep+"TIGER_def_g_cfg_2018.txt"
-             command_reply = self.GEM_COM.WriteTgtGEMROC_TIGER_GCfgReg_fromfile(self.g_inst, self.GEMROC_ID, T, default_filename)
+             command_reply = self.GEM_COM.WriteTgtGEMROC_TIGER_GCfgReg_fromfile(self.g_inst, T, default_filename)
 
              print("_-_-_-_-_-Configurating Channels_-_-_-_-_-\n")
              default_filename = self.GEM_COM.conf_folder+sep+"TIGER_def_ch_cfg_2018.txt"
-             command_reply = self.GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg_fromfile(self.c_inst, self.GEMROC_ID, T, 64, default_filename)
+             command_reply = self.GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg_fromfile(self.c_inst, T, 64, default_filename)
              print '\nCWdef command_reply: %s' % binascii.b2a_hex(command_reply)
-             command_reply = self.GEM_COM.ReadTgtGEMROC_TIGER_ChCfgReg(self.c_inst, self.GEMROC_ID, T, 64, 0)
+             command_reply = self.GEM_COM.ReadTgtGEMROC_TIGER_ChCfgReg(self.c_inst, T, 64, 0)
              print '\nCRd   command_reply: %s' % binascii.b2a_hex(command_reply)
 
              print ("_-_-_-_-_-Send syncronous reset_-_-_-_-_-\n")
-             self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, self.GEMROC_ID, 1, True)
-             self.GEM_COM.SynchReset_to_TgtTCAM(self.GEM_COM.gemroc_DAQ_XX, self.GEMROC_ID, 0, 1)
+             self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, 1, True)
+             self.GEM_COM.SynchReset_to_TgtTCAM(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
 
              print ("_-_-_-_-_-Setting  channels for scan_-_-_-_-_-\n")
 
@@ -88,26 +88,25 @@ class analisys_conf: #Analysis class used for configurations
             #self.GEM_COM.ResetTgtGEMROC_ALL_TIGER_GCfgReg(self.GEMROC_ID, self.GEM_COM.gemroc_DAQ_XX)
             print("_-_-_-_-_-Configurating Tiger {}_-_-_-_-_-\n".format(T))
             default_filename = self.GEM_COM.conf_folder + sep + "TIGER_def_g_cfg_2018.txt"
-            globalset = self.GEM_COM.WriteTgtGEMROC_TIGER_GCfgReg_fromfile(self.g_inst, self.GEMROC_ID, T, default_filename)
+            globalset = self.GEM_COM.WriteTgtGEMROC_TIGER_GCfgReg_fromfile(self.g_inst, T, default_filename)
             # default_filename = self.GEM_COM.conf_folder + sep + "TIGER_def_ch_cfg_2018.txt"
             # channelset = self.GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg_fromfile(self.c_inst, self.GEMROC_ID, T, 64,default_filename)
 
-            self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, self.GEMROC_ID, T, 64, 1, 3)
+            self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, 64, 1, 3)
 
-
-            self.GEM_COM.DAQ_set(self.GEM_COM.gemroc_DAQ_XX, self.GEMROC_ID, 2**T, 0, 0, 0, 1, 0)
+            self.GEM_COM.DAQ_set(self.GEM_COM.gemroc_DAQ_XX, 2 ** T, 0, 0, 0, 1, 0)
             # num=2**T & 0xFF
             # self.GEM_COM.DAQ_TIGER_SET(self.GEM_COM.gemroc_DAQ_XX, self.GEM_COM.GEMROC_ID, num)
 
-            self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, self.GEMROC_ID, 0, 1)
-            self.GEM_COM.SynchReset_to_TgtTCAM(self.GEM_COM.gemroc_DAQ_XX, self.GEMROC_ID, 0, 1)
+            self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
+            self.GEM_COM.SynchReset_to_TgtTCAM(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
             # self.GEM_COM.DAQ_Toggle_Set_Pause_bit(self.GEM_COM.gemroc_DAQ_XX, self.GEMROC_ID) #Setto bit di pausa
             for j in range (0,64):  #Channel cycle
-                self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, self.GEMROC_ID, T, j, 1, 0)
+                self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 0)
 
                 for i in range(0,64):#VTH Cycle
                         # self.GEM_COM.DAQ_set_Pause_Mode(self.GEM_COM.gemroc_DAQ_XX, self.GEMROC_ID, 1)
-                        command_sent = self.GEM_COM.Set_Vth_T1(self.c_inst, self.GEMROC_ID, T, j, i)
+                        command_sent = self.GEM_COM.Set_Vth_T1(self.c_inst, T, j, i)
                         #self.GEM_COM.display_log_ChCfg_readback(command_sent,0)
                         #print bin(int (binascii.b2a_hex(command_sent),16))
                         #with open(self.log_path, 'a') as log_file:
@@ -120,7 +119,7 @@ class analisys_conf: #Analysis class used for configurations
                             log_file.write("@@@@@@   {} -- Set Vth={} on channel {} \n".format(time.ctime(),i,j))
 
                         word_count = 0
-                        self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, self.GEMROC_ID, 0, 1)
+                        self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
                         test_r.start_socket()
                         while word_count < 50:
                             #print word_count
@@ -134,15 +133,15 @@ class analisys_conf: #Analysis class used for configurations
                                     time.sleep(0.1)
                                     break
                         test_r.dataSock.close()
-                        globalcheck=self.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(self.g_inst, self.GEMROC_ID, T)
+                        globalcheck= self.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(self.g_inst, T)
                         if (int(binascii.b2a_hex(globalset), 16)) != ((int(binascii.b2a_hex(globalcheck), 16)) - 2048):
                             with open(self.log_path, 'a') as log_file:
                                 log_file.write("Global configuration error\n")
-                        globalcheck=self.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(self.g_inst, self.GEMROC_ID, T)
+                        globalcheck= self.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(self.g_inst, T)
                         if (int(binascii.b2a_hex(globalset), 16)) != ((int(binascii.b2a_hex(globalcheck), 16)) - 2048):
                             with open(self.log_path, 'a') as log_file:
                                 log_file.write("Global configuration error\n")
-                        command_reply = self.GEM_COM.ReadTgtGEMROC_TIGER_ChCfgReg(self.c_inst, self.GEMROC_ID, T,j, 0)
+                        command_reply = self.GEM_COM.ReadTgtGEMROC_TIGER_ChCfgReg(self.c_inst, T, j, 0)
                         # L_array = array.array('I')  # L is an array of unsigned long
                         # L_array.fromstring(command_reply)
                         # L_array.byteswap()
@@ -161,7 +160,7 @@ class analisys_conf: #Analysis class used for configurations
                         os.system('clear')
                         string="SCANNING [TIGER={}, VTh={}, CH={}]\n".format(T,i,j)
                         sys.stdout.write(string)
-                self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, self.GEMROC_ID, T, j, 1, 3)
+                self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 3)
 
 
     def acquire_rate(self, frame_count, rate_matrix,test_r):
@@ -222,18 +221,18 @@ class analisys_conf: #Analysis class used for configurations
     def thr_autotune(self, T, desired_rate, test_r, max_iter=20,final_lowering=True):
         frameMax = 200
         frame_count = 0
-        self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, self.GEMROC_ID, 0, 1)
-        self.GEM_COM.SynchReset_to_TgtTCAM(self.GEM_COM.gemroc_DAQ_XX, self.GEMROC_ID, 0, 1)
+        self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
+        self.GEM_COM.SynchReset_to_TgtTCAM(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
 
-        self.GEM_COM.DAQ_set(self.GEM_COM.gemroc_DAQ_XX, self.GEMROC_ID, 2 ** T, 0x0, 0, 0, 1, 0)
+        self.GEM_COM.DAQ_set(self.GEM_COM.gemroc_DAQ_XX, 2 ** T, 0x0, 0, 0, 1, 0)
 
         for iter in range(0, max_iter):
             print("\nIteration {}".format(iter))
             autotune_scan_matrix = np.zeros((8, 64))
             # for T in range (first_TIGER_to_SCAN,last_TIGER_to_scan):
             # self.GEM_COM.DAQ_set(self.GEM_COM.gemroc_DAQ_XX, self.GEMROC_ID, 2 ** T, 0x0, 0, 0, 1, 0)
-            self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, self.GEMROC_ID, T, 64, 1, 0)
-            self.GEM_COM.Load_VTH_fromMatrix(self.c_inst, self.GEMROC_ID, T, self.vthr_matrix)
+            self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, 64, 1, 0)
+            self.GEM_COM.Load_VTH_fromMatrix(self.c_inst, T, self.vthr_matrix)
             test_r.start_socket()
             while frame_count < frameMax and not self.timedOut:
                 frame_count, autotune_scan_matrix = self.acquire_rate(frame_count, autotune_scan_matrix,test_r)
@@ -254,12 +253,12 @@ class analisys_conf: #Analysis class used for configurations
                             self.vthr_matrix[T, channel] = self.vthr_matrix[T, channel] - 1
 
                     if self.vthr_matrix[T, channel] <= 0:
-                        self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, self.GEMROC_ID, T, channel, 1, 3)
+                        self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, channel, 1, 3)
                         self.vthr_matrix[T, channel] = 0
                     if self.vthr_matrix[T, channel] > 63:
                         self.vthr_matrix[T, channel] = 63
 
-                    self.GEM_COM.Load_VTH_fromMatrix(self.c_inst,self.GEMROC_ID, T,self.vthr_matrix)
+                    self.GEM_COM.Load_VTH_fromMatrix(self.c_inst, T, self.vthr_matrix)
 
                 print(" \n Scan matrix TIGER {}".format(T))
                 print autotune_scan_matrix[T, :]
@@ -313,6 +312,50 @@ class analisys_conf: #Analysis class used for configurations
         self.timedOut = False
 
         return 0
+
+    
+    def TIGER_config_test(self):
+        print "--------------------------"
+        print "Configuration test"
+        print "--------------------------"
+
+        default_g_inst_settings_filename = self.GEM_COM.conf_folder + sep + "TIGER_def_g_cfg_2018.txt"
+        default_c_inst_settings_filename = self.GEM_COM.conf_folder + sep + "TIGER_def_ch_cfg_2018.txt"
+        error_list=[]
+        for T in range (0,8):
+            print ("\nGemroc {}, TIGER {}".format(self.GEMROC_ID, T))
+            command_sent = self.GEM_COM.WriteTgtGEMROC_TIGER_GCfgReg_fromfile(self.g_inst,T,default_g_inst_settings_filename,False)
+            command_reply = self.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(self.g_inst, T)
+            if (int(binascii.b2a_hex(command_sent), 16)) != ((int(binascii.b2a_hex(command_reply), 16)) - 2048):
+                print "   !!! Errors in global configuration !!!   "
+                error_list.append(T)
+            else:
+                print "         Global Configuration OK         "
+            ch_list = []
+
+            for ch in range (0,64):
+                command_sent = self.GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg_fromfile(self.c_inst, T, ch, default_c_inst_settings_filename)
+                command_reply = self.GEM_COM.ReadTgtGEMROC_TIGER_ChCfgReg(self.c_inst, T,ch, 0)
+                if (int(binascii.b2a_hex(command_sent), 16)) != ((int(binascii.b2a_hex(command_reply), 16)) - 2048):
+                    if not T in error_list:
+                        error_list.append(T)
+                    ch_list.append(ch)
+            if ch_list:
+                #print "Errors configurating channels: {}".format(ch_list)
+                print "   !!! Error(s) in channel(s) configuration !!!  "
+
+        if error_list:
+            print " \n--Gemroc {}: Errors configurating Tiger: {}".format(self.GEMROC_ID,error_list)
+        else:
+            print " \n--Gemroc {}: Configuration test passed".format(self.GEMROC_ID)
+
+
+        return (error_list)
+
+    def TIGER_TP_test(self):
+        print "--------------------------"
+        print "Test pulse reception"
+        print "--------------------------"
 
     def __del__(self):
         return 0
@@ -585,20 +628,6 @@ class analisys_read:
         plt.title('Threshold Scan Tiger {}, ch {}'.format(TIGER, CHANNEL))
         plt.show()
 
-
-class elaboration:
-    #def __init__(self,scan_reader,scan_configurer,threader):
-    def __init__(self,scan_reader,scan_configurer):
-        self.scan_configurer=scan_configurer
-        self.scan_reader=scan_reader
-       # self.scan_threader=threader
-
-
-    #
-    # def read_thr_from_file(self,filepath):
-    #     with open(filepath,'r') as scanfile:
-    #             self.scan_reader.thr_scan_frames[0, 20, :] = scanfile.readline().split('.')[0:64]
-    #             self.scan_reader.thr_scan_matrix[0, 20, :] = scanfile.readline().split('.')[0:64]
 
 
 class Thread_handler(Thread): #In order to scan during configuration is mandatory to use multithreading

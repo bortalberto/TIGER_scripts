@@ -121,7 +121,7 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
 
    def __del__(self):
       class_name = self.__class__.__name__
-      print class_name, "g_reg_settings destroyed"
+      #print class_name, "g_reg_settings destroyed"
 
    def reload_gcfg_settings_from_file(self, GCFGReg_def_fname_param): ## acr 2018-02-23 new method to reaload from a default file
       self.parameter_array = [0 for i in range(37)] # acr 2018-01-25 [0 for i in range(38)]
@@ -200,8 +200,6 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
          self.is_a_write = 0
          self.cmd_word0 = ((self.command_code & 0xF) << command_code_shift) + ((self.target_TIGER_ID & 0x7) << target_TIGER_ID_shift)
          self.command_words[11] = self.cmd_word0
-      else :
-         print class_name, "bad command_code parameter passed"
 
    def update_command_words(self):
       if ( (self.command_code & 0xF) == 0x9 ):
@@ -349,7 +347,7 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
 
    def __del__(self):
       class_name = self.__class__.__name__
-      print class_name, "ch_reg_settings destroyed"
+      #print class_name, "ch_reg_settings destroyed"
 
    def reload_chcfg_settings_from_file(self, ChCFGReg_def_fname_param): ## acr 2018-02-23 new method to reaload from a default file
       self.parameter_array = [0 for i in range(30)] # acr 2018-01-25 [0 for i in range(38)]
@@ -426,8 +424,6 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
          self.is_a_write = 0
          self.cmd_word0 = ((self.command_code & 0xF) << 12) + ((self.target_TIGER_ID & 0x7) << 8) + ((self.is_a_write & 0x1) << 7) + ((self.TO_ALL_enable & 0x1) << 6) + (self.channel_ID & 0x1F)
          self.command_words[9] = self.cmd_word0
-      else :
-         print class_name, "bad command_code parameter passed"
 
    def set_TP_disable_FE(self, TP_disable_FE_param):
       self.TP_disable_FE = TP_disable_FE_param & 0x1
@@ -583,7 +579,7 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
 
    def __del__(self):
       class_name = self.__class__.__name__
-      print class_name, "gemroc_cmd_LV_settings destroyed"
+      #print class_name, "gemroc_cmd_LV_settings destroyed"
 
    def cmd_words_array_size(self):
       return len(self.command_words)
@@ -778,7 +774,7 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
 
    def __del__(self):
       class_name = self.__class__.__name__
-      print class_name, "gemroc_cmd_DAQ_settings destroyed"
+      #print class_name, "gemroc_cmd_DAQ_settings destroyed"
 
    def cmd_words_array_size(self):
       return len(self.command_words)
