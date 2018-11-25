@@ -12,6 +12,7 @@ from scipy.optimize import curve_fit
 from scipy import special
 from threading import Thread
 import datetime
+import random
 import array
 
 OS = sys.platform
@@ -167,7 +168,7 @@ class analisys_conf: #Analysis class used for configurations
         try:
             data, addr = test_r.dataSock.recvfrom(BUFSIZE)
         except:
-            print "\nTimed out!\n"
+            print "\nTimed out!"
             self.timedOut = True
             return frame_count, rate_matrix
         hexdata = binascii.hexlify(data)
@@ -204,6 +205,52 @@ class analisys_conf: #Analysis class used for configurations
 
                 rate_matrix[TIGER, ch] = rate_matrix[TIGER, ch] + 1
             return frame_count, rate_matrix
+
+    def acquire_frame(self, frame_count, frame_matrix, test_r):
+        try:
+            data, addr = test_r.dataSock.recvfrom(BUFSIZE)
+        except:
+            print "\nTimed out!"
+            self.timedOut = True
+            return frame_count, frame_matrix
+        hexdata = binascii.hexlify(data)
+
+        for x in range(0, len(hexdata) - 1, 16):
+            int_x = 0
+            for b in range(7, 0, -1):
+                hex_to_int = (int(hexdata[x + b * 2], 16)) * 16 + int(hexdata[x + b * 2 + 1], 16)
+                int_x = (int_x + hex_to_int) << 8
+            hex_to_int = (int(hexdata[x], 16)) * 16 + int(hexdata[x + 1],
+                                                          16)  # acr 2017-11-17 this should fix the problem
+            int_x = (int_x + hex_to_int)
+            raw = '%016X ' % int_x
+
+            if (((int_x & 0xFF00000000000000) >> 59) == 0x04):
+                frame_count = frame_count + 1
+                TIGER = (int_x >> 56) & 0x7
+                # ch = (int_x >> 15) & 0xFFFF
+                # s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'HB: ' + 'Framecount: %08X ' % (
+                #          (int_x >> 15) & 0xFFFF) + 'SEUcount: %08X\n' % (int_x & 0x7FFF)
+                for i in range (0,len(frame_matrix[TIGER,:])):
+                    if not frame_matrix[TIGER,i]:
+                        frame_matrix[TIGER,i]=(int_x >> 15) & 0xFFFF
+                        break
+
+            # if (((int_x & 0xFF00000000000000) >> 59) == 0x08):
+            #     s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'CW: ' + 'ChID: %02X ' % (
+            #             (int_x >> 24) & 0x3F) + ' CounterWord: %016X\n' % (int_x & 0x00FFFFFF)
+            #
+            # if (((int_x & 0xFF00000000000000) >> 59) == 0x00):
+            #     TIGER = (int_x >> 56) & 0x7
+            #     ch = (int_x >> 48) & 0x3F
+            #     s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'EW: ' + 'ChID: %02X ' % (
+            #     #         (int_x >> 48) & 0x3F) + 'tacID: %01X ' % ((int_x >> 46) & 0x3) + 'Tcoarse: %04X ' % (
+            #     #             (int_x >> 30) & 0xFFFF) + 'Ecoarse: %03X ' % (
+            #     #             (int_x >> 20) & 0x3FF) + 'Tfine: %03X ' % ((int_x >> 10) & 0x3FF) + 'Efine: %03X \n' % (
+            #     #             int_x & 0x3FF)
+            #
+            #     #rate_matrix[TIGER, ch] = rate_matrix[TIGER, ch] + 1
+        return frame_count,frame_matrix
 
     def fill_VTHR_matrix(self, number_sigma, offset, tiger_id):
 
@@ -313,10 +360,31 @@ class analisys_conf: #Analysis class used for configurations
 
         return 0
 
-    
+    def check_sync(self):
+        test_r = analisys_read(self.GEM_COM, self.c_inst)
+        frame_count = 0
+        frameMax=48
+        test_r.start_socket()
+        frame_matrix=np.zeros((8,8))
+        while frame_count < frameMax and not self.timedOut:
+            frame_count, frame_matrix = self.acquire_frame(frame_count, frame_matrix,test_r)
+        test_r.dataSock.close()
+        print "Framewords collected:"
+        print frame_matrix
+        coincidence_matrix=np.zeros((8,8))
+        for i in range (0,8):
+            for j in range (i,8):
+                coincidence_matrix[i,j]=np.any(np.in1d(frame_matrix[i,:], frame_matrix[j,:]))
+                if not np.any(np.in1d(frame_matrix[i,:], frame_matrix[j,:])) and not np.all(frame_matrix[i,:]==np.zeros((1,len(frame_matrix)))) and not np.all(frame_matrix[j,:]==np.zeros((1,len(frame_matrix))).all()) :
+                    print "TIGER {} not in sync with TIGER {}".format(i,j)
+        #print coincidence_matrix
+        self.timedOut=False
+
+        return 0
+
     def TIGER_config_test(self):
         print "--------------------------"
-        print "Configuration test"
+        print "Configuration test, GEMROC {}".format(self.GEMROC_ID)
         print "--------------------------"
 
         default_g_inst_settings_filename = self.GEM_COM.conf_folder + sep + "TIGER_def_g_cfg_2018.txt"
@@ -343,6 +411,10 @@ class analisys_conf: #Analysis class used for configurations
             if ch_list:
                 #print "Errors configurating channels: {}".format(ch_list)
                 print "   !!! Error(s) in channel(s) configuration !!!  "
+            else:
+                print "         Channel Configuration OK         "
+
+
 
         if error_list:
             print " \n--Gemroc {}: Errors configurating Tiger: {}".format(self.GEMROC_ID,error_list)
@@ -354,9 +426,39 @@ class analisys_conf: #Analysis class used for configurations
 
     def TIGER_TP_test(self):
         print "--------------------------"
-        print "Test pulse reception"
+        print "Test pulse reception, GEMROC {}". format(self.GEMROC_ID)
+        print "--------------------------"
+        for T in range (0,8):
+            self.GEM_COM.set_FE_TPEnable(self.g_inst, T, 1)
+            for ch in range (0,64):
+                self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst,T,ch,0, 1)
+
+            frameMax=10
+            """ Acquiring rate """
+            test_r=analisys_read(self.GEM_COM, self.c_inst)
+            scan_matrix = np.zeros((8, 64))
+            frame_count = 0
+            test_r.start_socket()
+            while frame_count < frameMax and not self.timedOut:
+                frame_count, scan_matrix = self.acquire_rate(frame_count, scan_matrix, test_r)
+            test_r.dataSock.close()
+            scan_matrix = scan_matrix / frameMax * (1 / 0.0002048)
+            for ch in range (0,64):
+                self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst,T,ch,0, 3)
+            self.GEM_COM.set_FE_TPEnable(self.g_inst, T, 0)
+            if self.timedOut:
+                print "\nTiger {} timed out".format(T)
+                self.timedOut=0
+        #TODO finish this function when we can check on real GEMROCS
+
+
+    def TIGER_GEMROC_sync_test(self):
+        print "--------------------------"
+        print "Checking synchronization for GEMROC {}".format(self.GEMROC_ID)
         print "--------------------------"
 
+        self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
+        self.check_sync()
     def __del__(self):
         return 0
 

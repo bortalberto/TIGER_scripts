@@ -25,7 +25,7 @@ def swap_order_N_bits( Hex_data, N_bits ):
 
 
 ###CCCCCCCCCCCCCCCC###     CLASS g_reg_settings BEGIN  ###CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC###
-class g_reg_settings: # purpose: organize the Global Configuration Register Settings in an array format which can be sent over Ethernet or optical link
+class g_reg_settings: # purpose: organize the Global Configuration Register Settings in an array format which can be sent over Ethernet or optical link TODO: Update in an array of dictionary, in order to be able to configure different TGIERS with different configuration, save and load them
    def __init__(self,
                 TARGET_GEMROC_ID_param = 0, # acr 2017-09-22
                 cfg_filename_param = "default_g_cfg_2018_all_big_endian.txt" # acr 2017-07-11

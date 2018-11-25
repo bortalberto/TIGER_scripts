@@ -98,13 +98,19 @@ menu_string = "-- GEMROC {} --\n".format(GEMROC_ID)+"\
 \n SH                                                                               set sample and hold mode\
 \n TMSET    <L1_lat_B3clk_param>( 100 to 1023; default = 358) <TM_window_in_B3clk_param>(1 to 127; default = 66) \
 \n CONFIG_PAUSE                                                                     set default config (global and channel, pause state) in all the TIGERS\
-\n(X)CVRTST  <NumWordToSend>(0 thru 127; ONLY 0 is implemented at the moment)      Perform XCVR loopback test. If NumWordToSend=0 then capture of the next TM pkt is performed; else NumWordToSend data words are looped back\
-\n(D)efault_Init <Num_of_TIGERs_Enabled>(1 thru 8) <Ext/Int timing>(\"1\" for Ext) <TL/TM mode>(\"1\" for TL mode)      Default initialization \
-\n(Dtest)Default_Init_test <ID_of_TIGERs_Enabled>(1 thru 8) <Ext/Int timing>(\"1\" for Ext) <TL/TM mode>(\"1\" for TL mode)      Default initialization \
+\n(X)CVRTST  <NumWordToSend>(0 thru 127; ONLY 0 is implemented at the moment)       Perform XCVR loopback test. If NumWordToSend=0 then capture of the next TM pkt is performed; else NumWordToSend data words are looped back\
+\n(D)efault_Init <Pattern_of_Enabled_TIGERs>(0 thru 0xFF) <Ext/Int timing>(\"1\" for Ext) <TL/TM mode>(\"1\" for TL mode) <Pause_Mode_En>(0 or 1) <Int_TP_Burst_repeat_En>(0 or 1)   Default initialization \
+\n TEST <kind of test>                                                              \"s\" for synch test, \"c\" for configuration test, \"t\" for test pulse test\
 \n(Q)uit: leave\
 \nEnter your command:\n ")
-
 DONE = False
+def clear_term():
+    if OS == 'linux2':
+        os.system('clear')
+    else:
+        os.system('cls')
+
+
 def add_input(input_queue):
     while True:
         input_queue.put(sys.stdin.readline())
@@ -118,7 +124,7 @@ def Menu_and_prompt():
     DONE = False
     IVT_DISPLAY_ENABLE = 1
     fmt='%Y-%m-%d-%H-%M-%S'
-    GEM_COM1.IVT_log_file.write('\n%s' %datetime.datetime.now().strftime(fmt) )
+    #GEM_COM1.IVT_log_file.write('\n%s' %datetime.datetime.now().strftime(fmt) )
     GEM_COM1.GEMROC_IVT_read_and_log(IVT_DISPLAY_ENABLE, IVT_LOG_ENABLE, GEM_COM1.IVT_log_file)
     LOCAL_L1_TS_minus_TIGER_COARSE_TS = 0 # acr 2018-08-08
     LOCAL_L1_TIMESTAMP = 0 # acr 2018-08-08
@@ -290,8 +296,8 @@ def Menu_and_prompt():
                                 print "---____----____----____----____----"
                                 print "!!! ERROR IN CONFIGURATION !!!"
                                 print "---____----____----____----____----"
-                                time.sleep(4)
-                            time.sleep(2)
+                                time.sleep(1)
+                            time.sleep(1)
                             os.system('clear')
                             sys.stdout.write(menu_string)
                     elif (input_array[0] == 'GRd') or (input_array[0] == 'GR'):
@@ -723,7 +729,7 @@ def Menu_and_prompt():
                             GEM_COM1.DAQ_set_TP_from_L1Chk(GEM_COM1.gemroc_DAQ_XX, Enab_nDisab_TP_from_L1_Chk)
                             print '\nEnab_nDisab_TP_from_Ext_triggers: %d on GEMROC %d' % (Enab_nDisab_TP_from_L1_Chk, GEMROC_ID)
                             time.sleep(2)
-                            os.system('cls')
+                            os.system('clear')
                             sys.stdout.write(menu_string)
 
                     elif ((input_array[0] == 'XCVRTST') or (input_array[0] == 'X')):
@@ -774,169 +780,110 @@ def Menu_and_prompt():
                                 print '\n' + s
                             while input_queue.empty():
                                 time.sleep(1)
-                            os.system('cls')
+                            os.system('clear')
                             sys.stdout.write(menu_string)
 
                     elif ((input_array[0] == 'Default_Init') or (input_array[0] == 'D')):
-                        if (len(input_array) == 4):
-                            NumTigerToConfigure = int(input_array[1], 0) & 0x7
+                        if (len(input_array) == 6):
+                            Pattern_of_Tiger_To_Configure = int(input_array[1], 0) & 0xFF  # acr 2018-09-11
                             Ext_nInt_Clk_option = int(input_array[2], 0) & 0x1
                             TL_nTM_option = int(input_array[3], 0) & 0x1
-                            # SET TIMING SOURCE: 1 for External, 0 for Internal
+                            PauseMode_Enable_Option = int(input_array[4], 0) & 0x1
+                            Int_TP_Burst_repeat_Enable_Option = int(input_array[5], 0) & 0x1
                             GEM_COM1.DAQ_set_DAQck_source(GEM_COM1.gemroc_DAQ_XX, Ext_nInt_Clk_option)
-                            # TIGER INITIALIZATION
-                            GEM_COM1.ResetTgtGEMROC_ALL_TIGER_GCfgReg(GEM_COM1.gemroc_DAQ_XX)
-                            # TIGER GLOBAL REGISTER configuration
-                            for nT in range(0, NumTigerToConfigure):
-                                command_reply = GEM_COM1.WriteTgtGEMROC_TIGER_GCfgReg_fromfile(g_inst, nT,
-                                                                                               default_g_inst_settigs_filename)
-                                print '\nGWdef command_reply: %s' % binascii.b2a_hex(command_reply)
-                                command_reply = GEM_COM1.ReadTgtGEMROC_TIGER_GCfgReg(g_inst, nT)
-                                print '\nGRd   command_reply: %s' % binascii.b2a_hex(command_reply)
-                            # TIGER CHANNEL REGISTER configuration
-                            for nT in range(0, NumTigerToConfigure):
-                                # command_reply = GEM_COM1.WriteTgtGEMROC_TIGER_ChCfgReg_fromfile(c_inst, GEMROC_ID, nT, 64,default_TIGER_ch_cfg_fname, GEM_COM1.log_file)
-                                command_reply = GEM_COM1.WriteTgtGEMROC_TIGER_ChCfgReg_fromfile(c_inst, nT, 64,
-                                                                                                default_ch_inst_settigs_filename)
-                                print '\nCWdef command_reply: %s' % binascii.b2a_hex(command_reply)
-                                # command_reply = ReadTgtGEMROC_TIGER_ChCfgReg (c_inst, GEMROC_ID, int(input_array[1]), int(input_array[2]), 0 )
-                                command_reply = GEM_COM1.ReadTgtGEMROC_TIGER_ChCfgReg(c_inst, nT, 64, 0)
-                                print '\nCRd   command_reply: %s' % binascii.b2a_hex(command_reply)
-                            # TPEnable bit in the Global Cfg register
-                            for nT in range(0, NumTigerToConfigure):
-                                GEM_COM1.set_FE_TPEnable(g_inst, nT, 1)
-                                print '\nTo TIGER %d on GEMROC %d: GCreg FE_TPEnable bit set to %d' % (nT, GEMROC_ID, 1)
-                            # TP_disable_FE and TriggerMode bit setting in the channel configuration for selected (n_channel = 2 * N_TIGER) channels
-                            for nT in range(0, NumTigerToConfigure):
-                                GEM_COM1.Set_GEMROC_TIGER_ch_TPEn(c_inst, nT, nT * 2, 0, 1)
-                                print '\nTo TIGER %d on GEMROC %d: TP_disable_FE bit set to %d and TriggerMode bit set to %d for channel %d' % (
-                                nT, GEMROC_ID, 0, 1, nT * 2)
-                            # ENPM SET TO 1; REMEMBER TO STOP THE TRIGGER GENERATION AT THIS POINT
-                            GEM_COM1.DAQ_set_Pause_Mode(GEM_COM1.gemroc_DAQ_XX, 1)
-                            print '\nEnable DAQ Pause Mode: %d on GEMROC %d' % (1, GEMROC_ID)
-                            # SRst 4 : Synchronous timing reset to all Tiger Configuration and Acquisition modules (TCAM)
-                            GEM_COM1.SynchReset_to_TgtFEB(GEM_COM1.gemroc_DAQ_XX, 4, 1)
-                            print '\nToALL_on GEMROC %d: sent synchronous reset' % (GEMROC_ID)
-                            # PAUSE FLAG set
-                            GEM_COM1.DAQ_Toggle_Set_Pause_bit(GEM_COM1.gemroc_DAQ_XX)
-                            print '\nDAQ Pause Set bit TOGGLED on GEMROC %d' % (GEMROC_ID)
+                            print '\nDAQ_set_DAQck_source: %s' % GEM_COM1.print_int_vs_n_ext(Ext_nInt_Clk_option)
+
+                            for nT in range(0, 8):
+                                channel_ID_for_TPEn = 64  # original nT+1 - gm 2018-10-18
+                                # if ((Pattern_of_Tiger_To_Configure & (0x1 << nT)) != 0):
+                            #     Set_GEMROC_TIGER_ch_TPEn(c_inst, GEMROC_ID, nT, channel_ID_for_TPEn, 0, 0, log_file)
+                            #   print '\nTo TIGER %d on GEMROC %d: TP_disable_FE bit set to %d and TriggerMode bit set to %d for channel %d' %(nT, GEMROC_ID, 0, 0, channel_ID_for_TPEn)
+                            time.sleep(1)
                             # TMSET 358 66
                             L1_lat_B3clk_local_param = 358
                             TM_window_in_B3clk_local_param = 66
-                            GEM_COM1.MENU_set_L1_Lat_TM_Win_in_B3Ck_cycles(GEM_COM1.gemroc_DAQ_XX,
-                                                                           L1_lat_B3clk_local_param,
-                                                                           TM_window_in_B3clk_local_param)
-                            print '\nSet TM latency: %d and TM window: %d parameters on GEMROC %d' % ( L1_lat_B3clk_local_param, TM_window_in_B3clk_local_param, GEMROC_ID)
+                            GEM_COM1.MENU_set_L1_Lat_TM_Win_in_B3Ck_cycles(GEM_COM1.gemroc_DAQ_XX, L1_lat_B3clk_local_param,
+                                                                  TM_window_in_B3clk_local_param)
+                            print '\nSet TM latency: %d and TM window: %d parameters on GEMROC %d' % (
+                                L1_lat_B3clk_local_param, TM_window_in_B3clk_local_param, GEMROC_ID)
                             GEM_COM1.gemroc_DAQ_XX.extract_parameters_from_UDP_packet()  # acr 2018-07-23
-                            # CHK2TP
-                            Enab_nDisab_TP_from_L1_Chk_local = 1
-                            GEM_COM1.DAQ_set_TP_from_L1Chk(GEM_COM1.gemroc_DAQ_XX, Enab_nDisab_TP_from_L1_Chk_local)
-                            print '\nEnab_nDisab_TP_from_Ext_triggers: %d on GEMROC %d' % (Enab_nDisab_TP_from_L1_Chk_local, GEMROC_ID)
-
+                            # # CHK2TP
+                            # Enab_nDisab_TP_from_L1_Chk_local = 1
+                            # DAQ_set_TP_from_L1Chk(gemroc_DAQ_XX, GEMROC_ID, Enab_nDisab_TP_from_L1_Chk_local)
+                            # print '\nEnable/nDisable TP from L1CHK signal: %d on GEMROC %d' % (Enab_nDisab_TP_from_L1_Chk_local, GEMROC_ID)
+                            # ENPM SET TO 1; REMEMBER TO STOP THE TRIGGER GENERATION AT THIS POINT
+                            if (PauseMode_Enable_Option == 1):
+                                GEM_COM1.DAQ_set_Pause_Mode(GEM_COM1.gemroc_DAQ_XX, 1)
+                                print '\nEnable DAQ Pause Mode: %d on GEMROC %d' % (1, GEMROC_ID)
+                                # SRst 4 : Synchronous timing reset to all Tiger Configuration and Acquisition modules (TCAM)
+                                GEM_COM1.SynchReset_to_TgtFEB(GEM_COM1.gemroc_DAQ_XX, 4, 1)
+                                print '\nToALL_on GEMROC %d: sent synchronous reset' % (GEMROC_ID)
+                                # PAUSE FLAG set
+                                GEM_COM1.DAQ_Toggle_Set_Pause_bit(GEM_COM1.gemroc_DAQ_XX)
+                                print '\nDAQ Pause Set bit TOGGLED on GEMROC %d' % (GEMROC_ID)
+                                print '\nDAQ waiting for first trigger'
+                            else:
+                                GEM_COM1.DAQ_set_Pause_Mode(GEM_COM1.gemroc_DAQ_XX, 0)
+                                print '\nEnable DAQ Pause Mode: %d on GEMROC %d' % (0, GEMROC_ID)
+                                # SRst 4 : Synchronous timing reset to all Tiger Configuration and Acquisition modules (TCAM)
+                                GEM_COM1.SynchReset_to_TgtFEB(GEM_COM1.gemroc_DAQ_XX, 4, 1)
+                                print '\nToALL_on GEMROC %d: sent synchronous reset' % (GEMROC_ID)
                             # DAQSET 0Xpattern 0xf 0 0 tl/TM 0
-                            TCAM_Enable_pattern_local = GEM_COM1.enable_pattern_array[NumTigerToConfigure]
+                            # TCAM_Enable_pattern_local = enable_pattern_array[NumTigerToConfigure]
+                            TCAM_Enable_pattern_local = Pattern_of_Tiger_To_Configure
                             Periodic_FEB_TP_Enable_pattern_local = 0xF
-                            TP_repeat_burst_local = 0
-                            TP_Num_in_burst_local = 0
                             TL_nTM_option_local = TL_nTM_option
+                            if (Int_TP_Burst_repeat_Enable_Option == 1):
+                                TP_repeat_burst_local = 1
+                            else:
+                                TP_repeat_burst_local = 0
+                            TP_Num_in_burst_local = 1
                             Periodic_L1_Enable_pattern_local = 0
-                            GEM_COM1.DAQ_set(GEM_COM1.gemroc_DAQ_XX, TCAM_Enable_pattern_local,
-                                             Periodic_FEB_TP_Enable_pattern_local, TP_repeat_burst_local,
-                                             TP_Num_in_burst_local, TL_nTM_option_local,
-                                             Periodic_L1_Enable_pattern_local)
-                            print '\nStart DAQ from enabled TCAMs: %d on GEMROC %d; TL_nTM flag: %d' % (TCAM_Enable_pattern_local, GEMROC_ID, TL_nTM_option_local)
+                            # CHK2TP
+                            if (TL_nTM_option_local == 0):
+                                Enab_nDisab_TP_from_L1_Chk_local = 1
+                            else:
+                                Enab_nDisab_TP_from_L1_Chk_local = 0
+                            GEM_COM1.DAQ_set_TP_from_L1Chk(GEM_COM1.gemroc_DAQ_XX, Enab_nDisab_TP_from_L1_Chk_local)
+                            print '\nEnable/nDisable TP from L1CHK signal: %d on GEMROC %d' % (Enab_nDisab_TP_from_L1_Chk_local, GEMROC_ID)
+                            # set DAQ mode
+                            GEM_COM1.DAQ_set(GEM_COM1.gemroc_DAQ_XX, TCAM_Enable_pattern_local, Periodic_FEB_TP_Enable_pattern_local, TP_repeat_burst_local, TP_Num_in_burst_local, TL_nTM_option_local, Periodic_L1_Enable_pattern_local)
+                            # print '\nStart DAQ from enabled TCAMs: %d on GEMROC %d; TL_nTM flag: %d' % ( TCAM_Enable_pattern_local, GEMROC_ID, TL_nTM_option_local)
+                            print '\nStart DAQ in %s mode. Enable TIGERs pattern: %d on GEMROC %d' % (GEM_COM1.print_TL_vs_nTM(TL_nTM_option_local), TCAM_Enable_pattern_local, GEMROC_ID)  # acr 2018-09-11
                             while input_queue.empty():
                                 time.sleep(1)
                             os.system('cls')
                             sys.stdout.write(menu_string)
 
 
-                    elif ((input_array[0] == 'Default_Init_Test') or (input_array[0] == 'Dtest')):
-                        if (len(input_array) == 4):
-                            # NumTigerToConfigure = int(input_array[1], 0) & 0x7
-                            NumTigerToConfigure = int(input_array[1], 0) & 0xF
-                            Ext_nInt_Clk_option = int(input_array[2], 0) & 0x1
-                            TL_nTM_option = int(input_array[3], 0) & 0x1
-                            # SET TIMING SOURCE: 1 for External, 0 for Internal
-                            GEM_COM1.DAQ_set_DAQck_source(GEM_COM1.gemroc_DAQ_XX, Ext_nInt_Clk_option)
-                            # TIGER INITIALIZATION
-                            GEM_COM1.ResetTgtGEMROC_ALL_TIGER_GCfgReg(GEM_COM1.gemroc_DAQ_XX)
-                            # TIGER GLOBAL REGISTER configuration
-                            # for nT in range(0, NumTigerToConfigure):
-                            for nT in range(0, 8):
-                                command_reply = GEM_COM1.WriteTgtGEMROC_TIGER_GCfgReg_fromfile(g_inst, nT,
-                                                                                               default_g_inst_settigs_filename)
-                                print '\nGWdef command_reply: %s' % binascii.b2a_hex(command_reply)
-                                command_reply = GEM_COM1.ReadTgtGEMROC_TIGER_GCfgReg(g_inst, nT)
-                                print '\nGRd   command_reply: %s' % binascii.b2a_hex(command_reply)
-                            # TIGER CHANNEL REGISTER configuration
-                            for nT in range(0, 8):
-                            # for nT in range(0, NumTigerToConfigure):
-                                # command_reply = GEM_COM1.WriteTgtGEMROC_TIGER_ChCfgReg_fromfile(c_inst, GEMROC_ID, nT, 64,default_TIGER_ch_cfg_fname, GEM_COM1.log_file)
-                                command_reply = GEM_COM1.WriteTgtGEMROC_TIGER_ChCfgReg_fromfile(c_inst, nT, 64,
-                                                                                                default_ch_inst_settigs_filename)
-                                print '\nCWdef command_reply: %s' % binascii.b2a_hex(command_reply)
-                                # command_reply = ReadTgtGEMROC_TIGER_ChCfgReg (c_inst, GEMROC_ID, int(input_array[1]), int(input_array[2]), 0 )
-                                command_reply = GEM_COM1.ReadTgtGEMROC_TIGER_ChCfgReg(c_inst, nT, 64, 0)
-                                print '\nCRd   command_reply: %s' % binascii.b2a_hex(command_reply)
-                            # TPEnable bit in the Global Cfg register
-                            for nT in range(0, 8):
-                                # for nT in range(0, NumTigerToConfigure):
-                                GEM_COM1.set_FE_TPEnable(g_inst, nT, 1)
-                                print '\nTo TIGER %d on GEMROC %d: GCreg FE_TPEnable bit set to %d' % (nT, GEMROC_ID, 1)
-                            # TP_disable_FE and TriggerMode bit setting in the channel configuration for selected (n_channel = 2 * N_TIGER) channels
-                            for nT in range(0, 8):
-                                # for nT in range(0, NumTigerToConfigure):
-                                GEM_COM1.Set_GEMROC_TIGER_ch_TPEn(c_inst, nT, nT * 2, 0, 1)
-                                print '\nTo TIGER %d on GEMROC %d: TP_disable_FE bit set to %d and TriggerMode bit set to %d for channel %d' % (
-                                    nT, GEMROC_ID, 0, 1, nT * 2)
-                            # ENPM SET TO 1; REMEMBER TO STOP THE TRIGGER GENERATION AT THIS POINT
-                            GEM_COM1.DAQ_set_Pause_Mode(GEM_COM1.gemroc_DAQ_XX, 1)
-                            print '\nEnable DAQ Pause Mode: %d on GEMROC %d' % (1, GEMROC_ID)
-                                    # SRst 4 : Synchronous timing reset to all Tiger Configuration and Acquisition modules (TCAM)
-                            GEM_COM1.SynchReset_to_TgtFEB(GEM_COM1.gemroc_DAQ_XX, 4, 1)
-                            print '\nToALL_on GEMROC %d: sent synchronous reset' % (GEMROC_ID)
-                                    # PAUSE FLAG set
-                            GEM_COM1.DAQ_Toggle_Set_Pause_bit(GEM_COM1.gemroc_DAQ_XX)
-                            print '\nDAQ Pause Set bit TOGGLED on GEMROC %d' % (GEMROC_ID)
-                            # TMSET 358 66
-                            L1_lat_B3clk_local_param = 358
-                            TM_window_in_B3clk_local_param = 66
-                            GEM_COM1.MENU_set_L1_Lat_TM_Win_in_B3Ck_cycles(GEM_COM1.gemroc_DAQ_XX, L1_lat_B3clk_local_param,TM_window_in_B3clk_local_param)
-                            print '\nSet TM latency: %d and TM window: %d parameters on GEMROC %d' % (
-                            L1_lat_B3clk_local_param, TM_window_in_B3clk_local_param, GEMROC_ID)
-                            GEM_COM1.gemroc_DAQ_XX.extract_parameters_from_UDP_packet()  # acr 2018-07-23
-                            # CHK2TP
-                            Enab_nDisab_TP_from_L1_Chk_local = 1
-                            GEM_COM1.DAQ_set_TP_from_L1Chk(GEM_COM1.gemroc_DAQ_XX,
-                                                           Enab_nDisab_TP_from_L1_Chk_local)
-                            print '\nEnab_nDisab_TP_from_Ext_triggers: %d on GEMROC %d' % (
-                            Enab_nDisab_TP_from_L1_Chk_local, GEMROC_ID)
 
-                            # DAQSET 0Xpattern 0xf 0 0 tl/TM 0
-                            # TCAM_Enable_pattern_local = GEM_COM1.enable_pattern_array[NumTigerToConfigure]
-
-                            # TCAM_Enable_pattern_local = 2**(NumTigerToConfigure-1)#Test 1 Tiger
-                            TCAM_Enable_pattern_local = GEM_COM1.enable_pattern_array_test[NumTigerToConfigure]
-                            print  '\n!!! NumTigerToConfigur: %d TCAM_Enable_pattern_local %d' % (NumTigerToConfigure, TCAM_Enable_pattern_local)
-
-                            Periodic_FEB_TP_Enable_pattern_local = 0xF
-                            TP_repeat_burst_local = 0
-                            TP_Num_in_burst_local = 0
-                            TL_nTM_option_local = TL_nTM_option
-                            Periodic_L1_Enable_pattern_local = 0
-                            GEM_COM1.DAQ_set(GEM_COM1.gemroc_DAQ_XX, TCAM_Enable_pattern_local, Periodic_FEB_TP_Enable_pattern_local,TP_repeat_burst_local, TP_Num_in_burst_local, TL_nTM_option_local, Periodic_L1_Enable_pattern_local)
-                            print '\nStart DAQ from enabled TCAMs: %d on GEMROC %d; TL_nTM flag: %d' % (
-                            TCAM_Enable_pattern_local, GEMROC_ID, TL_nTM_option_local)
-                        while input_queue.empty():
-                            time.sleep(1)
-                        os.system('cls')
+                    elif (input_array[0].lower() == 'test'):
+                        if len(input_array) == 1:
+                            print "Specify"
+                        else:
+                            if input_array[1].lower()=='s':
+                                print "Synch test"
+                                test_r=AN_CLASS.analisys_conf(GEM_COM1,c_inst,g_inst)
+                                test_r.TIGER_GEMROC_sync_test()
+                                test_r.__del__()
+                            elif input_array[1].lower()=='c':
+                                print "Configuration test"
+                                test_r=AN_CLASS.analisys_conf(GEM_COM1,c_inst,g_inst)
+                                test_r.TIGER_config_test()
+                                test_r.__del__()
+                            elif input_array[1].lower=="t":
+                                print "Test pulse reception test"
+                                test_r=AN_CLASS.analisys_conf(GEM_COM1,c_inst,g_inst)
+                                test_r.TIGER_TP_test()
+                                test_r.__del__()
+                            else:
+                                print "Wrong test instruction"
+                            time.sleep(0.2)
                         sys.stdout.write(menu_string)
-
                     else:
                         print('\n bad command')
                         time.sleep(0.5)
-                        os.system('clear')
+                        clear_term()
                         sys.stdout.write(menu_string)
 
                 else:
@@ -945,5 +892,4 @@ def Menu_and_prompt():
 
 Menu_and_prompt()
 print "\nExit debug. Bye!"
-GEM_COM1.__del__()
 exit()
