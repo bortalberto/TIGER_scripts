@@ -16,8 +16,7 @@ import classes_test_functions
 import numpy as np
 import datetime
 import sys
-
-
+import os
 OS = sys.platform
 if OS == 'win32':
 	sep = '\\'
@@ -30,17 +29,21 @@ else:
 
 class communication: ##The directory are declared here to avoid multiple declaration
 
-    def __init__(self,gemroc_ID,feb_pwr_pattern):
+    def __init__(self, gemroc_ID, feb_pwr_pattern, keep_cfg_log=False, keep_IVT_log=False):
         self.conf_folder = "conf"
         self.Tscan_folder="thr_scan"
         self.GEMROC_ID=gemroc_ID
         self.FEB_PWR_EN_pattern=feb_pwr_pattern
+
+        self.keep_cfg_log=keep_cfg_log
+        self.keep_IVT_log=keep_IVT_log
+
         log_fname = "."+sep+"log_folder"+sep+"GEMROC{}_interactive_cfg_log_{}.txt".format(self.GEMROC_ID,datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         self.log_file = open(log_fname, 'w')
         IVT_log_fname = "."+sep+"log_folder"+sep+"GEMROC{}_IVT_log_{}.txt".format(self.GEMROC_ID,datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         self.IVT_log_file = open(IVT_log_fname, 'w')
 
-        local_test=True
+        local_test=False
 
         if local_test==True:
             # HOST_DYNAMIC_IP_ADDRESS = "192.168.1.%d" %(GEMROC_ID)
@@ -73,7 +76,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.receiveSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 106496 )
-        self.receiveSock.settimeout(4)
+        self.receiveSock.settimeout(6)
 
         self.receiveSock.bind((self.HOST_IP, self.HOST_PORT_RECEIVE))
         self.remote_IP_Address = '192.168.1.%d' % (self.GEMROC_ID + 16)
@@ -121,6 +124,15 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.enable_pattern_array_test = array.array('I', [0x0, 0xc8, 0x4a, 0x0b,  0xca, 0xc3, 0x4b, 0xcb])  # Test 3,4,5 Tigers
 
     def __del__(self):
+        path_cfg=self.log_file.name
+        path_IVT=self.IVT_log_file.name
+        self.log_file.close()
+        self.IVT_log_file.close()
+        if not self.keep_cfg_log and os.path.isfile(path_cfg):
+            os.remove(path_cfg)
+        if not self.keep_IVT_log and os.path.isfile(path_IVT):
+            os.remove(path_IVT)
+
         self.log_file.close()
         self.IVT_log_file.close()
     def flush_socket(self):
@@ -295,46 +307,46 @@ class communication: ##The directory are declared here to avoid multiple declara
         L_array = array.array('I')  # L is an array of unsigned long
         L_array.fromstring(command_echo_param)
         L_array.byteswap()
-        print('\nList of Global Config Register parameters read back from TIGER%d on RESPONDING GEMROC%d:' % (
+        print('List of Global Config Register parameters read back from TIGER%d on RESPONDING GEMROC%d:' % (
         ((L_array[11] >> 8) & 0X7), ((L_array[0] >> 16) & 0X1f)))  # acr 2018-01-23
-        print('\nTIGER REPLY BYTE (LOW LEVEL SERIAL PROTOCOL ERROR FLAG):%02X;' % ((L_array[11] >> 16) & 0xFF))
-        print('\nBufferBias: %d' % ((L_array[1] >> 24) & 0x3))
-        print('\nTDCVcasN: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[1] >> 16) & 0xF), 4)))
-        print('\nTDCVcasP: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[1] >> 8) & 0x1F), 5)))
-        print('\nTDCVcasPHyst: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[1] >> 0) & 0x3F), 6)))
-        print('\nDiscFE_Ibias: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[2] >> 24) & 0x3F), 6)))
-        print('\nBiasFE_PpreN: %d' % ((L_array[2] >> 16) & 0x3F))
-        print('\nAVcasp_global: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[2] >> 8) & 0x1F), 5)))
-        print('\nTDCcompVcas: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[2] >> 0) & 0xF), 4)))
-        print('\nTDCIref_cs: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[3] >> 24) & 0x1F), 5)))
-        print('\nDiscVcasN: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[3] >> 16) & 0xF), 4)))
-        print('\nIntegVb1: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[3] >> 8) & 0x3F), 6)))
-        print('\nBiasFE_A1: %d' % ((L_array[3] >> 0) & 0xF))
-        print('\nVcasp_Vth: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[4] >> 24) & 0x3F), 6)))
-        print('\nTAC_I_LSB: %d' % ((L_array[4] >> 16) & 0x1F))
-        print('\nTDCcompVbias: %d' % ((L_array[4] >> 8) & 0x1F))
-        print('\nVref_Integ: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[4] >> 0) & 0x3F), 6)))
-        print('\nIBiasTPcal: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[5] >> 24) & 0x1F), 5)))
-        print('\nTP_Vcal: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[5] >> 16) & 0x1F), 5)))
-        print('\nShaperIbias: %d' % ((L_array[5] >> 8) & 0xF))
-        print('\nIPostamp: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[5] >> 0) & 0x1F), 5)))
-        print('\nTP_Vcal_ref: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[6] >> 24) & 0x1F), 5)))
-        print('\nVref_integ_diff: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[6] >> 16) & 0x3F), 6)))
-        print('\nSig_pol: %d' % ((L_array[6] >> 8) & 0x1))
-        print('\nFE_TPEnable: %d' % ((L_array[6] >> 0) & 0x1))
-        print('\nDataClkDiv: %d' % ((L_array[7] >> 16) & 0x3))
-        print('\nTACrefreshPeriod: %d' % ((L_array[7] >> 8) & 0xF))
-        print('\nTACrefreshEnable: %d' % ((L_array[7] >> 0) & 0x1))
-        print('\nCounterPeriod: %d' % ((L_array[8] >> 24) & 0x7))
-        print('\nCounterEnable: %d' % ((L_array[8] >> 16) & 0x1))
-        print('\nStopRampEnable: %d' % ((L_array[8] >> 8) & 0x3))
-        print('\nRClkEnable: %d' % ((L_array[8] >> 0) & 0x1F))
-        print('\nTDCClkdiv: %d' % ((L_array[9] >> 24) & 0x1))
-        print('\nVetoMode: %d' % ((L_array[9] >> 16) & 0x3F))
-        print('\nCh_DebugMode: %d' % ((L_array[9] >> 8) & 0x1))
-        print('\nTxMode: %d' % ((L_array[9] >> 0) & 0x3))
-        print('\nTxDDR: %d' % ((L_array[10] >> 24) & 0x1))
-        print('\nTxLinks: %d' % ((L_array[10] >> 16) & 0x3))
+        print('TIGER REPLY BYTE (LOW LEVEL SERIAL PROTOCOL ERROR FLAG):%02X;' % ((L_array[11] >> 16) & 0xFF))
+        print('BufferBias: %d' % ((L_array[1] >> 24) & 0x3))
+        print('TDCVcasN: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[1] >> 16) & 0xF), 4)))
+        print('TDCVcasP: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[1] >> 8) & 0x1F), 5)))
+        print('TDCVcasPHyst: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[1] >> 0) & 0x3F), 6)))
+        print('DiscFE_Ibias: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[2] >> 24) & 0x3F), 6)))
+        print('BiasFE_PpreN: %d' % ((L_array[2] >> 16) & 0x3F))
+        print('AVcasp_global: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[2] >> 8) & 0x1F), 5)))
+        print('TDCcompVcas: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[2] >> 0) & 0xF), 4)))
+        print('TDCIref_cs: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[3] >> 24) & 0x1F), 5)))
+        print('DiscVcasN: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[3] >> 16) & 0xF), 4)))
+        print('IntegVb1: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[3] >> 8) & 0x3F), 6)))
+        print('BiasFE_A1: %d' % ((L_array[3] >> 0) & 0xF))
+        print('Vcasp_Vth: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[4] >> 24) & 0x3F), 6)))
+        print('TAC_I_LSB: %d' % ((L_array[4] >> 16) & 0x1F))
+        print('TDCcompVbias: %d' % ((L_array[4] >> 8) & 0x1F))
+        print('Vref_Integ: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[4] >> 0) & 0x3F), 6)))
+        print('IBiasTPcal: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[5] >> 24) & 0x1F), 5)))
+        print('TP_Vcal: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[5] >> 16) & 0x1F), 5)))
+        print('ShaperIbias: %d' % ((L_array[5] >> 8) & 0xF))
+        print('IPostamp: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[5] >> 0) & 0x1F), 5)))
+        print('TP_Vcal_ref: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[6] >> 24) & 0x1F), 5)))
+        print('Vref_integ_diff: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[6] >> 16) & 0x3F), 6)))
+        print('Sig_pol: %d' % ((L_array[6] >> 8) & 0x1))
+        print('FE_TPEnable: %d' % ((L_array[6] >> 0) & 0x1))
+        print('DataClkDiv: %d' % ((L_array[7] >> 16) & 0x3))
+        print('TACrefreshPeriod: %d' % ((L_array[7] >> 8) & 0xF))
+        print('TACrefreshEnable: %d' % ((L_array[7] >> 0) & 0x1))
+        print('CounterPeriod: %d' % ((L_array[8] >> 24) & 0x7))
+        print('CounterEnable: %d' % ((L_array[8] >> 16) & 0x1))
+        print('StopRampEnable: %d' % ((L_array[8] >> 8) & 0x3))
+        print('RClkEnable: %d' % ((L_array[8] >> 0) & 0x1F))
+        print('TDCClkdiv: %d' % ((L_array[9] >> 24) & 0x1))
+        print('VetoMode: %d' % ((L_array[9] >> 16) & 0x3F))
+        print('Ch_DebugMode: %d' % ((L_array[9] >> 8) & 0x1))
+        print('TxMode: %d' % ((L_array[9] >> 0) & 0x3))
+        print('TxDDR: %d' % ((L_array[10] >> 24) & 0x1))
+        print('TxLinks: %d' % ((L_array[10] >> 16) & 0x3))
         if log_enable == 1:
             self.log_file.write(
                 '\nList of Global Config Register parameters read back from TIGER%d on RESPONDING GEMROC%d:' % (
@@ -399,76 +411,76 @@ class communication: ##The directory are declared here to avoid multiple declara
         L_array = array.array('I')  # L is an array of unsigned long
         L_array.fromstring(command_echo_param)
         L_array.byteswap()
-        print('\nList of Channel %d Config Register parameters read back from TIGER%d on RESPONDING GEMROC%d:' % (
+        print('List of Channel %d Config Register parameters read back from TIGER%d on RESPONDING GEMROC%d:' % (
             ((L_array[9] >> 0) & 0X3F), ((L_array[9] >> 8) & 0X7), ((L_array[0] >> 16) & 0X1f)))  # acr 2018-01-23
-        print("\nTIGER REPLY BYTE (LOW LEVEL SERIAL PROTOCOL ERROR FLAG):%02X;" % (((L_array[9] >> 16) & 0Xff)))
-        print('\n DisableHyst: %d' % ((L_array[1] >> 24) & 0x1))
-        print('\n T2Hyst: %d' % ((L_array[1] >> 16) & 0x7))
-        print('\n T1Hyst: %d' % ((L_array[1] >> 8) & 0x7))
-        print('\n Ch63ObufMSB: %d' % ((L_array[1] >> 0) & 0x1))
-        print('\n TP_disable_FE: %d' % ((L_array[2] >> 24) & 0x1))
-        print('\n TDC_IB_E: %d' % ((L_array[2] >> 16) & 0xF))
-        print('\n TDC_IB_T: %d' % ((L_array[2] >> 8) & 0xF))
-        print('\n Integ: %d' % ((L_array[2] >> 0) & 0x1))
-        print('\n PostAmpGain: %d' % ((L_array[3] >> 24) & 0x3))
-        print('\n FE_delay: %d' % ((L_array[3] >> 16) & 0x1F))
-        print('\n Vth_T2: %d' % ((L_array[3] >> 8) & 0x3F))
-        print('\n Vth_T1: %d' % ((L_array[3] >> 0) & 0x3F))
-        print('\n QTx2Enable: %d' % ((L_array[4] >> 24) & 0x1))
-        print('\n MaxIntegTime: %d' % ((L_array[4] >> 16) & 0x7F))
-        print('\n MinIntegTime: %d' % ((L_array[4] >> 8) & 0x7F))
-        print('\n TriggerBLatched: %d' % ((L_array[4] >> 0) & 0x1))
-        print('\n QdcMode: %d' % ((L_array[5] >> 24) & 0x1))
-        print('\n BranchEnableT: %d' % ((L_array[5] >> 16) & 0x1))
-        print('\n BranchEnableEQ: %d' % ((L_array[5] >> 8) & 0x1))
-        print('\n TriggerMode2B: %d' % ((L_array[5] >> 0) & 0x7))
-        print('\n TriggerMode2Q: %d' % ((L_array[6] >> 24) & 0x3))
-        print('\n TriggerMode2E: %d' % ((L_array[6] >> 16) & 0x7))
-        print('\n TriggerMode2T: %d' % ((L_array[6] >> 8) & 0x3))
-        print('\n TACMinAge: %d' % ((L_array[6] >> 0) & 0x1F))
-        print('\n TACMaxAge: %d' % ((L_array[7] >> 24) & 0x1F))
-        print('\n CounterMode: %d' % ((L_array[7] >> 16) & 0xF))
-        print('\n DeadTime: %d' % ((L_array[7] >> 8) & 0x3F))
-        print('\n SyncChainLen: %d' % ((L_array[7] >> 0) & 0x3))
-        print('\n Ch_DebugMode: %d' % ((L_array[8] >> 24) & 0x3))
-        print('\n TriggerMode: %d' % ((L_array[8] >> 16) & 0x3))
+        print("TIGER REPLY BYTE (LOW LEVEL SERIAL PROTOCOL ERROR FLAG):%02X;" % (((L_array[9] >> 16) & 0Xff)))
+        print(' DisableHyst: %d' % ((L_array[1] >> 24) & 0x1))
+        print(' T2Hyst: %d' % ((L_array[1] >> 16) & 0x7))
+        print(' T1Hyst: %d' % ((L_array[1] >> 8) & 0x7))
+        print(' Ch63ObufMSB: %d' % ((L_array[1] >> 0) & 0x1))
+        print(' TP_disable_FE: %d' % ((L_array[2] >> 24) & 0x1))
+        print(' TDC_IB_E: %d' % ((L_array[2] >> 16) & 0xF))
+        print(' TDC_IB_T: %d' % ((L_array[2] >> 8) & 0xF))
+        print(' Integ: %d' % ((L_array[2] >> 0) & 0x1))
+        print(' PostAmpGain: %d' % ((L_array[3] >> 24) & 0x3))
+        print(' FE_delay: %d' % ((L_array[3] >> 16) & 0x1F))
+        print(' Vth_T2: %d' % ((L_array[3] >> 8) & 0x3F))
+        print(' Vth_T1: %d' % ((L_array[3] >> 0) & 0x3F))
+        print(' QTx2Enable: %d' % ((L_array[4] >> 24) & 0x1))
+        print(' MaxIntegTime: %d' % ((L_array[4] >> 16) & 0x7F))
+        print(' MinIntegTime: %d' % ((L_array[4] >> 8) & 0x7F))
+        print(' TriggerBLatched: %d' % ((L_array[4] >> 0) & 0x1))
+        print(' QdcMode: %d' % ((L_array[5] >> 24) & 0x1))
+        print(' BranchEnableT: %d' % ((L_array[5] >> 16) & 0x1))
+        print(' BranchEnableEQ: %d' % ((L_array[5] >> 8) & 0x1))
+        print(' TriggerMode2B: %d' % ((L_array[5] >> 0) & 0x7))
+        print(' TriggerMode2Q: %d' % ((L_array[6] >> 24) & 0x3))
+        print(' TriggerMode2E: %d' % ((L_array[6] >> 16) & 0x7))
+        print(' TriggerMode2T: %d' % ((L_array[6] >> 8) & 0x3))
+        print(' TACMinAge: %d' % ((L_array[6] >> 0) & 0x1F))
+        print(' TACMaxAge: %d' % ((L_array[7] >> 24) & 0x1F))
+        print(' CounterMode: %d' % ((L_array[7] >> 16) & 0xF))
+        print(' DeadTime: %d' % ((L_array[7] >> 8) & 0x3F))
+        print(' SyncChainLen: %d' % ((L_array[7] >> 0) & 0x3))
+        print(' Ch_DebugMode: %d' % ((L_array[8] >> 24) & 0x3))
+        print(' TriggerMode: %d' % ((L_array[8] >> 16) & 0x3))
         if log_enable == 1:
             self.log_file.write(
-                '\nList of Channel %d Config Register parameters read back from TIGER%d on RESPONDING GEMROC%d:' % (
+                'List of Channel %d Config Register parameters read back from TIGER%d on RESPONDING GEMROC%d:' % (
                     ((L_array[9] >> 0) & 0X3F), ((L_array[9] >> 8) & 0X7),
                     ((L_array[0] >> 16) & 0X1f)))  # acr 2018-01-23
             self.log_file.write(
-                "\nTIGER REPLY BYTE (LOW LEVEL SERIAL PROTOCOL ERROR FLAG):%02X;" % (((L_array[9] >> 16) & 0Xff)))
-            self.log_file.write('\n DisableHyst: %d' % ((L_array[1] >> 24) & 0x1))
-            self.log_file.write('\n T2Hyst: %d' % ((L_array[1] >> 16) & 0x7))
-            self.log_file.write('\n T1Hyst: %d' % ((L_array[1] >> 8) & 0x7))
-            self.log_file.write('\n Ch63ObufMSB: %d' % ((L_array[1] >> 0) & 0x1))
-            self.log_file.write('\n TP_disable_FE: %d' % ((L_array[2] >> 24) & 0x1))
-            self.log_file.write('\n TDC_IB_E: %d' % ((L_array[2] >> 16) & 0xF))
-            self.log_file.write('\n TDC_IB_T: %d' % ((L_array[2] >> 8) & 0xF))
-            self.log_file.write('\n Integ: %d' % ((L_array[2] >> 0) & 0x1))
-            self.log_file.write('\n PostAmpGain: %d' % ((L_array[3] >> 24) & 0x3))
-            self.log_file.write('\n FE_delay: %d' % ((L_array[3] >> 16) & 0x1F))
-            self.log_file.write('\n Vth_T2: %d' % ((L_array[3] >> 8) & 0x3F))
-            self.log_file.write('\n Vth_T1: %d' % ((L_array[3] >> 0) & 0x3F))
-            self.log_file.write('\n QTx2Enable: %d' % ((L_array[4] >> 24) & 0x1))
-            self.log_file.write('\n MaxIntegTime: %d' % ((L_array[4] >> 16) & 0x7F))
-            self.log_file.write('\n MinIntegTime: %d' % ((L_array[4] >> 8) & 0x7F))
-            self.log_file.write('\n TriggerBLatched: %d' % ((L_array[4] >> 0) & 0x1))
-            self.log_file.write('\n QdcMode: %d' % ((L_array[5] >> 24) & 0x1))
-            self.log_file.write('\n BranchEnableT: %d' % ((L_array[5] >> 16) & 0x1))
-            self.log_file.write('\n BranchEnableEQ: %d' % ((L_array[5] >> 8) & 0x1))
-            self.log_file.write('\n TriggerMode2B: %d' % ((L_array[5] >> 0) & 0x7))
-            self.log_file.write('\n TriggerMode2Q: %d' % ((L_array[6] >> 24) & 0x3))
-            self.log_file.write('\n TriggerMode2E: %d' % ((L_array[6] >> 16) & 0x7))
-            self.log_file.write('\n TriggerMode2T: %d' % ((L_array[6] >> 8) & 0x3))
-            self.log_file.write('\n TACMinAge: %d' % ((L_array[6] >> 0) & 0x1F))
-            self.log_file.write('\n TACMaxAge: %d' % ((L_array[7] >> 24) & 0x1F))
-            self.log_file.write('\n CounterMode: %d' % ((L_array[7] >> 16) & 0xF))
-            self.log_file.write('\n DeadTime: %d' % ((L_array[7] >> 8) & 0x3F))
-            self.log_file.write('\n SyncChainLen: %d' % ((L_array[7] >> 0) & 0x3))
-            self.log_file.write('\n Ch_DebugMode: %d' % ((L_array[8] >> 24) & 0x3))
-            self.log_file.write('\n TriggerMode: %d' % ((L_array[8] >> 16) & 0x3))
+                "TIGER REPLY BYTE (LOW LEVEL SERIAL PROTOCOL ERROR FLAG):%02X;" % (((L_array[9] >> 16) & 0Xff)))
+            self.log_file.write(' DisableHyst: %d' % ((L_array[1] >> 24) & 0x1))
+            self.log_file.write(' T2Hyst: %d' % ((L_array[1] >> 16) & 0x7))
+            self.log_file.write(' T1Hyst: %d' % ((L_array[1] >> 8) & 0x7))
+            self.log_file.write(' Ch63ObufMSB: %d' % ((L_array[1] >> 0) & 0x1))
+            self.log_file.write(' TP_disable_FE: %d' % ((L_array[2] >> 24) & 0x1))
+            self.log_file.write(' TDC_IB_E: %d' % ((L_array[2] >> 16) & 0xF))
+            self.log_file.write(' TDC_IB_T: %d' % ((L_array[2] >> 8) & 0xF))
+            self.log_file.write(' Integ: %d' % ((L_array[2] >> 0) & 0x1))
+            self.log_file.write(' PostAmpGain: %d' % ((L_array[3] >> 24) & 0x3))
+            self.log_file.write(' FE_delay: %d' % ((L_array[3] >> 16) & 0x1F))
+            self.log_file.write(' Vth_T2: %d' % ((L_array[3] >> 8) & 0x3F))
+            self.log_file.write(' Vth_T1: %d' % ((L_array[3] >> 0) & 0x3F))
+            self.log_file.write(' QTx2Enable: %d' % ((L_array[4] >> 24) & 0x1))
+            self.log_file.write(' MaxIntegTime: %d' % ((L_array[4] >> 16) & 0x7F))
+            self.log_file.write(' MinIntegTime: %d' % ((L_array[4] >> 8) & 0x7F))
+            self.log_file.write(' TriggerBLatched: %d' % ((L_array[4] >> 0) & 0x1))
+            self.log_file.write(' QdcMode: %d' % ((L_array[5] >> 24) & 0x1))
+            self.log_file.write(' BranchEnableT: %d' % ((L_array[5] >> 16) & 0x1))
+            self.log_file.write(' BranchEnableEQ: %d' % ((L_array[5] >> 8) & 0x1))
+            self.log_file.write(' TriggerMode2B: %d' % ((L_array[5] >> 0) & 0x7))
+            self.log_file.write(' TriggerMode2Q: %d' % ((L_array[6] >> 24) & 0x3))
+            self.log_file.write(' TriggerMode2E: %d' % ((L_array[6] >> 16) & 0x7))
+            self.log_file.write(' TriggerMode2T: %d' % ((L_array[6] >> 8) & 0x3))
+            self.log_file.write(' TACMinAge: %d' % ((L_array[6] >> 0) & 0x1F))
+            self.log_file.write(' TACMaxAge: %d' % ((L_array[7] >> 24) & 0x1F))
+            self.log_file.write(' CounterMode: %d' % ((L_array[7] >> 16) & 0xF))
+            self.log_file.write(' DeadTime: %d' % ((L_array[7] >> 8) & 0x3F))
+            self.log_file.write(' SyncChainLen: %d' % ((L_array[7] >> 0) & 0x3))
+            self.log_file.write(' Ch_DebugMode: %d' % ((L_array[8] >> 24) & 0x3))
+            self.log_file.write(' TriggerMode: %d' % ((L_array[8] >> 16) & 0x3))
 
     # def display_log_ChCfg_readback(self, command_echo_param, log_enable):  # acr 2018-03-02
     #     L_array = array.array('I')  # L is an array of unsigned long
@@ -543,7 +555,21 @@ class communication: ##The directory are declared here to avoid multiple declara
     #         self.log_file.write('\n SyncChainLen: %d' % ((L_array[7] >> 0) & 0x3))
     #         self.log_file.write('\n Ch_DebugMode: %d' % ((L_array[8] >> 24) & 0x3))
     #         self.log_file.write('\n TriggerMode: %d' % ((L_array[8] >> 16) & 0x3))
+    def print_int_vs_n_ext(self, int_vs_n_ext_param):  # acr 2018-09-11
+        int_n_ext_str = "?"
+        if (int_vs_n_ext_param == 1):
+            int_n_ext_str = "Internal"
+        else:
+            int_n_ext_str = "External"
+        return int_n_ext_str
 
+    def print_TL_vs_nTM(self, TL_vs_nTM_param):  # acr 2018-09-11
+        TL_vs_nTM_string = "?"
+        if (TL_vs_nTM_param == 1):
+            TL_vs_nTM_string = "TrigLess"
+        else:
+            TL_vs_nTM_string = "TrigMatched"
+        return TL_vs_nTM_string
 
     def send_TIGER_GCFG_Reg_CMD_PKT(self, TIGER_ID_param, COMMAND_STRING_PARAM, array_to_send_param, DEST_IP_ADDRESS_PARAM,
                                     DEST_PORT_NO_PARAM):  # acr 2018-03-05
@@ -711,10 +737,10 @@ class communication: ##The directory are declared here to avoid multiple declara
         array_to_send = GCFGReg_setting_inst.command_words
         command_echo = self.send_TIGER_GCFG_Reg_CMD_PKT(TIGER_ID_param, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
                                                    self.DEST_PORT_NO)
-        print('\nFE_TPEnable of Global CFG reg of TIGER%d of RESPONDING GEMROC%d: set to %d' % (
-        TIGER_ID_param, self.GEMROC_ID, FE_TPEnable_param))
-        self.log_file.write('\nFE_TPEnable of Global CFG reg of TIGER%d of RESPONDING GEMROC%d: set to %d' % (
-        TIGER_ID_param, self.GEMROC_ID, FE_TPEnable_param))
+        #print('\nFE_TPEnable of Global CFG reg of TIGER%d of RESPONDING GEMROC%d: set to %d' % (
+        #TIGER_ID_param, self.GEMROC_ID, FE_TPEnable_param))
+        #self.log_file.write('\nFE_TPEnable of Global CFG reg of TIGER%d of RESPONDING GEMROC%d: set to %d' % (
+        #TIGER_ID_param, self.GEMROC_ID, FE_TPEnable_param))
         return command_echo
 
     def ReadTgtGEMROC_TIGER_GCfgReg(self, GCFGReg_setting_inst, TIGER_ID_param):

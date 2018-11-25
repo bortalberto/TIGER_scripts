@@ -7,8 +7,8 @@ from lib import GEM_ACQ_classes as GEM_ACQ
 # spill=int(sys.argv[2])
 
 
-GEM1=GEM_ACQ.reader(1)
-GEM0=GEM_ACQ.reader(0)
+GEM1=GEM_ACQ.reader(0)
+#GEM0=GEM_ACQ.reader(0)
 
 fig1,axarray1=GEM1.create_rate_plot()
 #fig0,axarray0=GEM0.create_rate_plot()
