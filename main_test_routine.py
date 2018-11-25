@@ -44,6 +44,8 @@ for G in range(first,last):
 for G in range (first,last):
     print "Turning ON FEBs on GEMROC {}".format(G)
     GEM_COM_list[G-first].FEBPwrEnPattern_set(int(0xff))
-    GEM_AN_list[G-first].TIGER_config_test()
+    GEM_AN_list[G-first].TIGER_config_test() #Configuration test
+    GEM_AN_list[G-first].TIGER_TP_test() #Test pulse reception test
+    GEM_AN_list[G-first].TIGER_GEMROC_sync_test()  #Test the GEMROC syncronous reset
     print "Turning OFF febs on GEMROC {}".format(G)
     GEM_COM_list[G-first].FEBPwrEnPattern_set(int(0x0))
