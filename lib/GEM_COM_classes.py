@@ -76,7 +76,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.receiveSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 106496 )
-        self.receiveSock.settimeout(6)
+        self.receiveSock.settimeout(10)
 
         self.receiveSock.bind((self.HOST_IP, self.HOST_PORT_RECEIVE))
         self.remote_IP_Address = '192.168.1.%d' % (self.GEMROC_ID + 16)
@@ -148,7 +148,7 @@ class communication: ##The directory are declared here to avoid multiple declara
                                 DEST_PORT_NO_PARAM):
 
         buffer_to_send = struct.pack('>' + str(len(array_to_send_param)) + 'L', *array_to_send_param)
-        self.flush_socket()
+        #self.flush_socket()
         self.clientSock.sendto(buffer_to_send, (DEST_IP_ADDRESS_PARAM, DEST_PORT_NO_PARAM))
         cmd_message = "\nTarget GEMROC: %d; CMD sent (%s): \n" % (self.GEMROC_ID, COMMAND_STRING_PARAM)
         self.log_file.write(cmd_message)
@@ -212,6 +212,10 @@ class communication: ##The directory are declared here to avoid multiple declara
         FEB0_AOVV_FLAG = (L_array[8] >> 2) & 0X1
         FEB0_AOVC_FLAG = (L_array[8] >> 1) & 0X1
         ROC_OVT_FLAG = (L_array[9] >> 17) & 0X1  # ACR 2018-03-15
+        TIGER_for_counter = (L_array[0] >>21 & 0x7)  # TIGER on which we count error or hits
+        HIT_counter_enable = (L_array[0] >>15 & 0x1)  # 0 = counting errors, 1 = counting hits
+        CHANNEL_for_counter = (L_array[0] >> 8 & 0x7F)  # 0-63 for single channel hits, 64 for chip total
+        Counter_value = ((L_array[8] >> 22 & 0xff) << 24 + (L_array[7] >> 22 & 0xff) << 16+ (L_array[6] >> 22 & 0xff) << 8)
         del L_array
         T_ref_PT1000 = 25.0
         V_ADC_at_25C = 247.2
@@ -268,6 +272,10 @@ class communication: ##The directory are declared here to avoid multiple declara
         ## acr 2018-02-28 END  prototype V2 have INA GAIN set at 200 instead of 50!!!###
         ROC_T_conv_fact_C_per_LSB = 1.0
         ROC_T = ROC_T_U * ROC_T_conv_fact_C_per_LSB
+        if HIT_counter_enable:
+            counting="HIT"
+        else:
+            counting="Errors"
         if display_enable_param == 1:
             print'\n' + 'FEB3_T[degC]: ' + '%d; ' % FEB3_T + 'FEB3_VD[mV]: ' + '%d; ' % FEB3_VD + 'FEB3_ID[mA]: ' + '%d; ' % FEB3_ID + 'FEB3_VA[mV]: ' + '%d; ' % FEB3_VA + 'FEB3_IA[mA]: ' + '%d; ' % FEB3_IA
             print'\n' + 'FEB2_T[degC]: ' + '%d; ' % FEB2_T + 'FEB2_VD[mV]: ' + '%d; ' % FEB2_VD + 'FEB2_ID[mA]: ' + '%d; ' % FEB2_ID + 'FEB2_VA[mV]: ' + '%d; ' % FEB2_VA + 'FEB2_IA[mA]: ' + '%d; ' % FEB2_IA
@@ -279,6 +287,13 @@ class communication: ##The directory are declared here to avoid multiple declara
             print'\n' + 'FEB1_OVT: ' + '%d; ' % FEB1_OVT_FLAG + 'FEB1_DOVV: ' + '%d; ' % FEB1_DOVV_FLAG + 'FEB1_DOVC: ' + '%d; ' % FEB1_DOVC_FLAG + 'FEB1_AOVV: ' + '%d; ' % FEB1_AOVV_FLAG + 'FEB1_AOVC: ' + '%d; ' % FEB1_AOVC_FLAG
             print'\n' + 'FEB0_OVT: ' + '%d; ' % FEB0_OVT_FLAG + 'FEB0_DOVV: ' + '%d; ' % FEB0_DOVV_FLAG + 'FEB0_DOVC: ' + '%d; ' % FEB0_DOVC_FLAG + 'FEB0_AOVV: ' + '%d; ' % FEB0_AOVV_FLAG + 'FEB0_AOVC: ' + '%d; ' % FEB0_AOVC_FLAG
             print'\n' + 'ROC_OVT: ' + '%d; ' % ROC_OVT_FLAG
+            print ("\n Counting {} on TIGER {}".format(counting,TIGER_for_counter))
+            if HIT_counter_enable:
+                if CHANNEL_for_counter!=64:
+                    print ("on channel {}") .format(CHANNEL_for_counter)
+                else:
+                    print ("integrated on all 64 channels")
+            print ("\n Counter= {}".format(Counter_value))
         if log_enable_param == 1:
             self.IVT_log_file.write(
                 '\n' + 'FEB3_T[degC]: ' + '%d; ' % FEB3_T + 'FEB3_VD[mV]: ' + '%d; ' % FEB3_VD + 'FEB3_ID[mA]: ' + '%d; ' % FEB3_ID + 'FEB3_VA[mV]: ' + '%d; ' % FEB3_VA + 'FEB3_IA[mA]: ' + '%d; ' % FEB3_IA)
@@ -628,15 +643,21 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.gemroc_LV_XX.set_gemroc_cmd_code(COMMAND_STRING, 1)
         self.gemroc_LV_XX.update_command_words()
         array_to_send = self.gemroc_LV_XX.command_words
-        DEST_IP_ADDRESS = self.DEST_IP_ADDRESS
-        DEST_PORT_NO = self.DEST_PORT_NO
         command_echo_ivt = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
                                                         self.DEST_PORT_NO)
         # print '\nGEMROC_ID: %d: CMD_GEMROC_LV_IVT_READ' %self.GEMROC_ID
         self.display_and_log_IVT(command_echo_ivt, display_enable_param, log_enable_param, log_filename_param)
         return
-
-
+    def GEMROC_counter_get(self):
+        COMMAND_STRING = 'CMD_GEMROC_LV_IVT_READ'
+        array_to_send = self.gemroc_LV_XX.command_words
+        command_echo_ivt = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
+                                                        self.DEST_PORT_NO)
+        L_array = array.array('I')  # L is an array of unsigned long, I for some systems, L for others
+        L_array.fromstring(command_echo_ivt)
+        L_array.byteswap()
+        Counter_value = ((L_array[8] >> 22 & 0xff) << 24 + (L_array[7] >> 22 & 0xff) << 16 + (L_array[6] >> 22 & 0xff) << 8)
+        return Counter_value
     def send_GEMROC_LV_CMD(self, COMMAND_STRING_PARAM):
         self.gemroc_LV_XX.set_target_GEMROC(self.GEMROC_ID)
         self.gemroc_LV_XX.set_gemroc_cmd_code(COMMAND_STRING_PARAM, 1)
@@ -664,6 +685,22 @@ class communication: ##The directory are declared here to avoid multiple declara
         command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
         return command_echo
 
+
+    def set_counter(self, TIGER_for_counter, HIT_counter_enable, CHANNEL_for_counter):
+        self.gemroc_LV_XX.TIGER_for_counter=int(TIGER_for_counter)
+        self.gemroc_LV_XX.HIT_counter_enable=int(HIT_counter_enable)
+        self.gemroc_LV_XX.CHANNEL_for_counter=int(CHANNEL_for_counter)
+        COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
+        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
+        return command_echo
+
+
+    def reset_counter (self):
+        self.gemroc_LV_XX.RX_ERR_CNT_RST=1
+        COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
+        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
+        self.gemroc_LV_XX.RX_ERR_CNT_RST=0
+        return command_echo
 
     # acr 2018-03-06 changed order of parameters of send_GEMROC_DAQ_CMD
     def send_GEMROC_DAQ_CMD(self, gemroc_DAQ_inst_param, COMMAND_STRING_PARAM):
@@ -694,9 +731,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         time.sleep(1)
 
 
-    def WriteTgtGEMROC_TIGER_GCfgReg_fromfile(self, GCFGReg_setting_inst, TIGER_ID_param, GCFGReg_def_fname_param, verbose=True):
-
-        GCFGReg_setting_inst.reload_gcfg_settings_from_file(GCFGReg_def_fname_param)  ## acr 2018-02-23 new method to reaload from a default file
+    def WriteTgtGEMROC_TIGER_GCfgReg(self, GCFGReg_setting_inst, TIGER_ID_param, verbose=True):
         GCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
         GCFGReg_setting_inst.set_target_TIGER(TIGER_ID_param)
         COMMAND_STRING = 'WR'
@@ -725,6 +760,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         command_echo = self.send_TIGER_GCFG_Reg_CMD_PKT(TIGER_ID_param, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
                                                    self.DEST_PORT_NO)
         return command_echo
+
 
 
     def set_FE_TPEnable(self, GCFGReg_setting_inst, TIGER_ID_param, FE_TPEnable_param):
@@ -757,10 +793,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         return command_echo
 
 
-    def WriteTgtGEMROC_TIGER_ChCfgReg_fromfile(self, ChCFGReg_setting_inst, TIGER_ID_param, channel_ID_param,
-                                               ChCFGReg_def_fname_param):
-        ChCFGReg_setting_inst.reload_chcfg_settings_from_file(
-            ChCFGReg_def_fname_param)  ## acr 2018-02-23 new method to reaload from a default file
+    def WriteTgtGEMROC_TIGER_ChCfgReg(self, ChCFGReg_setting_inst, TIGER_ID_param, channel_ID_param):
         ChCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
         ChCFGReg_setting_inst.set_target_TIGER(TIGER_ID_param)
         ChCFGReg_setting_inst.set_to_ALL_param(
@@ -815,90 +848,98 @@ class communication: ##The directory are declared here to avoid multiple declara
 
     def Set_GEMROC_TIGER_ch_TPEn(self, ChCFGReg_setting_inst, TIGER_ID_param, Channel_ID_param, TP_disable_FE_param,
                                  TriggerMode_param):
-        ChCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
-        ChCFGReg_setting_inst.set_target_TIGER(TIGER_ID_param)
-        ChCFGReg_setting_inst.set_to_ALL_param(            0)  ## let's do multiple configuration under script control rather than under GEMROC NIOS2 processor control
-        COMMAND_STRING = 'WR'
-        ChCFGReg_setting_inst.set_command_code(COMMAND_STRING)
-        if Channel_ID_param < 64:
-            ChCFGReg_setting_inst.set_target_channel(Channel_ID_param)
-            ChCFGReg_setting_inst.set_TP_disable_FE(TP_disable_FE_param)  # ACR 2018-03-04
-            ChCFGReg_setting_inst.TriggerMode = TriggerMode_param
-            ChCFGReg_setting_inst.update_command_words()
-            array_to_send = ChCFGReg_setting_inst.command_words
-            command_echo = self.send_TIGER_Ch_CFG_Reg_CMD_PKT(TIGER_ID_param, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
-                                                         self.DEST_PORT_NO)
-        else:
-            for i in range(0, 64):
-                ChCFGReg_setting_inst.set_target_channel(i)
-                ChCFGReg_setting_inst.set_TP_disable_FE(TP_disable_FE_param)
-                ChCFGReg_setting_inst.TriggerMode = TriggerMode_param
-                ChCFGReg_setting_inst.update_command_words()
-                array_to_send = ChCFGReg_setting_inst.command_words
-                command_echo = self.send_TIGER_Ch_CFG_Reg_CMD_PKT(TIGER_ID_param, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
-                                                             self.DEST_PORT_NO)
-
-        last_command_echo = command_echo
+        self.Set_param_dict_channel(ChCFGReg_setting_inst, "TP_disable_FE", TIGER_ID_param, Channel_ID_param, TP_disable_FE_param)
+        last_command_echo = self.Set_param_dict_channel(ChCFGReg_setting_inst, "TriggerMode", TIGER_ID_param, Channel_ID_param, TriggerMode_param)
         return last_command_echo
+    # ChCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
+        # ChCFGReg_setting_inst.set_target_TIGER(TIGER_ID_param)
+        # ChCFGReg_setting_inst.set_to_ALL_param(            0)  ## let's do multiple configuration under script control rather than under GEMROC NIOS2 processor control
+        # COMMAND_STRING = 'WR'
+        # ChCFGReg_setting_inst.set_command_code(COMMAND_STRING)
+        # if Channel_ID_param < 64:
+        #     ChCFGReg_setting_inst.set_target_channel(Channel_ID_param)
+        #     ChCFGReg_setting_inst.set_TP_disable_FE(TP_disable_FE_param)  # ACR 2018-03-04
+        #     ChCFGReg_setting_inst.TriggerMode = TriggerMode_param
+        #     ChCFGReg_setting_inst.update_command_words()
+        #     array_to_send = ChCFGReg_setting_inst.command_words
+        #     command_echo = self.send_TIGER_Ch_CFG_Reg_CMD_PKT(TIGER_ID_param, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
+        #                                                  self.DEST_PORT_NO)
+        # else:
+        #     for i in range(0, 64):
+        #         ChCFGReg_setting_inst.set_target_channel(i)
+        #         ChCFGReg_setting_inst.set_TP_disable_FE(TP_disable_FE_param)
+        #         ChCFGReg_setting_inst.TriggerMode = TriggerMode_param
+        #         ChCFGReg_setting_inst.update_command_words()
+        #         array_to_send = ChCFGReg_setting_inst.command_words
+        #         command_echo = self.send_TIGER_Ch_CFG_Reg_CMD_PKT(TIGER_ID_param, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
+        #                                                      self.DEST_PORT_NO)
+        #
+        # last_command_echo = command_echo
+        # return last_command_echo
 
-
-    def Set_Vth_T1(self, ChCFGReg_setting_inst, TIGER_ID_param, Channel_ID_param, VthT1_param):
-        # self.log_file.write("\n Setting VTH to {}, TIGER {}, CH {} \n".format(VthT1_param,TIGER_ID_param,Channel_ID_param))
-        ChCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
-        ChCFGReg_setting_inst.set_target_TIGER(TIGER_ID_param)
-        ChCFGReg_setting_inst.set_to_ALL_param(0)  ## let's do multiple configuration under script control rather than under GEMROC NIOS2 processor control
-        ChCFGReg_setting_inst.set_Vth_T1(VthT1_param)
-        COMMAND_STRING = 'WR'
-        ChCFGReg_setting_inst.set_command_code(COMMAND_STRING)
-        if Channel_ID_param < 64:
-            ChCFGReg_setting_inst.set_target_channel(Channel_ID_param)
-            ChCFGReg_setting_inst.update_command_words()
-            array_to_send = ChCFGReg_setting_inst.command_words
-            command_echo = self.send_TIGER_Ch_CFG_Reg_CMD_PKT(TIGER_ID_param, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
-                                                         self.DEST_PORT_NO)
-        else:
-            for i in range(0, 64):
-                ChCFGReg_setting_inst.set_target_channel(i)
-                ChCFGReg_setting_inst.update_command_words()
-                array_to_send = ChCFGReg_setting_inst.command_words
-                command_echo = self.send_TIGER_Ch_CFG_Reg_CMD_PKT(TIGER_ID_param, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
-                                                             self.DEST_PORT_NO)
-        last_command_echo = command_echo
-        return last_command_echo
-    def Set_Vth_T1V2(self, ChCFGReg_setting_inst, TIGER_ID_param, Channel_ID_param, VthT1_param):
-        self.log_file.write("\n Setting VTH to {}, TIGER {}, CH {} \n".format(VthT1_param,TIGER_ID_param,Channel_ID_param))
-        ChCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
-        ChCFGReg_setting_inst.set_target_TIGER(TIGER_ID_param)
-        ChCFGReg_setting_inst.set_to_ALL_param(0)  ## let's do multiple configuration under script control rather than under GEMROC NIOS2 processor control
-        ChCFGReg_setting_inst.set_Vth_T1(VthT1_param)
-        print VthT1_param
-        COMMAND_STRING = 'WR'
-        ChCFGReg_setting_inst.set_command_code(COMMAND_STRING)
-        ChCFGReg_setting_inst.set_target_channel(Channel_ID_param)
-        ChCFGReg_setting_inst.update_command_words()
-        array_to_send = ChCFGReg_setting_inst.command_words
-        command_echo = self.send_TIGER_Ch_CFG_Reg_CMD_PKT(TIGER_ID_param, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
-                                                     self.DEST_PORT_NO)
-        print binascii.b2a_hex(command_echo)
-        last_command_echo = command_echo
-        return last_command_echo
-
-    def set_AVcasp_global(self, GCFGReg_setting_inst, TIGER_ID_param, AVcasp_global_param):
+    def Set_param_dict_global(self, GCFGReg_setting_inst, field, TIGER_ID, value):
         GCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
-        GCFGReg_setting_inst.set_target_TIGER(TIGER_ID_param)
-        GCFGReg_setting_inst.set_AVcasp_global(AVcasp_global_param)
+        GCFGReg_setting_inst.set_target_TIGER(TIGER_ID)
+        time.sleep(1)
+        GCFGReg_setting_inst.Global_cfg_list[TIGER_ID][field] = value
+
         COMMAND_STRING = 'WR'
         GCFGReg_setting_inst.set_command_code(COMMAND_STRING)
         GCFGReg_setting_inst.update_command_words()
         array_to_send = GCFGReg_setting_inst.command_words
-        command_echo = self.send_TIGER_GCFG_Reg_CMD_PKT(TIGER_ID_param, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
+        command_echo = self.send_TIGER_GCFG_Reg_CMD_PKT(TIGER_ID, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
                                                    self.DEST_PORT_NO)
-        print('\nAVcasp_global of Global CFG reg of TIGER%d of RESPONDING GEMROC%d: set to %d' % (
-        TIGER_ID_param, self.GEMROC_ID, AVcasp_global_param))
-        self.log_file.write('\nAVcasp_global of Global CFG reg of TIGER%d of RESPONDING GEMROC%d: set to %d' % (
-        TIGER_ID_param, self.GEMROC_ID, AVcasp_global_param))
         return command_echo
+    def Set_param_dict_channel(self, ChCFGReg_setting_inst, field, TIGER_ID,channel, value):
+        ChCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
+        ChCFGReg_setting_inst.set_target_TIGER(TIGER_ID)
+        ChCFGReg_setting_inst.set_to_ALL_param(0)  ## let's do multiple configuration under script control rather than under GEMROC NIOS2 processor control
+        COMMAND_STRING = 'WR'
+        ChCFGReg_setting_inst.set_command_code(COMMAND_STRING)
+        if channel < 64:
+            ChCFGReg_setting_inst.Channel_cfg_list[TIGER_ID][channel][field] = value
+            ChCFGReg_setting_inst.set_target_channel(channel)
+            ChCFGReg_setting_inst.update_command_words()
+            array_to_send = ChCFGReg_setting_inst.command_words
+            command_echo = self.send_TIGER_Ch_CFG_Reg_CMD_PKT(TIGER_ID, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
+                                                              self.DEST_PORT_NO)
+        else:
+            for i in range(0, 64):
+                ChCFGReg_setting_inst.Channel_cfg_list[TIGER_ID][i][field] = value
+                ChCFGReg_setting_inst.set_target_channel(i)
+                ChCFGReg_setting_inst.update_command_words()
+                array_to_send = ChCFGReg_setting_inst.command_words
+                command_echo = self.send_TIGER_Ch_CFG_Reg_CMD_PKT(TIGER_ID, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
+                                                                  self.DEST_PORT_NO)
+        last_command_echo = command_echo
+        return last_command_echo
 
+    def Set_Vth_T1(self, ChCFGReg_setting_inst, TIGER_ID_param, Channel_ID_param, VthT1_param):
+        last_command_echo = self.Set_param_dict_channel(ChCFGReg_setting_inst, "Vth_T1", TIGER_ID_param, Channel_ID_param, VthT1_param)
+
+        # self.log_file.write("\n Setting VTH to {}, TIGER {}, CH {} \n".format(VthT1_param,TIGER_ID_param,Channel_ID_param))
+        # ChCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
+        # ChCFGReg_setting_inst.set_target_TIGER(TIGER_ID_param)
+        # ChCFGReg_setting_inst.set_to_ALL_param(0)  ## let's do multiple configuration under script control rather than under GEMROC NIOS2 processor control
+        # ChCFGReg_setting_inst.set_Vth_T1(VthT1_param)
+        # COMMAND_STRING = 'WR'
+        # ChCFGReg_setting_inst.set_command_code(COMMAND_STRING)
+        # if Channel_ID_param < 64:
+        #     ChCFGReg_setting_inst.set_target_channel(Channel_ID_param)
+        #     ChCFGReg_setting_inst.update_command_words()
+        #     array_to_send = ChCFGReg_setting_inst.command_words
+        #     command_echo = self.send_TIGER_Ch_CFG_Reg_CMD_PKT(TIGER_ID_param, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
+        #                                                  self.DEST_PORT_NO)
+        # else:
+        #     for i in range(0, 64):
+        #         ChCFGReg_setting_inst.set_target_channel(i)
+        #         ChCFGReg_setting_inst.update_command_words()
+        #         array_to_send = ChCFGReg_setting_inst.command_words
+        #         command_echo = self.send_TIGER_Ch_CFG_Reg_CMD_PKT(TIGER_ID_param, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
+        #                                                      self.DEST_PORT_NO)
+        # last_command_echo = command_echo
+        # return last_command_echo
+        return last_command_echo
     def SynchReset_to_TgtFEB(self, gemroc_DAQ_inst, TargetFEB_param, To_ALL_param):
         gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
         gemroc_DAQ_inst.set_target_TCAM_ID(TargetFEB_param, To_ALL_param)
@@ -1011,7 +1052,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
         gemroc_DAQ_inst.set_EN_TM_TCAM_pattern(TCAM_Enable_pattern_param)
         gemroc_DAQ_inst.set_TP_width(5)
-        gemroc_DAQ_inst.set_AUTO_TP_EN_pattern(0x0)
+        gemroc_DAQ_inst.set_AUTO_TP_EN_bit(0x0)
         gemroc_DAQ_inst.set_Periodic_TP_EN_pattern(Per_FEB_TP_Enable_pattern_param)
         #gemroc_DAQ_inst.set_Periodic_L1_EN_pattern(Periodic_L1_Enable_param)
         self.set_Periodic_L1_EN_pattern(gemroc_DAQ_inst,Periodic_L1_Enable_param)
@@ -1032,7 +1073,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
         gemroc_DAQ_inst.set_EN_TM_TCAM_pattern(TCAM_Enable_pattern_param)
         gemroc_DAQ_inst.set_TP_width(5)
-        gemroc_DAQ_inst.set_AUTO_TP_EN_pattern(0x0)
+        gemroc_DAQ_inst.set_AUTO_TP_EN_bit(0x0)
         gemroc_DAQ_inst.set_Periodic_TP_EN_pattern(Per_FEB_TP_Enable_pattern_param)
         # gemroc_DAQ_inst.set_Periodic_L1_EN_pattern(Periodic_L1_Enable_param)
         self.set_Periodic_L1_EN_pattern(gemroc_DAQ_inst,Periodic_L1_Enable_param)
@@ -1534,7 +1575,7 @@ class communication: ##The directory are declared here to avoid multiple declara
     def TP_ENABLE(self, gemroc_DAQ_inst, TP_PATTERN): #Enable test pulses from FPGA
         gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
         gemroc_DAQ_inst.set_TP_width(5)
-        gemroc_DAQ_inst.set_AUTO_TP_EN_pattern(0x0)
+        gemroc_DAQ_inst.set_AUTO_TP_EN_bit(0x0)
         gemroc_DAQ_inst.set_Periodic_TP_EN_pattern(TP_PATTERN)
         gemroc_DAQ_inst.set_TP_Pos_nNeg(1)
         gemroc_DAQ_inst.set_TP_period(8)
