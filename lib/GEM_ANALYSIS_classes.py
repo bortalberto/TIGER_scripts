@@ -24,7 +24,7 @@ else:
 	print("ERROR: OS {} non compatible".format(OS))
 	sys.exit()
 first_TIGER_to_SCAN=0
-last_TIGER_to_scan=1
+last_TIGER_to_scan=4
 BUFSIZE = 4096
 
 int_time=0.2 #working at 0.5
@@ -57,19 +57,16 @@ class analisys_conf: #Analysis class used for configurations
         self.timedOut=False
 
 
-
-
-
     def thr_preconf(self):  #Initial configuration for THR_SCAN
          #self.GEM_COM.ResetTgtGEMROC_ALL_TIGER_GCfgReg(self.GEMROC_ID,self.GEM_COM.gemroc_DAQ_XX)
          for T in range (0,8):
              print("_-_-_-_-_-Configurating Tiger {}_-_-_-_-_-\n".format(T))
              default_filename = self.GEM_COM.conf_folder+sep+"TIGER_def_g_cfg_2018.txt"
-             command_reply = self.GEM_COM.WriteTgtGEMROC_TIGER_GCfgReg_fromfile(self.g_inst, T, default_filename)
+             command_reply = self.GEM_COM.WriteTgtGEMROC_TIGER_GCfgReg(self.g_inst, T)
 
              print("_-_-_-_-_-Configurating Channels_-_-_-_-_-\n")
              default_filename = self.GEM_COM.conf_folder+sep+"TIGER_def_ch_cfg_2018.txt"
-             command_reply = self.GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg_fromfile(self.c_inst, T, 64, default_filename)
+             command_reply = self.GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg(self.c_inst, T, 64)
              print '\nCWdef command_reply: %s' % binascii.b2a_hex(command_reply)
              command_reply = self.GEM_COM.ReadTgtGEMROC_TIGER_ChCfgReg(self.c_inst, T, 64, 0)
              print '\nCRd   command_reply: %s' % binascii.b2a_hex(command_reply)
@@ -80,33 +77,32 @@ class analisys_conf: #Analysis class used for configurations
 
              print ("_-_-_-_-_-Setting  channels for scan_-_-_-_-_-\n")
 
+
+
     def thr_conf(self,test_r): #Configuration on run for scan
         # self.GEM_COM.DAQ_set(self.GEM_COM.gemroc_DAQ_XX, self.GEMROC_ID, 0xff, 0x0, 0, 0, 1, 0)
 
         with open(self.log_path, 'a') as log_file:
             log_file.write("{} -- Starting thr scan\n".format(time.ctime()))
         for T in range(first_TIGER_to_SCAN, last_TIGER_to_scan):
+            self.GEM_COM.Set_param_dict_global(self.g_inst, "CounterEnable",T,1)
+            self.GEM_COM.Set_param_dict_global(self.g_inst, "CounterPeriod",T,3)
+
             #self.GEM_COM.ResetTgtGEMROC_ALL_TIGER_GCfgReg(self.GEMROC_ID, self.GEM_COM.gemroc_DAQ_XX)
             print("_-_-_-_-_-Configurating Tiger {}_-_-_-_-_-\n".format(T))
             default_filename = self.GEM_COM.conf_folder + sep + "TIGER_def_g_cfg_2018.txt"
-            globalset = self.GEM_COM.WriteTgtGEMROC_TIGER_GCfgReg_fromfile(self.g_inst, T, default_filename)
+            globalset = self.GEM_COM.WriteTgtGEMROC_TIGER_GCfgReg(self.g_inst, T)
             # default_filename = self.GEM_COM.conf_folder + sep + "TIGER_def_ch_cfg_2018.txt"
             # channelset = self.GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg_fromfile(self.c_inst, self.GEMROC_ID, T, 64,default_filename)
 
             self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, 64, 1, 3)
 
             self.GEM_COM.DAQ_set(self.GEM_COM.gemroc_DAQ_XX, 2 ** T, 0, 0, 0, 1, 0)
-            # num=2**T & 0xFF
-            # self.GEM_COM.DAQ_TIGER_SET(self.GEM_COM.gemroc_DAQ_XX, self.GEM_COM.GEMROC_ID, num)
-
-            self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
-            self.GEM_COM.SynchReset_to_TgtTCAM(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
-            # self.GEM_COM.DAQ_Toggle_Set_Pause_bit(self.GEM_COM.gemroc_DAQ_XX, self.GEMROC_ID) #Setto bit di pausa
             for j in range (0,64):  #Channel cycle
                 self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 0)
-
+                self.GEM_COM.Set_param_dict_channel(self.c_inst, "CounterMode", T, j, int(0x2))
                 for i in range(0,64):#VTH Cycle
-                        # self.GEM_COM.DAQ_set_Pause_Mode(self.GEM_COM.gemroc_DAQ_XX, self.GEMROC_ID, 1)
+
                         command_sent = self.GEM_COM.Set_Vth_T1(self.c_inst, T, j, i)
                         #self.GEM_COM.display_log_ChCfg_readback(command_sent,0)
                         #print bin(int (binascii.b2a_hex(command_sent),16))
@@ -121,6 +117,7 @@ class analisys_conf: #Analysis class used for configurations
 
                         word_count = 0
                         self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
+                        self.GEM_COM.SynchReset_to_TgtTCAM(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
                         test_r.start_socket()
                         while word_count < 50:
                             #print word_count
@@ -161,8 +158,13 @@ class analisys_conf: #Analysis class used for configurations
                         os.system('clear')
                         string="SCANNING [TIGER={}, VTh={}, CH={}]\n".format(T,i,j)
                         sys.stdout.write(string)
-                self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 3)
 
+                self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 3)
+                self.GEM_COM.Set_param_dict_channel(self.c_inst, "CounterMode", T, j, 0)
+
+            self.GEM_COM.Set_param_dict_global(self.g_inst, "CounterEnable", T, 0)
+
+        return
 
     def acquire_rate(self, frame_count, rate_matrix,test_r):
         try:
@@ -392,7 +394,7 @@ class analisys_conf: #Analysis class used for configurations
         error_list=[]
         for T in range (0,8):
             print ("\nGemroc {}, TIGER {}".format(self.GEMROC_ID, T))
-            command_sent = self.GEM_COM.WriteTgtGEMROC_TIGER_GCfgReg_fromfile(self.g_inst,T,default_g_inst_settings_filename,False)
+            command_sent = self.GEM_COM.WriteTgtGEMROC_TIGER_GCfgReg(self.g_inst, T, False)
             command_reply = self.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(self.g_inst, T)
             if (int(binascii.b2a_hex(command_sent), 16)) != ((int(binascii.b2a_hex(command_reply), 16)) - 2048):
                 print "   !!! Errors in global configuration !!!   "
@@ -402,7 +404,7 @@ class analisys_conf: #Analysis class used for configurations
             ch_list = []
 
             for ch in range (0,64):
-                command_sent = self.GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg_fromfile(self.c_inst, T, ch, default_c_inst_settings_filename)
+                command_sent = self.GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg(self.c_inst, T, ch)
                 command_reply = self.GEM_COM.ReadTgtGEMROC_TIGER_ChCfgReg(self.c_inst, T,ch, 0)
                 if (int(binascii.b2a_hex(command_sent), 16)) != ((int(binascii.b2a_hex(command_reply), 16)) - 2048):
                     if not T in error_list:
@@ -459,6 +461,32 @@ class analisys_conf: #Analysis class used for configurations
 
         self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
         self.check_sync()
+    def TIGER_delay_tuning(self):
+        for T in range (0,8):
+            self.GEM_COM.Set_param_dict_global(self.g_inst, "FE_TPEnable",T,1)
+            for ch in range (0,63):
+                self.GEM_COM.Set_param_dict_channel(self.c_inst, "TP_disable_FE", T, ch, 0)
+                self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode",T,ch,1)
+
+        for Ts in range (0,4):
+            self.GEM_COM.DAQ_set(self.GEM_COM.gemroc_DAQ_XX, 2 ** (Ts*2)+2**(Ts*2+1), 2 ** (Ts*2)+2**(Ts*2+1), 1, 1, 1, 1)
+            average=[]
+            for TD in range (0,64):
+                self.GEM_COM.set_FEB_timing_delays(TD, TD, TD, TD)
+                self.GEM_COM.set_counter((Ts * 2), 0, 0)
+                self.GEM_COM.reset_counter()
+                time.sleep(0.2)
+                counter1=self.GEM_COM.GEMROC_counter_get()
+                self.GEM_COM.set_counter((Ts * 2), 0, 0)
+                self.GEM_COM.reset_counter(Ts*2+1)
+                self.GEM_COM.reset_counter()
+                time.sleep(0.2)
+                counter2=self.GEM_COM.GEMROC_counter_get()
+                average.append((counter1+counter2)/2)
+
+        print average
+
+
     def __del__(self):
         return 0
 
@@ -494,7 +522,7 @@ class analisys_read:
     def __del__(self):
         return 0
 
-    def data_save_thr_scan(self, ch, vth, TIG, frame_count, save_binout=False, save_txt=True):
+    def data_save_thr_scan(self, ch, vth, TIG, frame_count, save_binout=False, save_txt=False):
         #print 'count_frame {}'.format(frame_count)
         is_framecount = False
         event_counter = 0
@@ -548,6 +576,61 @@ class analisys_read:
             out_file.write(return_string)
         return frame_count
 
+
+    def data_save_thr_scan_with_counter(self, ch, vth, TIG, frame_count, save_binout=False, save_txt=False):
+        #print 'count_frame {}'.format(frame_count)
+        is_framecount = False
+        event_counter = 0
+        return_string = ""
+        data, addr = self.dataSock.recvfrom(BUFSIZE)
+        if save_binout:
+            with open(self.bindata_path, 'a') as binout_file:
+                binout_file.write(data)
+
+        hexdata = binascii.hexlify(data)
+
+        for x in range(0, len(hexdata) - 1, 16):
+            int_x = 0
+            for b in range(7, 0, -1):
+                hex_to_int = (int(hexdata[x + b * 2], 16)) * 16 + int(hexdata[x + b * 2 + 1], 16)
+                int_x = (int_x + hex_to_int) << 8
+            hex_to_int = (int(hexdata[x], 16)) * 16 + int(hexdata[x + 1],
+                                                          16)  # acr 2017-11-17 this should fix the problem
+            int_x = (int_x + hex_to_int)
+            raw = bin(int_x)
+
+            if (((int_x & 0xFF00000000000000) >> 59) == 0x04):
+                frame_count = frame_count +1
+                s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'HB: ' + 'Framecount: %08X ' % (
+                        (int_x >> 15) & 0xFFFF) + 'SEUcount: %08X\n' % (int_x & 0x7FFF)
+                if TIG == (int_x >> 56) & 0x7:
+                    self.thr_scan_frames[(int_x >> 56) & 0x7, ch, vth] = self.thr_scan_frames[(int_x >> 56) & 0x7, ch, vth] + 1
+
+            elif (((int_x & 0xFF00000000000000) >> 59) == 0x08):
+                s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'CW: ' + 'ChID: %02X ' % (
+                        (int_x >> 24) & 0x3F) + ' CounterWord: %016X\n' % (int_x & 0x00FFFFFF)
+                if (ch ==(int(int_x >> 24) & 0x3F) and (TIG == (int_x >> 56) & 0x7)):
+                    self.thr_scan_matrix[(int_x >> 56) & 0x7, int(int_x >> 24) & 0x3F, vth] = int_x & 0x00FFFFFF
+                    frame_count=20000000
+
+
+
+            elif (((int_x & 0xFF00000000000000) >> 59) == 0x00):
+                s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'EW: ' + 'ChID: %02X ' % (
+                        (int_x >> 48) & 0x3F) + 'tacID: %01X ' % ((int_x >> 46) & 0x3) + 'Tcoarse: %04X ' % (
+                            (int_x >> 30) & 0xFFFF) + 'Ecoarse: %03X ' % (
+                            (int_x >> 20) & 0x3FF) + 'Tfine: %03X ' % ((int_x >> 10) & 0x3FF) + 'Efine: %03X \n' % (
+                            int_x & 0x3FF)
+
+            else:
+                with open(self.data_path, 'a') as out_file:
+                    out_file.write("ENCODING ERROR\n")
+            if save_txt:
+                return_string = return_string + ("\n" + raw + " " + s)
+
+        with open(self.data_path, 'a') as out_file:
+            out_file.write(return_string)
+        return frame_count
 
     def channel_plot(self, Chip, Channel):
         plt.plot(self.thr_scan_matrix[Chip, Channel, :], 'bo')
@@ -701,9 +784,9 @@ class analisys_read:
             if ytest > 0.9:
                 m = i
                 break
-        xdata = np.arange(0, int(m) + 1)
+        xdata = np.arange(0, int(m) )
 
-        popt, pcov = curve_fit(errorfunc, xdata, ydata[:m + 1], method='lm', maxfev=5000)
+        popt, pcov = curve_fit(errorfunc, xdata, ydata[:m ], method='lm', maxfev=5000)
 
         print ("\n")
         print popt

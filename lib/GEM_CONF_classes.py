@@ -5,6 +5,7 @@
 # list of main modifications / additions:
 # acr 2018-01-25 removing unused parameter self.CompactDataFormat 
 # acr 2018-01-13 split the handling of the GEMROC LV and DAQ configuration parameters
+import pickle
 
 command_code_shift = 11 # acr 2017-08-29
 target_TIGER_ID_shift = 8 # acr 2017-08-29
@@ -25,7 +26,7 @@ def swap_order_N_bits( Hex_data, N_bits ):
 
 
 ###CCCCCCCCCCCCCCCC###     CLASS g_reg_settings BEGIN  ###CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC###
-class g_reg_settings: # purpose: organize the Global Configuration Register Settings in an array format which can be sent over Ethernet or optical link TODO: Update in an array of dictionary, in order to be able to configure different TGIERS with different configuration, save and load them
+class g_reg_settings: # purpose: organize the Global Configuration Register Settings in an array format which can be sent over Ethernet or optical link
    def __init__(self,
                 TARGET_GEMROC_ID_param = 0, # acr 2017-09-22
                 cfg_filename_param = "default_g_cfg_2018_all_big_endian.txt" # acr 2017-07-11
@@ -81,6 +82,52 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
       self.TxMode = self.parameter_array [34] # acr 2018-01-25 [35] ## TxMode_param; default 2
       self.TxDDR = self.parameter_array [35] # acr 2018-01-25 [36] ## TxDDR_param; default X (1?)
       self.TxLinks = self.parameter_array [36] # acr 2018-01-25 [37] ## TxLinks_param; default 2 links nel GUI di Torino; dovrebbe corrispondeere ad un codice 1 per 2 links
+
+      #Created dictionary to better implement the field controll and saving on file
+      Global_config_dict= {
+          "BufferBias" : self.parameter_array[0], ## BufferBias_param; default 0
+          "TDCVcasN" : self.parameter_array[1],  # acr 2018-01-25 ## TDCVcasN_param; default 0
+          "TDCVcasP": self.parameter_array[2],  # acr 2018-01-25 ## TDCVcasP_param; default 0
+          "TDCVcasPHyst": self.parameter_array[3],  # acr 2018-01-25 ## TDCVcasPHyst_param; default 55
+          "DiscFE_Ibias": self.parameter_array[4],   # acr 2018-01-25 ## DiscFE_Ibias_param; default 50
+          "BiasFE_PpreN": self.parameter_array[5],  ## BiasFE_PpreN_param; default 10
+          "AVcasp_global": self.parameter_array[6],  # acr 2018-01-25 ## AVcasp_global_param; default 20
+          "TDCcompVcas": self.parameter_array[7],  # acr 2018-01-25 ## TDCcompVcas_param; default 0
+          "TDCIref_cs": self.parameter_array[8],  # acr 2018-01-25 ## TDCIref_cs_param; default 20
+          "DiscVcasN": self.parameter_array[9],  # acr 2018-01-25 elf.parameter_array [9] ## DiscVcasN_param; default 7
+          "IntegVb1": self.parameter_array[10],  # acr 2018-01-25 ## IntegVb1_param; default 27
+          "BiasFE_A1": self.parameter_array[11],  ## BiasFE_A1_param; default 8
+          "Vcasp_Vth": self.parameter_array[12],   # acr 2018-01-25 ## Vcasp_Vth_param; default 55
+          "TAC_I_LSB": self.parameter_array[13],  ## TAC_I_LSB_param; default 0
+          "TDCcompVbias": self.parameter_array[14],  ## TDCcompVbias_param; default 0
+          "Vref_Integ": self.parameter_array[15],   # acr 2018-01-25 ## Vref_Integ_param; default 55
+          "IBiasTPcal": self.parameter_array[16],   # acr 2018-01-25 ## IBiasTPcal_param; default 29
+          "TP_Vcal": self.parameter_array[17],  # acr 2018-01-25 ## TP_Vcal_param; default 8
+          "ShaperIbias": self.parameter_array[18],  ## ShaperIbias_param; default 0
+          "IPostamp": self.parameter_array[19],  # acr 2018-01-25 ## IPostamp_param; default 26
+          "TP_Vcal_ref": self.parameter_array[20],  # acr 2018-01-25 ## TP_Vcal_ref_param; default 23
+          "Vref_integ_diff": self.parameter_array[21], # acr 2018-01-25 ## Vref_integ_diff_param; default 39
+          "Sig_pol": self.parameter_array[22],  ## Sig_pol_param; default p-type (1?)
+          "FE_TPEnable": self.parameter_array[23],  ## FE_TPEnable_param; default X (1?)
+          "DataClkDiv": self.parameter_array[24],  # acr 2018-01-25 [25] ## DataClkDiv_param; default 0
+          "TACrefreshPeriod": self.parameter_array[25],  # acr 2018-01-25 [26] ## TACrefreshPeriod_param; default 9
+          "TACrefreshEnable": self.parameter_array[26],  # acr 2018-01-25 [27] ## TACrefreshEnable_param; default X (1?)
+          "CounterPeriod": self.parameter_array[27],  # acr 2018-01-25 [28] ## CounterPeriod_param; default 6
+          "CounterEnable": self.parameter_array[28],  # acr 2018-01-25 [29] ## CounterEnable_param; default EMPTYBOX (0?)
+          "StopRampEnable": self.parameter_array[29],  # acr 2018-01-25 [30] ## StopRampEnable_param; default 0
+          "RClkEnable": self.parameter_array[30],  # acr 2018-01-25 [31] ## RClkEnable_param; default 7
+          "TDCClkdiv": self.parameter_array[31],  # acr 2018-01-25 [32] ## TDCClkdiv_param; default EMPTYBOX (0?)
+          "VetoMode": self.parameter_array[32], # acr 2018-01-25 [33] ## VetoMode_param; default 0
+          "Ch_DebugMode": self.parameter_array[33],  # acr 2018-01-25 [34] ## Ch_DebugMode_param; default EMPTYBOX (0?)
+          "TxMode": self.parameter_array[34],  # acr 2018-01-25 [35] ## TxMode_param; default 2
+          "TxDDR": self.parameter_array[35],  # acr 2018-01-25 [36] ## TxDDR_param; default X (1?)
+          "TxLinks": self.parameter_array[36]  # acr 2018-01-25 [37] ## TxLinks_param; default 2 links nel GUI di Torino; dovrebbe corrispondeere ad un codice 1 per 2 links
+
+      }
+      self.Global_cfg_list=[]
+      for T in range (0,8):
+          self.Global_cfg_list.append(Global_config_dict.copy())
+
       ## acr 2017-07-12 END   implementing a parameter array loaded from a configuration file
       self.is_a_write = 0x1
       self.target_TIGER_ID = 0x1
@@ -201,6 +248,7 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
          self.cmd_word0 = ((self.command_code & 0xF) << command_code_shift) + ((self.target_TIGER_ID & 0x7) << target_TIGER_ID_shift)
          self.command_words[11] = self.cmd_word0
 
+
    def update_command_words(self):
       if ( (self.command_code & 0xF) == 0x9 ):
          self.cmd_word10 = 0
@@ -214,17 +262,55 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
          self.cmd_word2  = 0
          self.cmd_word1  = 0
       else :
-         self.cmd_word10 = ((self.BufferBias & 0x3) << 24)        + ((self.TDCVcasN & 0xF) << 16)         + ((self.TDCVcasP & 0x1F) << 8)        + ((self.TDCVcasPHyst & 0x3F))
-         self.cmd_word9 =  ((self.DiscFE_Ibias & 0x3f) << 24)     + ((self.BiasFE_PpreN & 0x3F) << 16)    + ((self.AVcasp_global & 0x1F) << 8)   + ((self.TDCcompVcas & 0xF))
-         self.cmd_word8 =  ((self.TDCIref_cs & 0x1f) << 24)          + ((self.DiscVcasN & 0xF) << 16)        + ((self.IntegVb1 & 0x3F) << 8)        + ((self.BiasFE_A1 & 0xF))
-         self.cmd_word7 =  ((self.Vcasp_Vth & 0x3f) << 24)        + ((self.TAC_I_LSB & 0x1F) << 16)       + ((self.TDCcompVbias & 0x1F) << 8)    + ((self.Vref_Integ & 0x3F))
-         self.cmd_word6 =  ((self.IBiasTPcal & 0x1f) << 24)       + ((self.TP_Vcal & 0x1F) << 16)         + ((self.ShaperIbias & 0xF) << 8)      + ((self.IPostamp & 0x1F))
-         self.cmd_word5 =  ((self.TP_Vcal_ref & 0x1f) << 24)      + ((self.Vref_integ_diff & 0x3F) << 16) + ((self.Sig_pol & 0x1) << 8)          + ((self.FE_TPEnable & 0x1))
-         # acr 2018-01-25 removing unused parameter self.cmd_word4 = ((self.CompactDataFormat & 0x1) << 24) + ((self.DataClkDiv & 0x3) << 16) + ((self.TACrefreshPeriod & 0xf) << 8) + ((self.TACrefreshEnable & 0x1))
-         self.cmd_word4 =                                           ((self.DataClkDiv & 0x3) << 16) + ((self.TACrefreshPeriod & 0xf) << 8) + ((self.TACrefreshEnable & 0x1))
-         self.cmd_word3 =  ((self.CounterPeriod & 0x7) << 24)     + ((self.CounterEnable & 0x1) << 16)    + ((self.StopRampEnable & 0x3) << 8)   + ((self.RClkEnable & 0x1F))
-         self.cmd_word2 =  ((self.TDCClkdiv & 0x1) << 24)         + ((self.VetoMode & 0x3F) << 16)        + ((self.Ch_DebugMode & 0x1) << 8)     + ((self.TxMode & 0x3))
-         self.cmd_word1 =  ((self.TxDDR & 0x1) << 24)             + ((self.TxLinks & 0x3) << 16)
+          BufferBias = self.Global_cfg_list[self.target_TIGER_ID]["BufferBias"] & 0x3  ## BufferBias_param; default 0
+          TDCVcasN = swap_order_N_bits(self.Global_cfg_list[self.target_TIGER_ID]["TDCVcasN"] , 4) & 0xF  # acr 2018-01-25 ## TDCVcasN_param; default 0
+          TDCVcasP = swap_order_N_bits(self.Global_cfg_list[self.target_TIGER_ID]["TDCVcasP"] , 5) & 0x1F  # acr 2018-01-25 ## TDCVcasP_param; default 0
+          TDCVcasPHyst = swap_order_N_bits(self.Global_cfg_list[self.target_TIGER_ID]["TDCVcasPHyst"] , 6) & 0x3F # acr 2018-01-25 ## TDCVcasPHyst_param; default 55
+          DiscFE_Ibias = swap_order_N_bits(self.Global_cfg_list[self.target_TIGER_ID]["DiscFE_Ibias"] , 6) & 0x3F  # acr 2018-01-25 ## DiscFE_Ibias_param; default 50
+          BiasFE_PpreN = self.Global_cfg_list[self.target_TIGER_ID]["BiasFE_PpreN"]  & 0x3F  ## BiasFE_PpreN_param; default 10
+          AVcasp_global = swap_order_N_bits(self.Global_cfg_list[self.target_TIGER_ID]["AVcasp_global"],5)  & 0x1F  # acr 2018-01-25 ## AVcasp_global_param; default 20
+          TDCcompVcas = swap_order_N_bits(self.Global_cfg_list[self.target_TIGER_ID]["TDCcompVcas"], 4) & 0xF  # acr 2018-01-25 ## TDCcompVcas_param; default 0
+          TDCIref_cs = swap_order_N_bits(self.Global_cfg_list[self.target_TIGER_ID]["TDCIref_cs"], 5)  & 0x1f # acr 2018-01-25 ## TDCIref_cs_param; default 20
+          DiscVcasN = swap_order_N_bits(self.Global_cfg_list[self.target_TIGER_ID]["DiscVcasN"], 4) & 0xF  # acr 2018-01-25 elf.parameter_array [9] ## DiscVcasN_param; default 7
+          IntegVb1 = swap_order_N_bits(self.Global_cfg_list[self.target_TIGER_ID]["IntegVb1"], 6) & 0x3F  # acr 2018-01-25 ## IntegVb1_param; default 27
+          BiasFE_A1 = self.Global_cfg_list[self.target_TIGER_ID]["BiasFE_A1"] & 0xF  ## BiasFE_A1_param; default 8
+          Vcasp_Vth = swap_order_N_bits(self.Global_cfg_list[self.target_TIGER_ID]["Vcasp_Vth"], 6) & 0x3F   # acr 2018-01-25 ## Vcasp_Vth_param; default 55
+          TAC_I_LSB = self.Global_cfg_list[self.target_TIGER_ID]["TAC_I_LSB"] & 0x1F   ## TAC_I_LSB_param; default 0
+          TDCcompVbias = self.Global_cfg_list[self.target_TIGER_ID]["TAC_I_LSB"] & 0x1F  ## TDCcompVbias_param; default 0
+          Vref_Integ = swap_order_N_bits(self.Global_cfg_list[self.target_TIGER_ID]["Vref_Integ"] , 6)& 0x3F   # acr 2018-01-25 ## Vref_Integ_param; default 55
+          IBiasTPcal = swap_order_N_bits(self.Global_cfg_list[self.target_TIGER_ID]["IBiasTPcal"] , 5) & 0x1f  # acr 2018-01-25 ## IBiasTPcal_param; default 29
+          TP_Vcal = swap_order_N_bits(self.Global_cfg_list[self.target_TIGER_ID]["TP_Vcal"] , 5)& 0x1F   # acr 2018-01-25 ## TP_Vcal_param; default 8
+          ShaperIbias = self.Global_cfg_list[self.target_TIGER_ID]["ShaperIbias"]& 0xF   ## ShaperIbias_param; default 0
+          IPostamp = swap_order_N_bits(self.Global_cfg_list[self.target_TIGER_ID]["IPostamp"], 5)& 0x1F   # acr 2018-01-25 ## IPostamp_param; default 26
+          TP_Vcal_ref = swap_order_N_bits(self.Global_cfg_list[self.target_TIGER_ID]["TP_Vcal_ref"], 5)& 0x1F   # acr 2018-01-25 ## TP_Vcal_ref_param; default 23
+          Vref_integ_diff = swap_order_N_bits(self.Global_cfg_list[self.target_TIGER_ID]["Vref_integ_diff"], 6)& 0x3F   # acr 2018-01-25 ## Vref_integ_diff_param; default 39
+          Sig_pol = self.Global_cfg_list[self.target_TIGER_ID]["Sig_pol"] & 0x1   ## Sig_pol_param; default p-type (1?)
+          FE_TPEnable = self.Global_cfg_list[self.target_TIGER_ID]["FE_TPEnable"] & 0x1   ## FE_TPEnable_param; default X (1?)
+          DataClkDiv = self.Global_cfg_list[self.target_TIGER_ID]["DataClkDiv"] & 0x3  # acr 2018-01-25 [25] ## DataClkDiv_param; default 0
+          TACrefreshPeriod = self.Global_cfg_list[self.target_TIGER_ID]["TACrefreshPeriod"]& 0xF   # acr 2018-01-25 [26] ## TACrefreshPeriod_param; default 9
+          TACrefreshEnable = self.Global_cfg_list[self.target_TIGER_ID]["TACrefreshEnable"] & 0x1  # acr 2018-01-25 [27] ## TACrefreshEnable_param; default X (1?)
+          CounterPeriod = self.Global_cfg_list[self.target_TIGER_ID]["CounterPeriod"] & 0x7  # acr 2018-01-25 [28] ## CounterPeriod_param; default 6
+          CounterEnable = self.Global_cfg_list[self.target_TIGER_ID]["CounterEnable"]  & 0x1 # acr 2018-01-25 [29] ## CounterEnable_param; default EMPTYBOX (0?)
+          StopRampEnable = self.Global_cfg_list[self.target_TIGER_ID]["StopRampEnable"]& 0x3   # acr 2018-01-25 [30] ## StopRampEnable_param; default 0
+          RClkEnable = self.Global_cfg_list[self.target_TIGER_ID]["RClkEnable"]& 0x1F   # acr 2018-01-25 [31] ## RClkEnable_param; default 7
+          TDCClkdiv =self.Global_cfg_list[self.target_TIGER_ID]["TDCClkdiv"]& 0x1   # acr 2018-01-25 [32] ## TDCClkdiv_param; default EMPTYBOX (0?)
+          VetoMode = self.Global_cfg_list[self.target_TIGER_ID]["VetoMode"]& 0x3F   # acr 2018-01-25 [33] ## VetoMode_param; default 0
+          Ch_DebugMode = self.Global_cfg_list[self.target_TIGER_ID]["Ch_DebugMode"] & 0x1  # acr 2018-01-25 [34] ## Ch_DebugMode_param; default EMPTYBOX (0?)
+          TxMode = self.Global_cfg_list[self.target_TIGER_ID]["TxMode"] & 0x3  # acr 2018-01-25 [35] ## TxMode_param; default 2
+          TxDDR = self.Global_cfg_list[self.target_TIGER_ID]["TxDDR"] & 0x1  # acr 2018-01-25 [36] ## TxDDR_param; default X (1?)
+          TxLinks = self.Global_cfg_list[self.target_TIGER_ID]["TxLinks"] & 0x3   # acr 2018-01-25 [37] ## TxLinks_param; default 2 links nel GUI di Torino; dovrebbe corrispondeere ad un codice 1 per 2 links
+
+          self.cmd_word10 = (BufferBias << 24) + ( TDCVcasN << 16)  + (TDCVcasP << 8)  + TDCVcasPHyst
+          self.cmd_word9 =  (DiscFE_Ibias  << 24)     + (BiasFE_PpreN  << 16)    + ( AVcasp_global << 8)   + TDCcompVcas
+          self.cmd_word8 =  (TDCIref_cs  << 24)          + (DiscVcasN  << 16)        + (IntegVb1  << 8)        + (BiasFE_A1 )
+          self.cmd_word7 =  (Vcasp_Vth  << 24)        + (TAC_I_LSB  << 16)       + (TDCcompVbias  << 8)    + (Vref_Integ )
+          self.cmd_word6 =  (IBiasTPcal  << 24)       + (TP_Vcal  << 16)         + (ShaperIbias  << 8)      + (IPostamp )
+          self.cmd_word5 =  (TP_Vcal_ref  << 24)      + (Vref_integ_diff  << 16) + (Sig_pol  << 8)          + (FE_TPEnable )
+          # acr 2018-01-25 removing unused parameter self.cmd_word4 = ((self.CompactDataFormat & 0x1) << 24) + ((self.DataClkDiv & 0x3) << 16) + ((self.TACrefreshPeriod & 0xf) << 8) + ((self.TACrefreshEnable & 0x1))
+          self.cmd_word4 =                                           (DataClkDiv  << 16) + (TACrefreshPeriod  << 8) + (TACrefreshEnable )
+          self.cmd_word3 =  (CounterPeriod << 24)     + (CounterEnable  << 16)    + (StopRampEnable  << 8)   + (RClkEnable )
+          self.cmd_word2 =  (TDCClkdiv  << 24)         + (VetoMode  << 16)        + (Ch_DebugMode << 8)     + (TxMode )
+          self.cmd_word1 =  (TxDDR  << 24)             + (TxLinks  << 16)
       self.cmd_word0 = ((self.command_code & 0xF) << command_code_shift) + ((self.target_TIGER_ID & 0x7) << target_TIGER_ID_shift)
       self.command_words = [ self.cmd_header,
                              self.cmd_word10,
@@ -240,6 +326,44 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
                              self.cmd_word0
                               ]
 
+   # def update_command_words(self):
+   #    if ( (self.command_code & 0xF) == 0x9 ):
+   #       self.cmd_word10 = 0
+   #       self.cmd_word9  = 0
+   #       self.cmd_word8  = 0
+   #       self.cmd_word7  = 0
+   #       self.cmd_word6  = 0
+   #       self.cmd_word5  = 0
+   #       self.cmd_word4  = 0
+   #       self.cmd_word3  = 0
+   #       self.cmd_word2  = 0
+   #       self.cmd_word1  = 0
+   #    else :
+   #       self.cmd_word10 = ((self.BufferBias & 0x3) << 24)        + ((self.TDCVcasN & 0xF) << 16)         + ((self.TDCVcasP & 0x1F) << 8)        + ((self.TDCVcasPHyst & 0x3F))
+   #       self.cmd_word9 =  ((self.DiscFE_Ibias & 0x3f) << 24)     + ((self.BiasFE_PpreN & 0x3F) << 16)    + ((self.AVcasp_global & 0x1F) << 8)   + ((self.TDCcompVcas & 0xF))
+   #       self.cmd_word8 =  ((self.TDCIref_cs & 0x1f) << 24)          + ((self.DiscVcasN & 0xF) << 16)        + ((self.IntegVb1 & 0x3F) << 8)        + ((self.BiasFE_A1 & 0xF))
+   #       self.cmd_word7 =  ((self.Vcasp_Vth & 0x3f) << 24)        + ((self.TAC_I_LSB & 0x1F) << 16)       + ((self.TDCcompVbias & 0x1F) << 8)    + ((self.Vref_Integ & 0x3F))
+   #       self.cmd_word6 =  ((self.IBiasTPcal & 0x1f) << 24)       + ((self.TP_Vcal & 0x1F) << 16)         + ((self.ShaperIbias & 0xF) << 8)      + ((self.IPostamp & 0x1F))
+   #       self.cmd_word5 =  ((self.TP_Vcal_ref & 0x1f) << 24)      + ((self.Vref_integ_diff & 0x3F) << 16) + ((self.Sig_pol & 0x1) << 8)          + ((self.FE_TPEnable & 0x1))
+   #       # acr 2018-01-25 removing unused parameter self.cmd_word4 = ((self.CompactDataFormat & 0x1) << 24) + ((self.DataClkDiv & 0x3) << 16) + ((self.TACrefreshPeriod & 0xf) << 8) + ((self.TACrefreshEnable & 0x1))
+   #       self.cmd_word4 =                                           ((self.DataClkDiv & 0x3) << 16) + ((self.TACrefreshPeriod & 0xf) << 8) + ((self.TACrefreshEnable & 0x1))
+   #       self.cmd_word3 =  ((self.CounterPeriod & 0x7) << 24)     + ((self.CounterEnable & 0x1) << 16)    + ((self.StopRampEnable & 0x3) << 8)   + ((self.RClkEnable & 0x1F))
+   #       self.cmd_word2 =  ((self.TDCClkdiv & 0x1) << 24)         + ((self.VetoMode & 0x3F) << 16)        + ((self.Ch_DebugMode & 0x1) << 8)     + ((self.TxMode & 0x3))
+   #       self.cmd_word1 =  ((self.TxDDR & 0x1) << 24)             + ((self.TxLinks & 0x3) << 16)
+   #    self.cmd_word0 = ((self.command_code & 0xF) << command_code_shift) + ((self.target_TIGER_ID & 0x7) << target_TIGER_ID_shift)
+   #    self.command_words = [ self.cmd_header,
+   #                           self.cmd_word10,
+   #                           self.cmd_word9,
+   #                           self.cmd_word8,
+   #                           self.cmd_word7,
+   #                           self.cmd_word6,
+   #                           self.cmd_word5,
+   #                           self.cmd_word4,
+   #                           self.cmd_word3,
+   #                           self.cmd_word2,
+   #                           self.cmd_word1,
+   #                           self.cmd_word0
+   #                            ]
 ## acr 2018-01-29 BEGIN must take into account the different endianness for different fields
    def extract_parameters_from_UDP_packet(self):
       print'\nList of parameters sent to TIGER%d:'%self.target_TIGER_ID
@@ -267,8 +391,15 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
       print ( "\nTDCClkdiv:%d;\t\tVetoMode:%d;\t\tCh_DebugMode:%d;\tTxMode:%d;" %( ((self.cmd_word2>>24)&0x1), ((self.cmd_word2>>16)&0x3F), ((self.cmd_word2>>8)&0x1 ), ((self.cmd_word2>>0)&0x3) ) )
       print ( "\nTxDDR:%d;\t\tTxLinks:%d;" %( ((self.cmd_word1>>24)&0x1), ((self.cmd_word1>>16)&0x3) ) )
 ## acr 2018-01-29 END  must take into account the different endianness for different fields
-
-
+   def save_glob_conf(self,filename):
+        with  open(filename,'wb') as f:
+            pickle.dump(self.Global_cfg_list,f)
+        return 0
+   def load_glob_conf(self,filename):
+        with  open(filename,'rb') as f:
+            self.Global_cfg_list=pickle.load(f)
+        print self.Global_cfg_list
+        return 0
 ###CCCCCCCCCCCCCCCC###     CLASS ch_reg_settings BEGIN  ###CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC###
 class ch_reg_settings: # purpose: organize the Channel Configuration Register Settings in an array format which can be sent over Ethernet or optical link
    def __init__(self,
@@ -312,6 +443,22 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
       self.Ch_DebugMode = self.parameter_array [28]  ## Ch_DebugMode_param
       self.TriggerMode = self.parameter_array [29]  ## TriggerMode_param
       ## acr 2017-07-12 END   implementing a parameter array loaded from a configuration file
+
+      sav_channel_dic={
+      "TP_disable_FE": self.parameter_array [4],  ## TP_disable_FE_param
+      "Integ": self.parameter_array [7],  ## Integ_param
+      "Vth_T1": self.parameter_array [11],  ## Vth_T1_param
+      "QdcMode": self.parameter_array [16],  ## QdcMode_param
+      "CounterMode": self.parameter_array [25],  ## CounterMode_param
+      "TriggerMode": self.parameter_array [29]  ## TriggerMode_param
+      }
+      sav_channel_chlist=[]
+      for ch in range (0,64):
+        sav_channel_chlist.append(sav_channel_dic.copy())
+      self.Channel_cfg_list=[]
+      for T in range (0,8):
+          self.Channel_cfg_list.append(sav_channel_chlist[:])
+
       self.is_a_write = 0x1
       self.target_TIGER_ID = 0x1
       self.command_code = 0x9
@@ -448,7 +595,9 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
          self.cmd_word3  = 0
          self.cmd_word2  = 0
          self.cmd_word1  = 0
-      else :
+
+      elif (self.TO_ALL_enable==1) :
+
          self.cmd_word8 = ((self.DisableHyst & 0x1) << 24)   + ((self.T2Hyst & 0x7) << 16)        + ((self.T1Hyst & 0x7) << 8)         + ((self.Ch63ObufMSB & 0x1))
          self.cmd_word7 = ((self.TP_disable_FE & 0x1) << 24) + ((self.TDC_IB_E & 0xF) << 16)      + ((self.TDC_IB_T & 0xF) << 8)       + ((self.Integ & 0x1))
          self.cmd_word6 = ((self.PostAmpGain & 0x3) << 24)   + ((self.FE_delay & 0x1F) << 16)     + ((self.Vth_T2 & 0x3F) << 8)        + ((self.Vth_T1 & 0x3F))
@@ -457,6 +606,24 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
          self.cmd_word3 = ((self.TriggerMode2Q & 0x3) << 24) + ((self.TriggerMode2E & 0x7) << 16) + ((self.TriggerMode2T & 0x3) << 8)  + ((self.TACMinAge & 0x1F))
          self.cmd_word2 = ((self.TACMaxAge & 0x1F) << 24)    + ((self.CounterMode & 0xF) << 16)   + ((self.DeadTime & 0x3F) << 8)      + ((self.SyncChainLen & 0x3))
          self.cmd_word1 = ((self.Ch_DebugMode & 0x3) << 24)  + ((self.TriggerMode & 0x3) << 16)
+
+      else:
+          TP_disable_FE=self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["TP_disable_FE"] & 0x1
+          Integ=self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["Integ"] & 0x1
+          Vth_T1= self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["Vth_T1"] & 0x3F
+          QdcMode= self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["QdcMode"] & 0x1
+          CounterMode= self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["CounterMode"]  & 0xF
+          TriggerMode= self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["TriggerMode"]  & 0x3
+          self.cmd_word8 = ((self.DisableHyst & 0x1) << 24) + ((self.T2Hyst & 0x7) << 16) + ((self.T1Hyst & 0x7) << 8) + ((self.Ch63ObufMSB & 0x1))
+          self.cmd_word7 = (TP_disable_FE << 24) + ((self.TDC_IB_E & 0xF) << 16) + ((self.TDC_IB_T & 0xF) << 8) + (Integ )
+          self.cmd_word6 = ((self.PostAmpGain & 0x3) << 24) + ((self.FE_delay & 0x1F) << 16) + ((self.Vth_T2 & 0x3F) << 8) + (Vth_T1 )
+          self.cmd_word5 = ((self.QTx2Enable & 0x1) << 24) + ((self.MaxIntegTime & 0x7F) << 16) + ((self.MinIntegTime & 0x7F) << 8) + ((self.TriggerBLatched & 0x1))
+          self.cmd_word4 = (QdcMode << 24) + ((self.BranchEnableT & 0x1) << 16) + ((self.BranchEnableEQ & 0x1) << 8) + (self.TriggerMode2B & 0x7)
+          self.cmd_word3 = ((self.TriggerMode2Q & 0x3) << 24) + ((self.TriggerMode2E & 0x7) << 16) + ((self.TriggerMode2T & 0x3) << 8) + ((self.TACMinAge & 0x1F))
+          self.cmd_word2 = ((self.TACMaxAge & 0x1F) << 24) + (CounterMode << 16) + ((self.DeadTime & 0x3F) << 8) + ((self.SyncChainLen & 0x3))
+          self.cmd_word1 = ((self.Ch_DebugMode & 0x3) << 24) + (TriggerMode  << 16)
+
+
       self.cmd_word0 = ((self.command_code & 0xF) << command_code_shift) + ((self.target_TIGER_ID & 0x7) << target_TIGER_ID_shift) + ((self.TO_ALL_enable & 0x1) << 6) + (self.channel_ID & 0x3F)
 
       self.command_words = [ self.cmd_header,
@@ -470,7 +637,6 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
                              self.cmd_word1,
                              self.cmd_word0
                               ]
-
    def extract_parameters_from_UDP_packet(self):
       print'\nList of parameters sent to TIGER%d:'%self.target_TIGER_ID
       print ("\ncmd_word8: DisableHyst:%02X;\t\tT2Hyst:%02X;\t\tT1Hyst:%02X;\t\tCh63ObufMSB:%02X;"                  %( ((self.cmd_word8>>24)&0x1), ((self.cmd_word8>>16)&0x7),  ((self.cmd_word8>>8)&0x7),  ((self.cmd_word8>>0)&0x1)  ) )
@@ -483,6 +649,14 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
       print ("\ncmd_word1: Ch_DebugMode:%02X;\t\tTriggerMode:%02X;"                                                 %( ((self.cmd_word1>>24)&0x3), ((self.cmd_word1>>16)&0x3)                                                          ) )
       print ("\ncmd_word0: command_code:%02X;\t\ttarget_TIGER_ID:%02X;\t\tTO_ALL_enable:%02X;\t\tchannel_ID:%02X;"  %( ((self.cmd_word0>>command_code_shift)&0xF), ((self.cmd_word0>>target_TIGER_ID_shift)&0x7),  ((self.cmd_word0>>6)&0x1), ((self.cmd_word0>>0)&0x3F)  ) )
 
+   def save_ch_conf(self,filename):
+        with  open(filename,'wb') as f:
+            pickle.dump(self.Channel_cfg_list,f)
+        return 0
+   def load_ch_conf(self,filename):
+        with  open(filename,'rb') as f:
+            self.Channel_cfg_list=pickle.load(f)
+        return 0
 ###CCCCCCCCCCCCCCCC###     CLASS gemroc_cmd_LV_settings BEGIN  ###CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC###
 # acr 2018-01-13 split the handling of the GEMROC LV and DAQ configuration parameters
 class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configuration Register Settings in an array format which can be sent over Ethernet or optical link
@@ -534,6 +708,11 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
       self.D_OVC_LIMIT_FEB3 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-29]
       self.D_OVV_LIMIT_FEB3 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-30]
       self.OVT_LIMIT_FEB3 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-31]
+
+      self.TIGER_for_counter = 0 #TIGER on which we count error or hits
+      self.HIT_counter_enable = 0 # 0= counting errors, 1= counting hits
+      self.CHANNEL_for_counter =64 #0-63 for single channel hits, 64 for chip total
+      self.RX_ERR_CNT_RST =0 #counter reset
       self.command_string = command_string_param
       self.command_list = [ 'NONE',
                             'CMD_GEMROC_LV_CFG_WR',
@@ -547,10 +726,9 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
          if (self.command_string == self.command_list[i]):
             self.gemroc_cmd_code = i
       header_tag = 0x8 << 28
-      gemroc_cmd_ID = 0xC #F for Global config register settings; E for channel config register settings; D for gemroc DAQ parameter settings; C for gemroc lv_Config parameter settings
-      gemroc_cmd_tag = gemroc_cmd_ID << 24
+      self.gemroc_cmd_ID = 0xC #F for Global config register settings; E for channel config register settings; D for gemroc DAQ parameter settings; C for gemroc lv_Config parameter settings
       gemroc_cmd_word_count = GEMROC_CMD_LV_Num_Of_PktWords - 1 # acr 2018-01-15 number of packet words following the header
-      self.cmd_header = header_tag + (self.TARGET_GEMROC_ID << 16) + gemroc_cmd_tag + gemroc_cmd_word_count
+      self.cmd_header = ((0x8 & 0xF) << 28) + ((self.gemroc_cmd_ID & 0xF) << 24) + ((self.TIGER_for_counter & 0x7) << 21) + ((self.TARGET_GEMROC_ID & 0x1f) << 16) +((self.HIT_counter_enable & 0x1) << 15) +((self.CHANNEL_for_counter & 0x7F) << 8) + (gemroc_cmd_word_count & 0xff)
       self.cmd_word10 = ((self.OVT_LIMIT_FEB3 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB3 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB3 & 0x1FF) << 4)
       self.cmd_word9  = ((self.OVT_LIMIT_FEB2 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB2 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB2 & 0x1FF) << 4)
       self.cmd_word8  = ((self.OVT_LIMIT_FEB1 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB1 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB1 & 0x1FF) << 4)
@@ -559,9 +737,8 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
       self.cmd_word5  = ((self.A_OVV_LIMIT_FEB2 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB2 & 0x1FF) << 4)
       self.cmd_word4  = ((self.A_OVV_LIMIT_FEB1 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB1 & 0x1FF) << 4)
       self.cmd_word3  = ((self.A_OVV_LIMIT_FEB0 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB0 & 0x1FF) << 4)
-      self.cmd_word2 = ((self.ROC_OVT_LIMIT & 0x3F) << 24) + ((self.XCVR_LPBCK_TST_EN & 0x1) << 18) +((self.ROC_OVT_EN & 0x1) << 16) + ((self.FEB_OVT_EN_pattern & 0xF) << 12) + ((self.FEB_OVV_EN_pattern & 0xF) << 8) + ((self.FEB_OVC_EN_pattern & 0xF) << 4) + (self.FEB_PWR_EN_pattern & 0xF)
+      self.cmd_word2 = ((self.ROC_OVT_LIMIT & 0x3F) << 24) +((self.RX_ERR_CNT_RST & 0x1) << 19)+ ((self.XCVR_LPBCK_TST_EN & 0x1) << 18) +((self.ROC_OVT_EN & 0x1) << 16) + ((self.FEB_OVT_EN_pattern & 0xF) << 12) + ((self.FEB_OVV_EN_pattern & 0xF) << 8) + ((self.FEB_OVC_EN_pattern & 0xF) << 4) + (self.FEB_PWR_EN_pattern & 0xF)
       self.cmd_word1 = ((self.TIMING_DLY_FEB3 & 0x3F) << 24) + ((self.TIMING_DLY_FEB2 & 0x3F) << 16) + ((self.TIMING_DLY_FEB1 & 0x3F) << 8) + ((self.TIMING_DLY_FEB0 & 0x3F) << 0)
-#      self.cmd_word0 = ((self.number_of_repetitions & 0x3FF) << 16) + ((self.gemroc_cmd_code & 0xF) << 11) + ((self.target_TCAM_ID & 0x3) << 8) + ((self.to_ALL_TCAM_enable & 0x1) << 6)
       self.cmd_word0 = ((self.gemroc_cmd_code & 0xF) << 11)
       self.command_words = [ self.cmd_header,
                              self.cmd_word10,
@@ -610,6 +787,8 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
 
 ## acr 2018-01-15 updated definition: zero all setting when it's a 'CMD_GEMROC_LV_CFG_RD' ( = 2 ) or 'CMD_GEMROC_LV_IVT_READ' ( = 3 ) or 'CMD_GEMROC_TIMING_DELAYS_UPDATE' ( = 4 )
    def update_command_words(self):
+      gemroc_cmd_tag = 0xC << 24
+      gemroc_cmd_word_count = GEMROC_CMD_LV_Num_Of_PktWords - 1
       if ( ((self.gemroc_cmd_code & 0xF) == 0x2) or ((self.gemroc_cmd_code & 0xF) == 0x3) or ((self.gemroc_cmd_code & 0xF) == 0x4) ):
          self.cmd_word10  = 0
          self.cmd_word9  = 0
@@ -622,32 +801,33 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
          self.cmd_word2  = 0
          self.cmd_word1  = 0
       else :
-         self.cmd_word10 = ((self.OVT_LIMIT_FEB3 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB3 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB3 & 0x1FF) << 4)
-         self.cmd_word9  = ((self.OVT_LIMIT_FEB2 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB2 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB2 & 0x1FF) << 4)
-         self.cmd_word8  = ((self.OVT_LIMIT_FEB1 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB1 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB1 & 0x1FF) << 4)
-         self.cmd_word7  = ((self.OVT_LIMIT_FEB0 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB0 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB0 & 0x1FF) << 4)
-         self.cmd_word6  = ((self.A_OVV_LIMIT_FEB3 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB3 & 0x1FF) << 4)
-         self.cmd_word5  = ((self.A_OVV_LIMIT_FEB2 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB2 & 0x1FF) << 4)
-         self.cmd_word4  = ((self.A_OVV_LIMIT_FEB1 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB1 & 0x1FF) << 4)
-         self.cmd_word3  = ((self.A_OVV_LIMIT_FEB0 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB0 & 0x1FF) << 4)
-         self.cmd_word2 = ((self.ROC_OVT_LIMIT & 0x3F) << 24) + ((self.XCVR_LPBCK_TST_EN & 0x1) << 18) +((self.ROC_OVT_EN & 0x1) << 16) + ((self.FEB_OVT_EN_pattern & 0xF) << 12) + ((self.FEB_OVV_EN_pattern & 0xF) << 8) + ((self.FEB_OVC_EN_pattern & 0xF) << 4) + (self.FEB_PWR_EN_pattern & 0xF)
-         self.cmd_word1 = ((self.TIMING_DLY_FEB3 & 0x3F) << 24) + ((self.TIMING_DLY_FEB2 & 0x3F) << 16) + ((self.TIMING_DLY_FEB1 & 0x3F) << 8) + ((self.TIMING_DLY_FEB0 & 0x3F) << 0)
-#acr 2018-01-16      self.cmd_word0 = ((self.number_of_repetitions & 0x3FF) << 16) + ((self.gemroc_cmd_code & 0xF) << 11) + ((self.target_TCAM_ID & 0x3) << 8) + ((self.to_ALL_TCAM_enable & 0x1) << 6)
-      self.cmd_word0 = ((self.gemroc_cmd_code & 0xF) << 11)
-      self.command_words = [ self.cmd_header,
-                             self.cmd_word10,
-                             self.cmd_word9,
-                             self.cmd_word8,
-                             self.cmd_word7,
-                             self.cmd_word6,
-                             self.cmd_word5,
-                             self.cmd_word4,
-                             self.cmd_word3,
-                             self.cmd_word2,
-                             self.cmd_word1,
-                             self.cmd_word0
-                              ]
 
+          self.cmd_header = ((0x8 & 0xF) << 28) + ((self.gemroc_cmd_ID & 0xF) << 24) + ((self.TIGER_for_counter & 0x7) << 21) + ((self.TARGET_GEMROC_ID & 0x1f) << 16) + ((self.HIT_counter_enable & 0x1) << 15) + ((self.CHANNEL_for_counter & 0x7F) << 8) + (gemroc_cmd_word_count & 0xff)
+          self.cmd_word10 = ((self.OVT_LIMIT_FEB3 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB3 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB3 & 0x1FF) << 4)
+          self.cmd_word9 = ((self.OVT_LIMIT_FEB2 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB2 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB2 & 0x1FF) << 4)
+          self.cmd_word8 = ((self.OVT_LIMIT_FEB1 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB1 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB1 & 0x1FF) << 4)
+          self.cmd_word7 = ((self.OVT_LIMIT_FEB0 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB0 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB0 & 0x1FF) << 4)
+          self.cmd_word6 = ((self.A_OVV_LIMIT_FEB3 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB3 & 0x1FF) << 4)
+          self.cmd_word5 = ((self.A_OVV_LIMIT_FEB2 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB2 & 0x1FF) << 4)
+          self.cmd_word4 = ((self.A_OVV_LIMIT_FEB1 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB1 & 0x1FF) << 4)
+          self.cmd_word3 = ((self.A_OVV_LIMIT_FEB0 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB0 & 0x1FF) << 4)
+          self.cmd_word2 = ((self.ROC_OVT_LIMIT & 0x3F) << 24) + ((self.RX_ERR_CNT_RST & 0x1) << 19) + ((self.XCVR_LPBCK_TST_EN & 0x1) << 18) + ((self.ROC_OVT_EN & 0x1) << 16) + ((self.FEB_OVT_EN_pattern & 0xF) << 12) + ((self.FEB_OVV_EN_pattern & 0xF) << 8) + (
+                      (self.FEB_OVC_EN_pattern & 0xF) << 4) + (self.FEB_PWR_EN_pattern & 0xF)
+          self.cmd_word1 = ((self.TIMING_DLY_FEB3 & 0x3F) << 24) + ((self.TIMING_DLY_FEB2 & 0x3F) << 16) + ((self.TIMING_DLY_FEB1 & 0x3F) << 8) + ((self.TIMING_DLY_FEB0 & 0x3F) << 0)
+          self.cmd_word0 = ((self.gemroc_cmd_code & 0xF) << 11)
+          self.command_words = [self.cmd_header,
+                                self.cmd_word10,
+                                self.cmd_word9,
+                                self.cmd_word8,
+                                self.cmd_word7,
+                                self.cmd_word6,
+                                self.cmd_word5,
+                                self.cmd_word4,
+                                self.cmd_word3,
+                                self.cmd_word2,
+                                self.cmd_word1,
+                                self.cmd_word0
+                                ]
    def extract_parameters_from_UDP_packet(self):
       print ( "\n   OVT_LIMIT_FEB3 = %04X %d")  % ( ((self.cmd_word10 >> 22) &  0xFF), ((self.cmd_word10 >> 22) &  0xFF) )
       print ( "\n D_OVV_LIMIT_FEB3 = %04X %d ") % ( ((self.cmd_word10 >> 13) &  0x1FF), ((self.cmd_word10 >> 13) &  0x1FF) )
@@ -723,8 +903,8 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
       self.TP_period = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-7] # period (in units of BES-III clk cycles) of periodic Test Pulses; range: 0..1023
       self.Periodic_TP_EN_pattern = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-6] # Enable Periodic Test Pulse Generation for TCAM[3..0]
       self.TL_nTM_ACQ = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-5] # 1 bit selector between TL and nTM data acquisition
-      self.AUTO_L1_EN_pattern = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-4] # REDUCED TO 1 bit Enable simulated L1 Trigger Generation for TCAM[3..0]
-      self.AUTO_TP_EN_pattern = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-3] # REDUCED TO 1 bit Enable Test Pulse Generation for TCAM[3..0]
+      self.AUTO_L1_EN_bit = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-4] # REDUCED TO 1 bit Enable simulated L1 Trigger Generation for TCAM[3..0]
+      self.AUTO_TP_EN_bit = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-3] # REDUCED TO 1 bit Enable Test Pulse Generation for TCAM[3..0]
       self.TP_Pos_nNeg = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-2] # select polarity of test pulse output to TIGER
       #Note: TCAM = Tiger Configuration/ Acquisition Module
       self.EN_TM_TCAM_pattern = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-1] # acr 2018-01-15 last parameter written in default configuration file # 8 bit field; EN_TM_TCAM[7..0] Enable the target TCAM to generate Trigger Matched data packets
@@ -764,7 +944,7 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
       #self.cmd_word2 = ((self.L1_period  & 0x3FF) << 20) + ((self.Periodic_TP_EN_pattern  & 0xF) << 16) + (self.L1_win_lower_edge_offset & 0xFFFF)
       self.cmd_word2 = ((self.L1_period  & 0x3FF) << 20) + ((self.Dbg_functions_ctrl_bits_HiNibble  & 0xF) << 16) + (self.L1_win_lower_edge_offset & 0xFFFF)
       # acr 2018-04-24 self.cmd_word1 = ((self.TP_period & 0x3FF) << 20) + ((self.Periodic_TP_EN_pattern & 0xF) << 16) + ((self.TL_nTM_ACQ & 0x1) << 11) + ((self.AUTO_L1_EN_pattern & 0x1) << 10) + ((self.AUTO_TP_EN_pattern & 0x1) << 9) + ((self.TP_Pos_nNeg & 0x1) << 8)  + (self.EN_TM_TCAM_pattern & 0xFF)
-      self.cmd_word1 = ((self.TP_period & 0x3FF) << 20) + ((self.Periodic_TP_EN_pattern & 0xF) << 16) + ((self.Dbg_functions_ctrl_bits_LoNibble & 0xF) << 12) + ((self.TL_nTM_ACQ & 0x1) << 11) + ((self.AUTO_L1_EN_pattern & 0x1) << 10) + ((self.AUTO_TP_EN_pattern & 0x1) << 9) + ((self.TP_Pos_nNeg & 0x1) << 8)  + (self.EN_TM_TCAM_pattern & 0xFF)
+      self.cmd_word1 = ((self.TP_period & 0x3FF) << 20) + ((self.Periodic_TP_EN_pattern & 0xF) << 16) + ((self.Dbg_functions_ctrl_bits_LoNibble & 0xF) << 12) + ((self.TL_nTM_ACQ & 0x1) << 11) + ((self.AUTO_L1_EN_bit & 0x1) << 10) + ((self.AUTO_TP_EN_bit & 0x1) << 9) + ((self.TP_Pos_nNeg & 0x1) << 8)  + (self.EN_TM_TCAM_pattern & 0xFF)
       self.command_words = [ self.cmd_header,
                              self.cmd_word3,
                              self.cmd_word2,
@@ -797,8 +977,14 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
    def set_TP_period(self, TP_period_param): # acr 2017-09-28
       self.TP_period = TP_period_param & 0x3FF
 
-   def set_AUTO_TP_EN_pattern(self, target_AUTO_TP_EN_param): # acr 2017-10-03
-      self.AUTO_TP_EN_pattern = target_AUTO_TP_EN_param & 0xF
+   def set_AUTO_TP_EN_bit(self, target_AUTO_TP_EN_param): #acr 2018-11-02 updated # acr 2017-10-03
+      self.AUTO_TP_EN_bit = target_AUTO_TP_EN_param & 0x1
+
+   def set_AUTO_L1_EN_bit(self, target_AUTO_L1_EN_param): #acr 2018-11-02 defined
+      self.AUTO_L1_EN_bit = target_AUTO_L1_EN_param & 0x1
+
+   def set_Periodic_TP_EN_pattern(self, Periodic_TP_EN_pattern_param): # acr 2017-10-03
+      self.Periodic_TP_EN_pattern = Periodic_TP_EN_pattern_param & 0xF
 
    def set_Periodic_TP_EN_pattern(self, Periodic_TP_EN_pattern_param): # acr 2017-10-03
       self.Periodic_TP_EN_pattern = Periodic_TP_EN_pattern_param & 0xF
@@ -872,7 +1058,7 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
            # self.cmd_word2 = ((self.L1_period  & 0x3FF) << 20) + ((self.Dbg_functions_ctrl_bits_HiNibble  & 0xF) << 16) + (self.L1_win_lower_edge_offset & 0xFFFF)
            # self.cmd_word1 = ((self.TP_period & 0x3FF) << 20) + ((self.Periodic_TP_EN_pattern & 0xF) << 16) + ((self.Dbg_functions_ctrl_bits_U8 & 0xF) << 12) + ((self.TL_nTM_ACQ & 0x1) << 11) + ((self.AUTO_L1_EN_pattern & 0x1) << 10) + ((self.AUTO_TP_EN_pattern & 0x1) << 9) + ((self.TP_Pos_nNeg & 0x1) << 8)  + (self.EN_TM_TCAM_pattern & 0xFF)
            self.cmd_word2 = ((self.L1_period  & 0x3FF) << 20) + ((self.Dbg_functions_ctrl_bits_HiNibble  & 0xF) << 16) + (self.L1_win_lower_edge_offset & 0xFFFF)
-           self.cmd_word1 = ((self.TP_period & 0x3FF) << 20) + ((self.Periodic_TP_EN_pattern & 0xF) << 16) + ((self.Dbg_functions_ctrl_bits_LoNibble & 0xF) << 12) + ((self.TL_nTM_ACQ & 0x1) << 11) + ((self.AUTO_L1_EN_pattern & 0x1) << 10) + ((self.AUTO_TP_EN_pattern & 0x1) << 9) + ((self.TP_Pos_nNeg & 0x1) << 8)  + (self.EN_TM_TCAM_pattern & 0xFF)
+           self.cmd_word1 = ((self.TP_period & 0x3FF) << 20) + ((self.Periodic_TP_EN_pattern & 0xF) << 16) + ((self.Dbg_functions_ctrl_bits_LoNibble & 0xF) << 12) + ((self.TL_nTM_ACQ & 0x1) << 11) + ((self.AUTO_L1_EN_bit & 0x1) << 10) + ((self.AUTO_L1_EN_bit & 0x1) << 9) + ((self.TP_Pos_nNeg & 0x1) << 8)  + (self.EN_TM_TCAM_pattern & 0xFF)
            # acr 2018-07-11 END
            self.cmd_word0 = ((self.UDP_DATA_DESTINATION_IPPORT & 0xF)<<26) + ((self.number_of_repetitions & 0x3FF) << 16) + ((self.gemroc_cmd_code & 0xF) << 11) + ((self.target_TCAM_ID & 0x3) << 8) + ((self.to_ALL_TCAM_enable & 0x1) << 6)
        self.command_words = [ self.cmd_header,
@@ -895,8 +1081,8 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
       print ( "\n Dbg_functions_ctrl_bits_HiNibble = %X %d")    % ( ((self.cmd_word2 >> 16) &  0xF)   , ((self.cmd_word2 >> 16) &  0xF) )
       print ( "\n Dbg_functions_ctrl_bits_LoNibble = %X %d")    % ( ((self.cmd_word1 >> 12) &  0xF)   , ((self.cmd_word1 >> 12) &  0xF) )
       print ( "\n TL_nTM_ACQ = %X %d")                  % ( ((self.cmd_word1 >> 11)  &  0x1)  , ((self.cmd_word1 >> 11)  &  0x1) )
-      print ( "\n AUTO_L1_EN_pattern = %X %d")          % ( ((self.cmd_word1 >> 10)  &  0x1)  , ((self.cmd_word1 >> 10)  &  0x1) )
-      print ( "\n AUTO_TP_EN_pattern = %X %d")          % ( ((self.cmd_word1 >>  9)  &  0x1)  , ((self.cmd_word1 >>  9)  &  0x1) )
+      print ( "\n AUTO_L1_EN_bit = %X %d")          % ( ((self.cmd_word1 >> 10)  &  0x1)  , ((self.cmd_word1 >> 10)  &  0x1) )
+      print ( "\n AUTO_TP_EN_bit = %X %d")          % ( ((self.cmd_word1 >>  9)  &  0x1)  , ((self.cmd_word1 >>  9)  &  0x1) )
       print ( "\n TP_Pos_nNeg = %X %d")                 % ( ((self.cmd_word1 >>  8)  &  0x1)  , ((self.cmd_word1 >>  8)  &  0x1) )
       print ( "\n EN_TM_TCAM_pattern = %X %d")          % ( ((self.cmd_word1 >>  0)  &  0xFF) , ((self.cmd_word1 >>  0)  &  0xFF) )
       print ( "\n number_of_repetitions = %X %d")       % ( ((self.cmd_word0 >> 16)  & 0x3FF)  , ((self.cmd_word0 >> 16)  & 0x3FF) )
