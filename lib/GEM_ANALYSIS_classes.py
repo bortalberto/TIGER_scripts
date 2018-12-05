@@ -14,7 +14,7 @@ from threading import Thread
 import datetime
 import random
 import array
-
+import fileinput
 OS = sys.platform
 if OS == 'win32':
 	sep = '\\'
@@ -23,8 +23,8 @@ elif OS == 'linux2':
 else:
 	print("ERROR: OS {} non compatible".format(OS))
 	sys.exit()
-first_TIGER_to_SCAN=0
-last_TIGER_to_scan=4
+first_TIGER_to_SCAN=6
+last_TIGER_to_scan=8
 BUFSIZE = 4096
 
 int_time=0.2 #working at 0.5
@@ -126,7 +126,7 @@ class analisys_conf: #Analysis class used for configurations
                             #print "after word count {}".format(word_count)
                             except:
                                 with open(self.log_path, 'a') as log_file:
-                                    log_file.write("{} -- Timed out, sending synch reset \n".format(time.ctime(), i, j))
+                                    log_file.write("{} -- Timed out \n".format(time.ctime(), i, j))
                                     print ("\nTIMED OUT\n")
                                     time.sleep(0.1)
                                     break
@@ -464,28 +464,83 @@ class analisys_conf: #Analysis class used for configurations
     def TIGER_delay_tuning(self):
         for T in range (0,8):
             self.GEM_COM.Set_param_dict_global(self.g_inst, "FE_TPEnable",T,1)
-            for ch in range (0,63):
+            for ch in range (0,64):
                 self.GEM_COM.Set_param_dict_channel(self.c_inst, "TP_disable_FE", T, ch, 0)
                 self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode",T,ch,1)
 
-        for Ts in range (0,4):
-            self.GEM_COM.DAQ_set(self.GEM_COM.gemroc_DAQ_XX, 2 ** (Ts*2)+2**(Ts*2+1), 2 ** (Ts*2)+2**(Ts*2+1), 1, 1, 1, 1)
-            average=[]
-            for TD in range (0,64):
-                self.GEM_COM.set_FEB_timing_delays(TD, TD, TD, TD)
-                self.GEM_COM.set_counter((Ts * 2), 0, 0)
+        error_matrix = np.zeros((8,64))
+        delay_vector = np.zeros((64))
+        safe_delays =np.zeros((4)) #Best dealy for each FEB
+
+        for TD in range (0,64):
+            print ("Setting delay {}".format(TD))
+            self.GEM_COM.set_FEB_timing_delays(TD, TD, TD, TD)
+            for Ts in range(0, 4):
+                self.GEM_COM.DAQ_set(self.GEM_COM.gemroc_DAQ_XX, 2 ** (Ts * 2) + 2 ** (Ts * 2 + 1), 2 ** (Ts * 2) + 2 ** (Ts * 2 + 1), 1, 256, 1, 1,False)
+                self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
+                self.GEM_COM.set_counter((Ts * 2), 1, 0)
                 self.GEM_COM.reset_counter()
-                time.sleep(0.2)
+                time.sleep(0.3)
                 counter1=self.GEM_COM.GEMROC_counter_get()
-                self.GEM_COM.set_counter((Ts * 2), 0, 0)
-                self.GEM_COM.reset_counter(Ts*2+1)
+                self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
+                self.GEM_COM.set_counter((Ts * 2+1), 1, 0)
                 self.GEM_COM.reset_counter()
-                time.sleep(0.2)
+                time.sleep(0.3)
                 counter2=self.GEM_COM.GEMROC_counter_get()
-                average.append((counter1+counter2)/2)
 
-        print average
+                error_matrix[Ts * 2,TD]=counter1
+                error_matrix[Ts*2 +1,TD]=counter2
 
+        for i in range (0,64):
+            delay_vector[i]=88*i
+
+        for Ts in range(0, 4):
+            first_zero=65
+            second_zero=65
+            Searching_first_zero=True
+            Searching_second_zero=False
+
+            for delay in range (0,64): #Searching for the zero error interval
+                total_error=error_matrix[Ts * 2,delay]+error_matrix[Ts * 2+1,delay]
+                if total_error== 0 and Searching_first_zero:
+                    first_zero=delay
+                    Searching_first_zero=False
+                    Searching_second_zero=True
+                if total_error != 0 and Searching_second_zero:
+                    second_zero = delay-1
+                    Searching_second_zero=False
+                if total_error ==0 and not Searching_second_zero and not Searching_first_zero:
+                    first_zero=delay
+
+            print ("First zero {} second zero {}\n".format(first_zero,second_zero))
+            if first_zero==second_zero: #Same zero, not stable (or not sero at all)
+                a=raw_input("\nWarning! Can't fine a stable communication delay for FEB {}!, press enter to continue\n".format(Ts))
+            if first_zero>second_zero:
+                second_zero=second_zero+64
+
+            safe_delays[Ts]=(second_zero+first_zero)/2
+            if safe_delays[Ts]>63:
+                safe_delays[Ts]=safe_delays[Ts]-64
+
+        for Ts in range (0,4):
+            plt.plot(delay_vector[:],error_matrix[Ts*2,:], 'b-', label='TIGER {}'.format(Ts*2))
+            plt.plot(delay_vector[:],error_matrix[Ts*2 + 1,:], 'g-',label='TIGER {}'.format(Ts*2+1))
+            plt.axvline(x=safe_delays[Ts]*88,color='r',label="Time delay set at {}".format(safe_delays[Ts]))
+            plt.legend(loc='best')
+            plt.ylabel('Errors')
+            plt.xlabel('Communication delay [ps] ')
+            plt.title('Delay scan, FEB '.format(Ts))
+            plt.savefig(self.GEM_COM.conf_folder+sep+"TD_scan_results"+sep+"GEMROC_{}_TD_scan_FEB_{}.png".format(self.GEM_COM.GEMROC_ID,Ts))
+            plt.clf()
+        for i in range(0, 4):
+            safe_delays[i]=int(safe_delays[i]//1)
+
+        for T in range (0,8):
+            self.GEM_COM.Set_param_dict_global(self.g_inst, "FE_TPEnable",T,0)
+            for ch in range (0,64):
+                self.GEM_COM.Set_param_dict_channel(self.c_inst, "TP_disable_FE", T, ch, 0)
+                self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode",T,ch,3)
+        return safe_delays
 
     def __del__(self):
         return 0
@@ -508,7 +563,6 @@ class analisys_read:
         self.thr_scan_matrix=np.zeros((8,64,64))#Tiger,Channel,Threshold
         self.thr_scan_frames=np.ones((8,64,64))
         self.vthr_matrix=np.ones((8,64))
-
         self.thr_scan_rate = np.zeros((8, 64, 64))
         self.thresholds = np.zeros((8, 64, 2))
 

@@ -69,8 +69,8 @@ menu_string = "-- GEMROC {} --\n".format(GEMROC_ID)+"\
 # \n OVCD     <FEB3_OVCD_thr_param> <FEB2_OVCD_thr_param> <FEB1_OVCD_thr_param> <FEB0_OVCD_thr_param>  range of parameters is 0 to 1200(dec) [mA]\
 # \n OVTF     <FEB3_OVT_thr_param>  <FEB2_OVT_thr_param>  <FEB1_OVT_thr_param>  <FEB0_OVT_thr_param>   range of parameters is 0 to 100(dec)[degree Celsius]\
 # \n OVTR     <FEB3_OVT_thr_param>                                                                     range of parameters is 0 to 63(dec)[degree Celsius]\
-# \n LVCR                                                                             read and print setting of GEMROC LV configuration register  \
-"\n DAQCR                                                                            read and print setting of GEMROC DAQ configuration register  \
+"\n LVCR                                                                             read and print setting of GEMROC LV configuration register  \
+\n DAQCR                                                                            read and print setting of GEMROC DAQ configuration register  \
 \n GRST                                                                             RESETS ALL TIGER CONFIGURATION REGISTERS: must be executed before TIGER Global Register Write \
 \n (GW)def   <TIGER_ID>(0 thru 7)                                                    (default file: \"TIGER_def_g_cfg_2018.txt\") \
 \n (CW)def   <TIGER_ID>(0 thru 7) <channel_ID>(0 thru 64);                           if channel_ID =64 then WRITE ALL IN SEQUENCE (default file: \"TIGER_def_ch_cfg_2018.txt\"); \
@@ -99,9 +99,12 @@ menu_string = "-- GEMROC {} --\n".format(GEMROC_ID)+"\
 \n TMSET    <L1_lat_B3clk_param>( 100 to 1023; default = 358) <TM_window_in_B3clk_param>(1 to 127; default = 66) \
 \n CONFIG_PAUSE                                                                     set default config (global and channel, pause state) in all the TIGERS\
 \n (X)CVRTST  <NumWordToSend>(0 thru 127; ONLY 0 is implemented at the moment)       Perform XCVR loopback test. If NumWordToSend=0 then capture of the next TM pkt is performed; else NumWordToSend data words are looped back\
-\n (D)efault_Init <Pattern_of_Enabled_TIGERs>(0 thru 0xFF) <Ext/Int timing>(\"1\" for Ext) <TL/TM mode>(\"1\" for TL mode) <Pause_Mode_En>(0 or 1) <Int_TP_Burst_repeat_En>(0 or 1)   Default initialization \
+\n(D)efault_Init <Pattern_of_Enabled_TIGERs>(0 thru 0xFF) <Ext/Int timing>(\"1\" for Ext) <TL/TM mode>(\"1\" for TL mode) \
+\n              <Pause_Mode_En>(0 or 1) <Int_TP_Burst_repeat_En>(0 or 1) <TP_Num_in_burst>(0 thru 511) <Periodic_L1_Enable>(0 or 1) <Enable Auto L1 generation after TP>(0 or 1). Default initialization \
 \n TEST <kind of test>                                                              \"s\" for synch test, \"c\" for configuration test, \"t\" for test pulse test\
-\n Counter <TIGER> <mode> <Channel>                                                 set the counter. Mode 0 = error mode, mode 1 = counter mode \
+\n Counter <TIGER> <mode> <Channel>                                                 set the counter. Mode 1 = error mode, mode 0 = counter mode \
+\n counter_reset                                                                    reset counter\
+\n counter_display                                                                  display counter\
 \n AUTO_TD                                                                          search for the best communication delay \
 \n(Q)uit: leave\
 \nEnter your command:\n ")
@@ -424,9 +427,7 @@ def Menu_and_prompt():
                                 # acr 2018-05-31 DAQ_set(gemroc_DAQ_XX, GEMROC_ID, TCAM_Enable_pattern, Periodic_FEB_TP_Enable_pattern, TP_repeat_burst, TP_Num_in_burst)
                                 # acr 2018-06-04 DAQ_set(gemroc_DAQ_XX, GEMROC_ID, TCAM_Enable_pattern, Periodic_FEB_TP_Enable_pattern, TP_repeat_burst, TP_Num_in_burst, TL_nTM_ACQ_choice)
                                 gemroc_DAQ_XX = GEM_COM1.gemroc_DAQ_XX
-                                GEM_COM1.DAQ_set(gemroc_DAQ_XX, TCAM_Enable_pattern, Periodic_FEB_TP_Enable_pattern,
-                                                 TP_repeat_burst, TP_Num_in_burst, TL_nTM_ACQ_choice,
-                                                 Periodic_L1_Enable_pattern)
+                                GEM_COM1.DAQ_set(gemroc_DAQ_XX, TCAM_Enable_pattern, Periodic_FEB_TP_Enable_pattern, TP_repeat_burst, TP_Num_in_burst, TL_nTM_ACQ_choice, Periodic_L1_Enable_pattern)
                                 print '\nStart TL DAQ from enable TCAM pattern: %d on GEMROC %d' % (TCAM_Enable_pattern, GEMROC_ID)
                                 time.sleep(2)
                                 os.system('clear')
@@ -589,7 +590,6 @@ def Menu_and_prompt():
 
                     elif input_array[0].lower() == 'config':
                         GEM_COM1.ResetTgtGEMROC_ALL_TIGER_GCfgReg(GEM_COM1.gemroc_DAQ_XX)
-
                         for T in range(0,8):
                             GEM_COM1.WriteTgtGEMROC_TIGER_GCfgReg(g_inst, T)
                         print("Global configuration set\n")
@@ -813,7 +813,7 @@ def Menu_and_prompt():
                             # acr 2018-11-02 BEGIN using the most recent definition of function DAQ_set
                             # DAQ_set(gemroc_DAQ_XX, GEMROC_ID, TCAM_Enable_pattern_local, Periodic_FEB_TP_Enable_pattern_local,
                             #        TP_repeat_burst_local, DI_TP_Num_in_burst, DI_TL_nTM_option, DI_Periodic_L1_Enable_bit, DI_Enab_Auto_L1_from_TP_bit)
-                            GEM_COM1.DAQ_set(GEM_COM1.gemroc_DAQ_XX, TCAM_Enable_pattern_local, Periodic_FEB_TP_Enable_pattern_local, TP_repeat_burst_local, DI_TP_Num_in_burst, DI_TL_nTM_option, DI_Periodic_L1_Enable_bit, DI_Enab_Auto_L1_from_TP_bit)
+                            GEM_COM1.DAQ_set(GEM_COM1.gemroc_DAQ_XX, TCAM_Enable_pattern_local, Periodic_FEB_TP_Enable_pattern_local, TP_repeat_burst_local, DI_TP_Num_in_burst, DI_TL_nTM_option, DI_Periodic_L1_Enable_bit)
                             # acr 2018-11-02 END   using the most recent definition of function DAQ_set
                             #print '\nStart DAQ from enabled TCAMs: %d on GEMROC %d; TL_nTM flag: %d' % ( TCAM_Enable_pattern_local, GEMROC_ID, DI_TL_nTM_option)
                             print '\nStart DAQ in %s mode. Enable TIGERs pattern: %d on GEMROC %d. Periodic TP enable: %d. Number of periodic TP in burst: %d. Periodic_L1_Enable_bit: %d. DI_Enab_Auto_L1_from_TP_bit: %d.' % ( GEM_COM1.print_TL_vs_nTM(DI_TL_nTM_option), TCAM_Enable_pattern_local, GEMROC_ID, TP_repeat_burst_local, DI_TP_Num_in_burst, DI_Periodic_L1_Enable_bit, DI_Enab_Auto_L1_from_TP_bit )
@@ -851,12 +851,44 @@ def Menu_and_prompt():
                             print "To few arguments"
                         else:
                             GEM_COM1.set_counter(input_array[1], input_array[2], input_array[3])
+                    elif input_array[0].lower() == 'counter_display': # acr 2018-03-16 at IHEP
+                        if len(input_array) == 1:
+                            command_reply = GEM_COM1.Read_GEMROC_LV_CfgReg()
+                            print '\nLVCR command_reply: %s' %binascii.b2a_hex(command_reply)
+                            GEM_COM1.display_counter(command_reply)
+                            print '\npress RETURN to continue'
+                            while input_queue.empty():
+                                time.sleep(1)
+                            os.system('clear')
+                            sys.stdout.write(menu_string)
+                    elif input_array[0].lower() == 'counter_reset':  # acr 2018-03-16 at IHEP
+                        if len(input_array) == 1:
+                            GEM_COM1.reset_counter()
+                            print ("\n counter reset")
+                            time.sleep(0.1)
+                            os.system('clear')
+                            sys.stdout.write(menu_string)
                     elif (input_array[0].lower() == 'auto_td'):
                         print "Auto Time Delay setting"
                         test_r=AN_CLASS.analisys_conf(GEM_COM1,c_inst,g_inst)
-                        test_r.TIGER_delay_tuning()
-                        test_r.__del__()
+                        safe_delays=test_r.TIGER_delay_tuning()
 
+                        test_r.__del__()
+                        input_queue.empty()
+                        del input_array
+                        print("Final TD values: FEB 0 = {}, FEB 1 = {},FEB 2 = {},FEB 3 = {}\n".format(safe_delays[0], safe_delays[1], safe_delays[2], safe_delays[3]))
+                        print ("Do you want to set them? (y or n)\n")
+                        input_array = (input_queue.get()).split()
+                        ans1=input_array[0]
+                        if ans1.lower() == "y":
+                            GEM_COM1.set_FEB_timing_delays(int(safe_delays[3]), int(safe_delays[2]), int(safe_delays[1]),int(safe_delays[0]))
+                            print "TD set\n"
+                            time.sleep(0.5)
+                        # ans2 = str(input("Do you want to save them as default? (y or n)\n"))
+                        # if ans2.lower() == "y":  # TODO sistemarlo
+                        #     with open("path", 'a') as f:
+                        #         f.write("TD")
+                        clear_term()
                         sys.stdout.write(menu_string)
                     else:
                         print('\n bad command')

@@ -710,7 +710,7 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
       self.OVT_LIMIT_FEB3 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-31]
 
       self.TIGER_for_counter = 0 #TIGER on which we count error or hits
-      self.HIT_counter_enable = 0 # 0= counting errors, 1= counting hits
+      self.HIT_counter_disable = 0 # 1= counting errors, 0= counting hits
       self.CHANNEL_for_counter =64 #0-63 for single channel hits, 64 for chip total
       self.RX_ERR_CNT_RST =0 #counter reset
       self.command_string = command_string_param
@@ -728,31 +728,31 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
       header_tag = 0x8 << 28
       self.gemroc_cmd_ID = 0xC #F for Global config register settings; E for channel config register settings; D for gemroc DAQ parameter settings; C for gemroc lv_Config parameter settings
       gemroc_cmd_word_count = GEMROC_CMD_LV_Num_Of_PktWords - 1 # acr 2018-01-15 number of packet words following the header
-      self.cmd_header = ((0x8 & 0xF) << 28) + ((self.gemroc_cmd_ID & 0xF) << 24) + ((self.TIGER_for_counter & 0x7) << 21) + ((self.TARGET_GEMROC_ID & 0x1f) << 16) +((self.HIT_counter_enable & 0x1) << 15) +((self.CHANNEL_for_counter & 0x7F) << 8) + (gemroc_cmd_word_count & 0xff)
+      self.cmd_header = ((0x8 & 0xF) << 28) + ((self.gemroc_cmd_ID & 0xF) << 24) + ((self.TIGER_for_counter & 0x7) << 21) + ((self.TARGET_GEMROC_ID & 0x1f) << 16) + ((self.HIT_counter_disable & 0x1) << 15) + ((self.CHANNEL_for_counter & 0x7F) << 8) + (gemroc_cmd_word_count & 0xff)
       self.cmd_word10 = ((self.OVT_LIMIT_FEB3 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB3 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB3 & 0x1FF) << 4)
-      self.cmd_word9  = ((self.OVT_LIMIT_FEB2 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB2 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB2 & 0x1FF) << 4)
-      self.cmd_word8  = ((self.OVT_LIMIT_FEB1 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB1 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB1 & 0x1FF) << 4)
-      self.cmd_word7  = ((self.OVT_LIMIT_FEB0 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB0 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB0 & 0x1FF) << 4)
-      self.cmd_word6  = ((self.A_OVV_LIMIT_FEB3 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB3 & 0x1FF) << 4)
-      self.cmd_word5  = ((self.A_OVV_LIMIT_FEB2 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB2 & 0x1FF) << 4)
-      self.cmd_word4  = ((self.A_OVV_LIMIT_FEB1 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB1 & 0x1FF) << 4)
-      self.cmd_word3  = ((self.A_OVV_LIMIT_FEB0 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB0 & 0x1FF) << 4)
-      self.cmd_word2 = ((self.ROC_OVT_LIMIT & 0x3F) << 24) +((self.RX_ERR_CNT_RST & 0x1) << 19)+ ((self.XCVR_LPBCK_TST_EN & 0x1) << 18) +((self.ROC_OVT_EN & 0x1) << 16) + ((self.FEB_OVT_EN_pattern & 0xF) << 12) + ((self.FEB_OVV_EN_pattern & 0xF) << 8) + ((self.FEB_OVC_EN_pattern & 0xF) << 4) + (self.FEB_PWR_EN_pattern & 0xF)
+      self.cmd_word9 = ((self.OVT_LIMIT_FEB2 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB2 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB2 & 0x1FF) << 4)
+      self.cmd_word8 = ((self.OVT_LIMIT_FEB1 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB1 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB1 & 0x1FF) << 4)
+      self.cmd_word7 = ((self.OVT_LIMIT_FEB0 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB0 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB0 & 0x1FF) << 4)
+      self.cmd_word6 = ((self.A_OVV_LIMIT_FEB3 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB3 & 0x1FF) << 4)
+      self.cmd_word5 = ((self.A_OVV_LIMIT_FEB2 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB2 & 0x1FF) << 4)
+      self.cmd_word4 = ((self.A_OVV_LIMIT_FEB1 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB1 & 0x1FF) << 4)
+      self.cmd_word3 = ((self.A_OVV_LIMIT_FEB0 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB0 & 0x1FF) << 4)
+      self.cmd_word2 = ((self.ROC_OVT_LIMIT & 0x3F) << 24) +((self.RX_ERR_CNT_RST & 0x1) << 19)+ ((self.XCVR_LPBCK_TST_EN & 0x1) << 18) + ((self.ROC_OVT_EN & 0x1) << 16) + ((self.FEB_OVT_EN_pattern & 0xF) << 12) + ((self.FEB_OVV_EN_pattern & 0xF) << 8) + ((self.FEB_OVC_EN_pattern & 0xF) << 4) + (self.FEB_PWR_EN_pattern & 0xF)
       self.cmd_word1 = ((self.TIMING_DLY_FEB3 & 0x3F) << 24) + ((self.TIMING_DLY_FEB2 & 0x3F) << 16) + ((self.TIMING_DLY_FEB1 & 0x3F) << 8) + ((self.TIMING_DLY_FEB0 & 0x3F) << 0)
       self.cmd_word0 = ((self.gemroc_cmd_code & 0xF) << 11)
-      self.command_words = [ self.cmd_header,
-                             self.cmd_word10,
-                             self.cmd_word9,
-                             self.cmd_word8,
-                             self.cmd_word7,
-                             self.cmd_word6,
-                             self.cmd_word5,
-                             self.cmd_word4,
-                             self.cmd_word3,
-                             self.cmd_word2,
-                             self.cmd_word1,
-                             self.cmd_word0
-                             ]
+      self.command_words = [self.cmd_header,
+                            self.cmd_word10,
+                            self.cmd_word9,
+                            self.cmd_word8,
+                            self.cmd_word7,
+                            self.cmd_word6,
+                            self.cmd_word5,
+                            self.cmd_word4,
+                            self.cmd_word3,
+                            self.cmd_word2,
+                            self.cmd_word1,
+                            self.cmd_word0
+                            ]
 
    def __del__(self):
       class_name = self.__class__.__name__
@@ -800,34 +800,35 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
          self.cmd_word3  = 0
          self.cmd_word2  = 0
          self.cmd_word1  = 0
-      else :
-
-          self.cmd_header = ((0x8 & 0xF) << 28) + ((self.gemroc_cmd_ID & 0xF) << 24) + ((self.TIGER_for_counter & 0x7) << 21) + ((self.TARGET_GEMROC_ID & 0x1f) << 16) + ((self.HIT_counter_enable & 0x1) << 15) + ((self.CHANNEL_for_counter & 0x7F) << 8) + (gemroc_cmd_word_count & 0xff)
-          self.cmd_word10 = ((self.OVT_LIMIT_FEB3 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB3 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB3 & 0x1FF) << 4)
-          self.cmd_word9 = ((self.OVT_LIMIT_FEB2 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB2 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB2 & 0x1FF) << 4)
-          self.cmd_word8 = ((self.OVT_LIMIT_FEB1 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB1 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB1 & 0x1FF) << 4)
-          self.cmd_word7 = ((self.OVT_LIMIT_FEB0 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB0 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB0 & 0x1FF) << 4)
-          self.cmd_word6 = ((self.A_OVV_LIMIT_FEB3 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB3 & 0x1FF) << 4)
-          self.cmd_word5 = ((self.A_OVV_LIMIT_FEB2 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB2 & 0x1FF) << 4)
-          self.cmd_word4 = ((self.A_OVV_LIMIT_FEB1 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB1 & 0x1FF) << 4)
-          self.cmd_word3 = ((self.A_OVV_LIMIT_FEB0 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB0 & 0x1FF) << 4)
-          self.cmd_word2 = ((self.ROC_OVT_LIMIT & 0x3F) << 24) + ((self.RX_ERR_CNT_RST & 0x1) << 19) + ((self.XCVR_LPBCK_TST_EN & 0x1) << 18) + ((self.ROC_OVT_EN & 0x1) << 16) + ((self.FEB_OVT_EN_pattern & 0xF) << 12) + ((self.FEB_OVV_EN_pattern & 0xF) << 8) + (
-                      (self.FEB_OVC_EN_pattern & 0xF) << 4) + (self.FEB_PWR_EN_pattern & 0xF)
-          self.cmd_word1 = ((self.TIMING_DLY_FEB3 & 0x3F) << 24) + ((self.TIMING_DLY_FEB2 & 0x3F) << 16) + ((self.TIMING_DLY_FEB1 & 0x3F) << 8) + ((self.TIMING_DLY_FEB0 & 0x3F) << 0)
-          self.cmd_word0 = ((self.gemroc_cmd_code & 0xF) << 11)
-          self.command_words = [self.cmd_header,
-                                self.cmd_word10,
-                                self.cmd_word9,
-                                self.cmd_word8,
-                                self.cmd_word7,
-                                self.cmd_word6,
-                                self.cmd_word5,
-                                self.cmd_word4,
-                                self.cmd_word3,
-                                self.cmd_word2,
-                                self.cmd_word1,
-                                self.cmd_word0
-                                ]
+      else:
+         self.cmd_header = ((0x8 & 0xF) << 28) + ((self.gemroc_cmd_ID & 0xF) << 24) + ((self.TIGER_for_counter & 0x7) << 21) + ((self.TARGET_GEMROC_ID & 0x1f) << 16) + ((self.HIT_counter_disable & 0x1) << 15) + (
+                 (self.CHANNEL_for_counter & 0x7F) << 8) + (gemroc_cmd_word_count & 0xff)
+         self.cmd_word10 = ((self.OVT_LIMIT_FEB3 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB3 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB3 & 0x1FF) << 4)
+         self.cmd_word9 = ((self.OVT_LIMIT_FEB2 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB2 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB2 & 0x1FF) << 4)
+         self.cmd_word8 = ((self.OVT_LIMIT_FEB1 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB1 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB1 & 0x1FF) << 4)
+         self.cmd_word7 = ((self.OVT_LIMIT_FEB0 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB0 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB0 & 0x1FF) << 4)
+         self.cmd_word6 = ((self.A_OVV_LIMIT_FEB3 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB3 & 0x1FF) << 4)
+         self.cmd_word5 = ((self.A_OVV_LIMIT_FEB2 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB2 & 0x1FF) << 4)
+         self.cmd_word4 = ((self.A_OVV_LIMIT_FEB1 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB1 & 0x1FF) << 4)
+         self.cmd_word3 = ((self.A_OVV_LIMIT_FEB0 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB0 & 0x1FF) << 4)
+         self.cmd_word2 = ((self.ROC_OVT_LIMIT & 0x3F) << 24) + ((self.RX_ERR_CNT_RST & 0x1) << 19) + ((self.XCVR_LPBCK_TST_EN & 0x1) << 18) + ((self.ROC_OVT_EN & 0x1) << 16) + ((self.FEB_OVT_EN_pattern & 0xF) << 12) + ((self.FEB_OVV_EN_pattern & 0xF) << 8) + (
+                 (self.FEB_OVC_EN_pattern & 0xF) << 4) + (self.FEB_PWR_EN_pattern & 0xF)
+         self.cmd_word1 = ((self.TIMING_DLY_FEB3 & 0x3F) << 24) + ((self.TIMING_DLY_FEB2 & 0x3F) << 16) + ((self.TIMING_DLY_FEB1 & 0x3F) << 8) + ((self.TIMING_DLY_FEB0 & 0x3F) << 0)
+      # acr 2018-01-16      self.cmd_word0 = ((self.number_of_repetitions & 0x3FF) << 16) + ((self.gemroc_cmd_code & 0xF) << 11) + ((self.target_TCAM_ID & 0x3) << 8) + ((self.to_ALL_TCAM_enable & 0x1) << 6)
+      self.cmd_word0 = ((self.gemroc_cmd_code & 0xF) << 11)
+      self.command_words = [self.cmd_header,
+                            self.cmd_word10,
+                            self.cmd_word9,
+                            self.cmd_word8,
+                            self.cmd_word7,
+                            self.cmd_word6,
+                            self.cmd_word5,
+                            self.cmd_word4,
+                            self.cmd_word3,
+                            self.cmd_word2,
+                            self.cmd_word1,
+                            self.cmd_word0
+                            ]
    def extract_parameters_from_UDP_packet(self):
       print ( "\n   OVT_LIMIT_FEB3 = %04X %d")  % ( ((self.cmd_word10 >> 22) &  0xFF), ((self.cmd_word10 >> 22) &  0xFF) )
       print ( "\n D_OVV_LIMIT_FEB3 = %04X %d ") % ( ((self.cmd_word10 >> 13) &  0x1FF), ((self.cmd_word10 >> 13) &  0x1FF) )
