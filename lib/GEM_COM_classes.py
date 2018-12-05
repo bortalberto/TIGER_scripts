@@ -164,6 +164,39 @@ class communication: ##The directory are declared here to avoid multiple declara
 
 
     ## acr 2018-02-19 BEGIN definining a function to call within the display loop
+    def display_counter (self,command_echo_param):
+        L_array = array.array('I')  # L is an array of unsigned long, I for some systems, L for others
+        L_array.fromstring(command_echo_param)
+        L_array.byteswap()
+        TIGER_for_counter = (L_array[0] >>21 & 0x7)  # TIGER on which we count error or hits
+        HIT_counter_disable = (L_array[0] >>15 & 0x1)  # 1 = counting errors, 0 = counting hits
+        CHANNEL_for_counter = (L_array[0] >> 8 & 0x7F)  # 0-63 for single channel hits, 64 for chip total
+        counter1 =((L_array[8]) >> 22) & 0xff
+        counter2 =((L_array[7]) >> 22) & 0xff
+        counter3 =((L_array[6]) >> 22) & 0xff
+        VERSION = ((L_array[11]) >> 16) & 0xf
+        Counter_value = (counter3<<16)+(counter2<<8)+counter1
+        if not HIT_counter_disable:
+            counting="HIT"
+        else:
+            counting="Errors"
+
+        print ("\n Counting {} on TIGER {}".format(counting, TIGER_for_counter))
+        if not HIT_counter_disable:
+            if CHANNEL_for_counter!=64:
+                print ("on channel {}") .format(CHANNEL_for_counter)
+            else:
+                print ("integrated on all 64 channels")
+
+        print ("\n Counter= {}".format(Counter_value))
+
+        print ('\nTIMING_DLY_FEB3 : %d' % ((L_array[10] >> 24) & 0x3F))
+        print ('\nTIMING_DLY_FEB2 : %d' % ((L_array[10] >> 16) & 0x3F))
+        print ('\nTIMING_DLY_FEB1 : %d' % ((L_array[10] >> 8) & 0x3F))
+        print ('\nTIMING_DLY_FEB0 : %d' % ((L_array[10] >> 0) & 0x3F))
+
+        print "\n GEMROC firmware version = {}".format(VERSION)
+
     def display_and_log_IVT(self,command_echo_param, display_enable_param, log_enable_param,
                             log_filename_param):  ## acr 2018-02-23
         L_array = array.array('I')  # L is an array of unsigned long, I for some systems, L for others
@@ -212,10 +245,6 @@ class communication: ##The directory are declared here to avoid multiple declara
         FEB0_AOVV_FLAG = (L_array[8] >> 2) & 0X1
         FEB0_AOVC_FLAG = (L_array[8] >> 1) & 0X1
         ROC_OVT_FLAG = (L_array[9] >> 17) & 0X1  # ACR 2018-03-15
-        TIGER_for_counter = (L_array[0] >>21 & 0x7)  # TIGER on which we count error or hits
-        HIT_counter_enable = (L_array[0] >>15 & 0x1)  # 0 = counting errors, 1 = counting hits
-        CHANNEL_for_counter = (L_array[0] >> 8 & 0x7F)  # 0-63 for single channel hits, 64 for chip total
-        Counter_value = ((L_array[8] >> 22 & 0xff) << 24 + (L_array[7] >> 22 & 0xff) << 16+ (L_array[6] >> 22 & 0xff) << 8)
         del L_array
         T_ref_PT1000 = 25.0
         V_ADC_at_25C = 247.2
@@ -272,10 +301,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         ## acr 2018-02-28 END  prototype V2 have INA GAIN set at 200 instead of 50!!!###
         ROC_T_conv_fact_C_per_LSB = 1.0
         ROC_T = ROC_T_U * ROC_T_conv_fact_C_per_LSB
-        if HIT_counter_enable:
-            counting="HIT"
-        else:
-            counting="Errors"
+
         if display_enable_param == 1:
             print'\n' + 'FEB3_T[degC]: ' + '%d; ' % FEB3_T + 'FEB3_VD[mV]: ' + '%d; ' % FEB3_VD + 'FEB3_ID[mA]: ' + '%d; ' % FEB3_ID + 'FEB3_VA[mV]: ' + '%d; ' % FEB3_VA + 'FEB3_IA[mA]: ' + '%d; ' % FEB3_IA
             print'\n' + 'FEB2_T[degC]: ' + '%d; ' % FEB2_T + 'FEB2_VD[mV]: ' + '%d; ' % FEB2_VD + 'FEB2_ID[mA]: ' + '%d; ' % FEB2_ID + 'FEB2_VA[mV]: ' + '%d; ' % FEB2_VA + 'FEB2_IA[mA]: ' + '%d; ' % FEB2_IA
@@ -287,13 +313,7 @@ class communication: ##The directory are declared here to avoid multiple declara
             print'\n' + 'FEB1_OVT: ' + '%d; ' % FEB1_OVT_FLAG + 'FEB1_DOVV: ' + '%d; ' % FEB1_DOVV_FLAG + 'FEB1_DOVC: ' + '%d; ' % FEB1_DOVC_FLAG + 'FEB1_AOVV: ' + '%d; ' % FEB1_AOVV_FLAG + 'FEB1_AOVC: ' + '%d; ' % FEB1_AOVC_FLAG
             print'\n' + 'FEB0_OVT: ' + '%d; ' % FEB0_OVT_FLAG + 'FEB0_DOVV: ' + '%d; ' % FEB0_DOVV_FLAG + 'FEB0_DOVC: ' + '%d; ' % FEB0_DOVC_FLAG + 'FEB0_AOVV: ' + '%d; ' % FEB0_AOVV_FLAG + 'FEB0_AOVC: ' + '%d; ' % FEB0_AOVC_FLAG
             print'\n' + 'ROC_OVT: ' + '%d; ' % ROC_OVT_FLAG
-            print ("\n Counting {} on TIGER {}".format(counting,TIGER_for_counter))
-            if HIT_counter_enable:
-                if CHANNEL_for_counter!=64:
-                    print ("on channel {}") .format(CHANNEL_for_counter)
-                else:
-                    print ("integrated on all 64 channels")
-            print ("\n Counter= {}".format(Counter_value))
+
         if log_enable_param == 1:
             self.IVT_log_file.write(
                 '\n' + 'FEB3_T[degC]: ' + '%d; ' % FEB3_T + 'FEB3_VD[mV]: ' + '%d; ' % FEB3_VD + 'FEB3_ID[mA]: ' + '%d; ' % FEB3_ID + 'FEB3_VA[mV]: ' + '%d; ' % FEB3_VA + 'FEB3_IA[mA]: ' + '%d; ' % FEB3_IA)
@@ -649,14 +669,15 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.display_and_log_IVT(command_echo_ivt, display_enable_param, log_enable_param, log_filename_param)
         return
     def GEMROC_counter_get(self):
-        COMMAND_STRING = 'CMD_GEMROC_LV_IVT_READ'
-        array_to_send = self.gemroc_LV_XX.command_words
-        command_echo_ivt = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
-                                                        self.DEST_PORT_NO)
+
+        command_echo_ivt = self.Read_GEMROC_LV_CfgReg()
         L_array = array.array('I')  # L is an array of unsigned long, I for some systems, L for others
         L_array.fromstring(command_echo_ivt)
         L_array.byteswap()
-        Counter_value = ((L_array[8] >> 22 & 0xff) << 24 + (L_array[7] >> 22 & 0xff) << 16 + (L_array[6] >> 22 & 0xff) << 8)
+        counter1 =((L_array[8]) >> 22) & 0xff
+        counter2 =((L_array[7]) >> 22) & 0xff
+        counter3 =((L_array[6]) >> 22) & 0xff
+        Counter_value = (counter3<<16)+(counter2<<8)+counter1
         return Counter_value
     def send_GEMROC_LV_CMD(self, COMMAND_STRING_PARAM):
         self.gemroc_LV_XX.set_target_GEMROC(self.GEMROC_ID)
@@ -688,7 +709,7 @@ class communication: ##The directory are declared here to avoid multiple declara
 
     def set_counter(self, TIGER_for_counter, HIT_counter_enable, CHANNEL_for_counter):
         self.gemroc_LV_XX.TIGER_for_counter=int(TIGER_for_counter)
-        self.gemroc_LV_XX.HIT_counter_enable=int(HIT_counter_enable)
+        self.gemroc_LV_XX.HIT_counter_disable=int(HIT_counter_enable)
         self.gemroc_LV_XX.CHANNEL_for_counter=int(CHANNEL_for_counter)
         COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
         command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
@@ -717,7 +738,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         gemroc_DAQ_inst_param.set_target_GEMROC(self.GEMROC_ID)
         gemroc_DAQ_inst_param.set_gemroc_cmd_code(COMMAND_STRING_PARAM, num_of_repetitions_param)
         gemroc_DAQ_inst_param.update_command_words()
-        print '\n gemroc_DAQ_inst_param.number_of_repetitions = %03X' % gemroc_DAQ_inst_param.number_of_repetitions
+        #print '\n gemroc_DAQ_inst_param.number_of_repetitions = %03X' % gemroc_DAQ_inst_param.number_of_repetitions
         array_to_send = gemroc_DAQ_inst_param.command_words
         command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING_PARAM, array_to_send, self.DEST_IP_ADDRESS,
                                                     self.DEST_PORT_NO)
@@ -1041,14 +1062,13 @@ class communication: ##The directory are declared here to avoid multiple declara
         Dbg_funct_ctrl_bits_U4_HI_localcopy = gemroc_DAQ_inst.get_Dbg_functions_ctrl_bits_HiNibble()
         Dbg_funct_ctrl_bits_U4_HI_localcopy &= 0xE
         Dbg_funct_ctrl_bits_U4_HI_localcopy |= ((Enab_nDisab_Periodic_L1_param & 0x1) << 0)
-        print '\n Dbg_funct_ctrl_bits_U4_HI_localcopy = %d' % Dbg_funct_ctrl_bits_U4_HI_localcopy
+        #print '\n Dbg_funct_ctrl_bits_U4_HI_localcopy = %d' % Dbg_funct_ctrl_bits_U4_HI_localcopy
         gemroc_DAQ_inst.set_Dbg_functions_ctrl_bits_HiNibble(Dbg_funct_ctrl_bits_U4_HI_localcopy)
         return
 
     ## ACR 2018-07-23 END
 
-    def DAQ_set(self, gemroc_DAQ_inst, TCAM_Enable_pattern_param, Per_FEB_TP_Enable_pattern_param,
-                TP_repeat_burst_param, TP_Num_in_burst_param, TL_nTM_ACQ_param, Periodic_L1_Enable_param):
+    def DAQ_set(self, gemroc_DAQ_inst, TCAM_Enable_pattern_param, Per_FEB_TP_Enable_pattern_param, TP_repeat_burst_param, TP_Num_in_burst_param, TL_nTM_ACQ_param, Periodic_L1_Enable_param, print_mode=True):
         gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
         gemroc_DAQ_inst.set_EN_TM_TCAM_pattern(TCAM_Enable_pattern_param)
         gemroc_DAQ_inst.set_TP_width(5)
@@ -1060,9 +1080,10 @@ class communication: ##The directory are declared here to avoid multiple declara
         gemroc_DAQ_inst.set_TP_Pos_nNeg(1)
         gemroc_DAQ_inst.set_TP_period(8)
         number_of_repetitions = ((TP_repeat_burst_param & 0X1) << 9) + TP_Num_in_burst_param
-        print 'DAQSET {0} {1} {2} {3} {4} {5} '.format(TCAM_Enable_pattern_param,Per_FEB_TP_Enable_pattern_param, TP_repeat_burst_param, TP_Num_in_burst_param, TL_nTM_ACQ_param,Periodic_L1_Enable_param)
-        print '\n number_of_repetitions = %03X' % number_of_repetitions
-        print '\n number_of_repetitions = %d' % number_of_repetitions
+        if print_mode:
+            print 'DAQSET {0} {1} {2} {3} {4} {5} '.format(TCAM_Enable_pattern_param,Per_FEB_TP_Enable_pattern_param, TP_repeat_burst_param, TP_Num_in_burst_param, TL_nTM_ACQ_param,Periodic_L1_Enable_param)
+            print '\n number_of_repetitions = %03X' % number_of_repetitions
+            print '\n number_of_repetitions = %d' % number_of_repetitions
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
         # acr 2018-04-023 command_echo = send_GEMROC_DAQ_CMD(self.GEMROC_ID, gemroc_DAQ_inst, COMMAND_STRING)
         command_echo = self.send_GEMROC_DAQ_CMD_num_rep(gemroc_DAQ_inst, COMMAND_STRING, number_of_repetitions)
@@ -1339,7 +1360,7 @@ class communication: ##The directory are declared here to avoid multiple declara
 
 
     def display_log_GEMROC_LV_CfgReg_readback(self, command_echo_param, display_enable_param, log_enable_param):  # acr 2018-03-16 at IHEP
-        L_array = array.array('L')  # L is an array of unsigned long
+        L_array = array.array('I')  # L is an array of unsigned long
         L_array.fromstring(command_echo_param)
         L_array.byteswap()
         if (display_enable_param == 1):
