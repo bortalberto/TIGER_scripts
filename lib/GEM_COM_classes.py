@@ -122,7 +122,10 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.enable_pattern_array = array.array('I', [0x0, 0x1, 0x3, 0x7, 0xf, 0x1f, 0x3f, 0x7f, 0xff])  # acr 2018-08-08
         # self.enable_pattern_array_test = array.array('I',[0x0, 0x3, 0x9, 0xA, 0x41, 0x42, 0x81, 0x82,  0xC0]) #Test 2 Tigers
         self.enable_pattern_array_test = array.array('I', [0x0, 0xc8, 0x4a, 0x0b,  0xca, 0xc3, 0x4b, 0xcb])  # Test 3,4,5 Tigers
-
+        COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
+        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
+        COMMAND_STRING = 'CMD_GEMROC_TIMING_DELAYS_UPDATE'
+        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
     def __del__(self):
         path_cfg=self.log_file.name
         path_IVT=self.IVT_log_file.name
@@ -707,9 +710,9 @@ class communication: ##The directory are declared here to avoid multiple declara
         return command_echo
 
 
-    def set_counter(self, TIGER_for_counter, HIT_counter_enable, CHANNEL_for_counter):
+    def set_counter(self, TIGER_for_counter, ERROR_counter_enable, CHANNEL_for_counter):
         self.gemroc_LV_XX.TIGER_for_counter=int(TIGER_for_counter)
-        self.gemroc_LV_XX.HIT_counter_disable=int(HIT_counter_enable)
+        self.gemroc_LV_XX.HIT_counter_disable=int(ERROR_counter_enable)
         self.gemroc_LV_XX.CHANNEL_for_counter=int(CHANNEL_for_counter)
         COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
         command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
@@ -1439,31 +1442,38 @@ class communication: ##The directory are declared here to avoid multiple declara
         command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
         return command_echo
 
-    def set_sampleandhold_mode(self, ChCFGReg_setting_inst, TIGER_ID_param, Channel_ID_param):
-        ChCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
-        ChCFGReg_setting_inst.set_target_TIGER(TIGER_ID_param)
-        ChCFGReg_setting_inst.set_to_ALL_param(0)  ## let's do multiple configuration under script control rather than under GEMROC NIOS2 processor control
-        COMMAND_STRING = 'WR'
-        ChCFGReg_setting_inst.set_command_code(COMMAND_STRING)
-        if Channel_ID_param < 64:
-            ChCFGReg_setting_inst.set_target_channel(Channel_ID_param)
-            ChCFGReg_setting_inst.sample_and_hold_mode()  # ACR 2018-03-04
-            ChCFGReg_setting_inst.update_command_words()
-            array_to_send = ChCFGReg_setting_inst.command_words
-            command_echo = self.send_TIGER_Ch_CFG_Reg_CMD_PKT(TIGER_ID_param, COMMAND_STRING, array_to_send,
-                                                              self.DEST_IP_ADDRESS,
-                                                              self.DEST_PORT_NO)
-        else:
-            for i in range(0, 64):
-                ChCFGReg_setting_inst.set_target_channel(i)
-                ChCFGReg_setting_inst.sample_and_hold_mode()  # ACR 2018-03-04
-                ChCFGReg_setting_inst.update_command_words()
-                array_to_send = ChCFGReg_setting_inst.command_words
-                command_echo = self.send_TIGER_Ch_CFG_Reg_CMD_PKT(TIGER_ID_param, COMMAND_STRING, array_to_send,
-                                                                  self.DEST_IP_ADDRESS,
-                                                                  self.DEST_PORT_NO)
-        last_command_echo = command_echo
-        return last_command_echo
+    def set_sampleandhold_mode(self, ChCFGReg_setting_inst):
+        for T in range (0,8):
+            for ch in range (0,64):
+                self.Set_param_dict_channel(ChCFGReg_setting_inst, "QdcMode", T, ch, 1)
+                last_command_echo = self.Set_param_dict_channel(ChCFGReg_setting_inst, "Integ", T, ch, 1)
+                self.WriteTgtGEMROC_TIGER_ChCfgReg(ChCFGReg_setting_inst, T, ch)
+                return last_command_echo
+
+        # ChCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
+        # ChCFGReg_setting_inst.set_target_TIGER(TIGER_ID_param)
+        # ChCFGReg_setting_inst.set_to_ALL_param(0)  ## let's do multiple configuration under script control rather than under GEMROC NIOS2 processor control
+        # COMMAND_STRING = 'WR'
+        # ChCFGReg_setting_inst.set_command_code(COMMAND_STRING)
+        # if Channel_ID_param < 64:
+        #     ChCFGReg_setting_inst.set_target_channel(Channel_ID_param)
+        #     ChCFGReg_setting_inst.sample_and_hold_mode()  # ACR 2018-03-04
+        #     ChCFGReg_setting_inst.update_command_words()
+        #     array_to_send = ChCFGReg_setting_inst.command_words
+        #     command_echo = self.send_TIGER_Ch_CFG_Reg_CMD_PKT(TIGER_ID_param, COMMAND_STRING, array_to_send,
+        #                                                       self.DEST_IP_ADDRESS,
+        #                                                       self.DEST_PORT_NO)
+        # else:
+        #     for i in range(0, 64):
+        #         ChCFGReg_setting_inst.set_target_channel(i)
+        #         ChCFGReg_setting_inst.sample_and_hold_mode()  # ACR 2018-03-04
+        #         ChCFGReg_setting_inst.update_command_words()
+        #         array_to_send = ChCFGReg_setting_inst.command_words
+        #         command_echo = self.send_TIGER_Ch_CFG_Reg_CMD_PKT(TIGER_ID_param, COMMAND_STRING, array_to_send,
+        #                                                           self.DEST_IP_ADDRESS,
+        #                                                           self.DEST_PORT_NO)
+        # last_command_echo = command_echo
+        # return last_command_echo
 
     def display_log_GEMROC_DAQ_CfgReg_readback(self, command_echo_param, display_enable_param, log_enable_param):  # acr 2018-03-16 at IHEP
         L_array = array.array('I')  # L is an array of unsigned long
