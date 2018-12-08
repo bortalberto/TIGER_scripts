@@ -7,7 +7,7 @@ from lib import GEM_ACQ_classes as GEM_ACQ
 # spill=int(sys.argv[2])
 
 
-GEM1=GEM_ACQ.reader(2)
+GEM1=GEM_ACQ.reader(1)
 # GEM2=GEM_ACQ.reader(3)
 
 #GEM0=GEM_ACQ.reader(0)
@@ -22,7 +22,7 @@ while True:
     if inp=="q":
         break
     else:
-            thread_1 = GEM_ACQ.Thread_handler("GEM2",2 , GEM1)
+            thread_1 = GEM_ACQ.Thread_handler("GEM2",0.2 , GEM1)
             # thread_2 = GEM_ACQ.Thread_handler("GEM3",2 , GEM2)
 
             thread_1.start()

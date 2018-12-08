@@ -525,7 +525,6 @@ def Menu_and_prompt():
                                 auto_tune_C = AN_CLASS.analisys_conf(GEM_COM1, c_inst, g_inst)
                                 GEM_COM1.Load_VTH_fromfile(c_inst, T, 2, 0)
                                 print "\nVth Loaded on TIGER {}".format(T)
-                                time.sleep(0.2)
                                 auto_tune_C.fill_VTHR_matrix(3, 0, T)
 
                                 auto_tune_C.thr_autotune(T, int(input_array[2]), test_r)
@@ -540,7 +539,6 @@ def Menu_and_prompt():
                                     auto_tune_C = AN_CLASS.analisys_conf(GEM_COM1,c_inst,g_inst )
                                     GEM_COM1.Load_VTH_fromfile(c_inst, T, 2, 0)
                                     print "\nVth Loaded on TIGER {}".format(T)
-                                    time.sleep(0.2)
                                     auto_tune_C.fill_VTHR_matrix(3, 0, T)
 
                                     auto_tune_C.thr_autotune(T,int(input_array[2]),test_r)
@@ -550,8 +548,8 @@ def Menu_and_prompt():
                                     test_r.__del__()
 
 
-                                os.system('clear')
-                                sys.stdout.write(menu_string)
+                            os.system('clear')
+                            sys.stdout.write(menu_string)
                         else:
                             print"\nCheck input formatting\n"
                             time.sleep(0.8)
