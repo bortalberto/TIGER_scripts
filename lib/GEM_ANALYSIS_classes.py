@@ -117,7 +117,7 @@ class analisys_conf: #Analysis class used for configurations10
                         self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
                         self.GEM_COM.SynchReset_to_TgtTCAM(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
                         test_r.start_socket()
-                        while word_count < 50:
+                        while word_count < 60:
                             #print word_count
                             try:
                                 word_count = test_r.data_save_thr_scan(j, i, T, word_count, save_binout=False, save_txt=False)
@@ -313,8 +313,8 @@ class analisys_conf: #Analysis class used for configurations10
     #             print(self.vthr_matrix[T, :])
     #             self.timedOut = False
     #             frame_count = 0
-    def thr_autotune(self, T, desired_rate, test_r, max_iter=10, final_lowering=True):
-        frameMax = 100
+    def thr_autotune(self, T, desired_rate, test_r, max_iter=16, final_lowering=True):
+        frameMax = 104
         frame_count = 0
         self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
         doing_tuning_matrix = np.ones((64))
@@ -598,7 +598,6 @@ class analisys_conf: #Analysis class used for configurations10
     def __del__(self):
         return 0
 
-
 class analisys_read:
     def __init__(self, com, c_inst):
         self.c_inst=c_inst
@@ -621,7 +620,7 @@ class analisys_read:
 
     def start_socket(self):
         self.dataSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.dataSock.settimeout(0.01)
+        self.dataSock.settimeout(0.1)
         self.dataSock.bind((self.HOST_IP, self.HOST_PORT))
         #self.dataSock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 8388608 )
         #self.dataSock.getsockopt(socket.SOL_SOCKET,socket.SO_RCVBUF)
