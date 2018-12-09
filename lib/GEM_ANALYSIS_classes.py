@@ -49,7 +49,6 @@ class analisys_conf: #Analysis class used for configurations10
         self.currentCH=0
         self.currentVTH=0
         self.currentTIGER=0
-        self.thr_scan_matrix=np.zeros((8,64,64))#Tiger,Channel,Threshold
         self.thr_scan_frames=np.ones((8,64,64))
         self.vthr_matrix=np.ones((8,64))
         self.timedOut=False
@@ -129,15 +128,15 @@ class analisys_conf: #Analysis class used for configurations10
                                     time.sleep(0.1)
                                     break
                         test_r.dataSock.close()
-                        globalcheck= self.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(self.g_inst, T)
-                        if (int(binascii.b2a_hex(globalset), 16)) != ((int(binascii.b2a_hex(globalcheck), 16)) - 2048):
-                            with open(self.log_path, 'a') as log_file:
-                                log_file.write("Global configuration error\n")
-                        globalcheck= self.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(self.g_inst, T)
-                        if (int(binascii.b2a_hex(globalset), 16)) != ((int(binascii.b2a_hex(globalcheck), 16)) - 2048):
-                            with open(self.log_path, 'a') as log_file:
-                                log_file.write("Global configuration error\n")
-                        command_reply = self.GEM_COM.ReadTgtGEMROC_TIGER_ChCfgReg(self.c_inst, T, j, 0)
+                        # globalcheck= self.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(self.g_inst, T)
+                        # if (int(binascii.b2a_hex(globalset), 16)) != ((int(binascii.b2a_hex(globalcheck), 16)) - 2048):
+                        #     with open(self.log_path, 'a') as log_file:
+                        #         log_file.write("Global configuration error\n")
+                        # globalcheck= self.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(self.g_inst, T)
+                        # if (int(binascii.b2a_hex(globalset), 16)) != ((int(binascii.b2a_hex(globalcheck), 16)) - 2048):
+                        #     with open(self.log_path, 'a') as log_file:
+                        #         log_file.write("Global configuration error\n")
+                        # command_reply = self.GEM_COM.ReadTgtGEMROC_TIGER_ChCfgReg(self.c_inst, T, j, 0)
                         # L_array = array.array('I')  # L is an array of unsigned long
                         # L_array.fromstring(command_reply)
                         # L_array.byteswap()
@@ -147,7 +146,7 @@ class analisys_conf: #Analysis class used for configurations10
                         #     time.sleep(10)
 
                         #print bin(int (binascii.b2a_hex(command_reply),16))
-                        self.GEM_COM.Channel_set_check(command_sent,command_reply,self.log_path)
+                        # self.GEM_COM.Channel_set_check(command_sent,command_reply,self.log_path)
                         # if (int (binascii.b2a_hex(command_sent),16)) !=( (int (binascii.b2a_hex(command_reply),16)) -2048 ):
                         #     print "---____----____----____----____----"
                         #     print "!!! ERROR IN CONFIGURATION !!!"
@@ -163,7 +162,34 @@ class analisys_conf: #Analysis class used for configurations10
             self.GEM_COM.Set_param_dict_global(self.g_inst, "CounterEnable", T, 0)
 
         return
+    def thr_conf_using_GEMROC_COUNTERS(self,test_r, first_TIGER_to_SCAN, last_TIGER_to_SCAN):
+        with open(self.log_path, 'a') as log_file:
+            log_file.write("{} -- Starting thr scan\n".format(time.ctime()))
+        thr_scan_matrix=np.zeros((8,64,64))
+        for T in range(first_TIGER_to_SCAN, last_TIGER_to_SCAN):
+            self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, 64, 1, 3)
+            self.GEM_COM.DAQ_set(self.GEM_COM.gemroc_DAQ_XX, 2**T, 0, 0, 0, 1, 0)
 
+            for j in range (0,64):  #Channel cycle
+                self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 0)
+                self.GEM_COM.set_counter(T, 0, j)
+                for i in range(0,64):#VTH Cycle
+                        command_sent = self.GEM_COM.Set_Vth_T1(self.c_inst, T, j, i)
+                        with open(self.log_path, 'a') as log_file:
+                            log_file.write("@@@@@@   {} -- Set Vth={} on channel {} \n".format(time.ctime(),i,j))
+                        self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
+                        self.GEM_COM.SynchReset_to_TgtTCAM(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
+                        self.GEM_COM.reset_counter()
+                        time.sleep(0.01)
+                        thr_scan_matrix[T, j, i] = self.GEM_COM.GEMROC_counter_get()
+                        # print ("Events: {}".format(thr_scan_matrix[T, j, i]))
+                        os.system('clear')
+                        string="SCANNING [TIGER={}, VTh={}, CH={}]\n".format(T,i,j)
+                        sys.stdout.write(string)
+
+                self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 3)
+
+        return thr_scan_matrix
     def acquire_rate(self, frame_count, rate_matrix,test_r):
         try:
             data, addr = test_r.dataSock.recvfrom(BUFSIZE)
