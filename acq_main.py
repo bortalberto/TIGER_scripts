@@ -7,7 +7,7 @@ from lib import GEM_ACQ_classes as GEM_ACQ
 # spill=int(sys.argv[2])
 
 
-GEM1=GEM_ACQ.reader(1)
+GEM1=GEM_ACQ.reader(3)
 # GEM2=GEM_ACQ.reader(3)
 
 #GEM0=GEM_ACQ.reader(0)

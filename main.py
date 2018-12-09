@@ -592,17 +592,16 @@ def Menu_and_prompt():
                             test_c = AN_CLASS.analisys_conf(GEM_COM1, c_inst, g_inst)
                             test_r = AN_CLASS.analisys_read(GEM_COM1,c_inst )
                             test_c.thr_preconf()
-                            test_c.thr_conf(test_r, int(input_array[1]),int(input_array[2]))
-
-
-                            test_r.save_scan_on_file()
+                            test_r.thr_scan_matrix=test_c.thr_conf_using_GEMROC_COUNTERS(test_r, int(input_array[1]),int(input_array[2]))
 
                             test_r.make_rate()
+                            test_r.normalize_rate(int(input_array[1]),int(input_array[2]))
+                            test_r.save_scan_on_file()
                             test_r.colorPlot(GEM_COM1.Tscan_folder+sep+"GEMROC{}".format(GEMROC_ID)+sep+"GEMROC {}".format(GEMROC_ID)+"rate", int(input_array[1]),int(input_array[2]),True)
                             test_r.colorPlot(GEM_COM1.Tscan_folder+sep+"GEMROC{}".format(GEMROC_ID)+sep+"GEMROC {}".format(GEMROC_ID)+"conteggi", int(input_array[1]),int(input_array[2]))
 
 
-                            test_r.normalize_rate( int(input_array[1]),int(input_array[2]))
+                            #test_r.normalize_rate( int(input_array[1]),int(input_array[2]))
                             test_r.global_sfit( int(input_array[1]),int(input_array[2]))
                             test_r.__del__()
                             test_c.__del__()
