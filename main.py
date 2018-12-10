@@ -518,6 +518,37 @@ def Menu_and_prompt():
 
                     elif input_array[0].lower() == 'auto':
                         if len(input_array) == 3:
+                        #     if int(input_array[1]) != 8:
+                        #         T = int(input_array[1])
+                        #         test_r = AN_CLASS.analisys_read(GEM_COM1, c_inst)
+                        #
+                        #         auto_tune_C = AN_CLASS.analisys_conf(GEM_COM1, c_inst, g_inst)
+                        #         GEM_COM1.Load_VTH_fromfile(c_inst, T, 2, 0)
+                        #         print "\nVth Loaded on TIGER {}".format(T)
+                        #         auto_tune_C.fill_VTHR_matrix(3, 0, T)
+                        #
+                        #         auto_tune_C.thr_autotune(T, int(input_array[2]), test_r)
+                        #         auto_tune_C.__del__()
+                        #
+                        #         test_r.__del__()
+                        #
+                        #     else:
+                        #         for T in range(0, 8):
+                        #             test_r = AN_CLASS.analisys_read(GEM_COM1, c_inst)
+                        #
+                        #             auto_tune_C = AN_CLASS.analisys_conf(GEM_COM1, c_inst, g_inst)
+                        #             GEM_COM1.Load_VTH_fromfile(c_inst, T, 2, 0)
+                        #             print "\nVth Loaded on TIGER {}".format(T)
+                        #             auto_tune_C.fill_VTHR_matrix(3, 0, T)
+                        #
+                        #             auto_tune_C.thr_autotune(T, int(input_array[2]), test_r)
+                        #
+                        #             auto_tune_C.__del__()
+                        #
+                        #             test_r.__del__()
+                        #
+                        #     os.system('clear')
+                        #     sys.stdout.write(menu_string) if len(input_array) == 3:
                             if int(input_array[1]) != 8:
                                 T=int(input_array[1])
                                 test_r = AN_CLASS.analisys_read(GEM_COM1, c_inst)
@@ -527,7 +558,10 @@ def Menu_and_prompt():
                                 print "\nVth Loaded on TIGER {}".format(T)
                                 auto_tune_C.fill_VTHR_matrix(3, 0, T)
 
-                                auto_tune_C.thr_autotune(T, int(input_array[2]), test_r)
+                                auto_tune_C.thr_autotune_wth_counter(T, int(input_array[2]), test_r,15,0.02)
+                                auto_tune_C.thr_autotune_wth_counter(T, int(input_array[2]), test_r,2,1)
+
+
                                 auto_tune_C.__del__()
 
                                 test_r.__del__()
@@ -541,7 +575,8 @@ def Menu_and_prompt():
                                     print "\nVth Loaded on TIGER {}".format(T)
                                     auto_tune_C.fill_VTHR_matrix(3, 0, T)
 
-                                    auto_tune_C.thr_autotune(T,int(input_array[2]),test_r)
+                                    auto_tune_C.thr_autotune_wth_counter(T, int(input_array[2]), test_r, 15, 0.02)
+                                    auto_tune_C.thr_autotune_wth_counter(T, int(input_array[2]), test_r, 2, 1)
 
                                     auto_tune_C.__del__()
 

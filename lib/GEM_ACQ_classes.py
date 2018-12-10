@@ -21,12 +21,14 @@ else:
     sys.exit()
 
 
-class Thread_handler(Thread): #In order to scan during configuration is mandatory to use multithreading
+class Thread_handler(Thread):
     def __init__(self, name,acq_time,reader):
         Thread.__init__(self)
         self.name = name
         self.acq_time=acq_time
         self.reader=reader
+        self.running=True
+
     def run(self):
         datapath= "."+sep+"data_folder"+sep+"Spill_{}_GEMROC_{}.dat".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"),self.reader.GEMROC_ID)
         # with open(self.reader.log_path, 'a') as log_file:
@@ -56,32 +58,47 @@ class Thread_handler(Thread): #In order to scan during configuration is mandator
                 return 0
         self.reader.datapath=datapath
 
-# class Thread_handler(Thread):  # In order to scan during configuration is mandatory to use multithreading
-#     def __init__(self, name, acq_time, reader):
-#         Thread.__init__(self)
-#         self.name = name
-#         self.acq_time = acq_time
-#         self.reader = reader
-#
-#     def run(self):
-#
-#         datapath = "." + sep + "data_folder" + sep + "Spill_{}_GEMROC_{}.dat".format(
-#             datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"), self.reader.GEMROC_ID)
-#         self.first_framew=np.zeros(8)
-#         self.last_framew = np.zeros(8)
-#         with open(datapath, 'wb') as datafile:
-#
-#             # with open(self.reader.log_path, 'a') as log_file:
-#             #     log_file.write("{} --Launching acquisition on GEMROC {} for {} seconds\n".format(time.ctime(),self.reader.GEMROC_ID,self.acq_time))
-#
-#             time0 = time.time()
-#             data_list = []
-#             self.reader.start_socket()
-#             while time.time() - time0 < self.acq_time:
-#                 self.reader.acquisition(datafile)  # self.reader.fast_acquisition(data_list)
-#
-#             self.reader.dataSock.close()
+class Thread_handler_TM(Thread): #In order to scan during configuration is mandatory to use multithreading
+    def __init__(self, name,reader):
+        Thread.__init__(self)
+        self.name = name
+        self.reader=reader
+        self.running=True
+    def run(self):
+        Total_data_MAX_size = 2 ** 20
 
+        datapath= "."+sep+"data_folder"+sep+"Spill_{}_GEMROC_{}_TM.dat".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"),self.reader.GEMROC_ID)
+        # with open(self.reader.log_path, 'a') as log_file:
+        #     log_file.write("{} --Launching acquisition on GEMROC {} for {} seconds\n".format(time.ctime(),self.reader.GEMROC_ID,self.acq_time))
+
+        data_list = []
+        Total_Data=0
+        while self.running:
+            Total_Data = 0
+            self.reader.start_socket()
+            while (Total_Data < Total_data_MAX_size ):
+                try:
+                   x=self.reader.fast_acquisition(data_list)# self.reader.fast_acquisition(data_list)
+                   Total_Data += x
+
+                except:
+                    print ("\n---TIMED_OUT!!!...\n")
+                    self.reader.dataSock.close()
+                    return 0
+            self.reader.dataSock.close()
+            self.reader.data_list=list(data_list)
+            print len(self.reader.data_list)
+
+            # with open(self.reader.log_path, 'a') as log_file:
+            #     log_file.write("{} -- Closing acquisition on GEMROC {}\n".format(time.ctime(),self.reader.GEMROC_ID))
+            with open(datapath, 'ab') as datafile:
+                print "Saving data on file"
+                try: # add a method to write the list on the file
+                    self.reader.dump_list(datafile,data_list)
+                except:
+                    print ("\n----SOMETHING WRONG---FILE MISSING\n")
+                    return 0
+        self.reader.datapath=datapath
 
 class reader:
     def __init__(self, GEMROC_ID):
