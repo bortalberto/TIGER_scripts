@@ -87,7 +87,7 @@ class reader:
 
                     hex_to_int = (int(hexdata[x], 16)) * 16 + int(hexdata[x + 1], 16)  # acr 2017-11-17 this should fix the problem
                     int_x = (int_x + hex_to_int)
-                    raw = "{}".format(hex(int_x))
+                    raw = "{}".format(bin(int_x))
 
 
                     if (((int_x & 0xFF00000000000000) >> 59) == 0x04):  # It's a frameword
