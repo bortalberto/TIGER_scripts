@@ -987,9 +987,6 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
    def set_Periodic_TP_EN_pattern(self, Periodic_TP_EN_pattern_param): # acr 2017-10-03
       self.Periodic_TP_EN_pattern = Periodic_TP_EN_pattern_param & 0xF
 
-   def set_Periodic_TP_EN_pattern(self, Periodic_TP_EN_pattern_param): # acr 2017-10-03
-      self.Periodic_TP_EN_pattern = Periodic_TP_EN_pattern_param & 0xF
-
    # acr 2018-07-11 BEGIN new functions added
    # Dbg_functions_ctrl_bits_U8[7] <-> roc_ctl_port[19] <-> RESERVED
    # Dbg_functions_ctrl_bits_U8[6] <-> roc_ctl_port[18] <-> RESERVED
