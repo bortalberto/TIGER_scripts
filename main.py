@@ -429,18 +429,20 @@ def Menu_and_prompt():
                             # acr 2018-04-24 elif (input_array[0] == 'DSTART'):
                     elif (input_array[0] == 'DAQSET'):
                             # acr 2018-04-23 if (len(input_array) == 3):
-                            if (len(input_array) == 7):  # 5):
+                            if (len(input_array) == 8):  # 5):
                                 TCAM_Enable_pattern = int(input_array[1], 0) & 0xFF
                                 Periodic_FEB_TP_Enable_pattern = int(input_array[2], 0) & 0xFF
                                 TP_repeat_burst = int(input_array[3], 0) & 0x1
                                 TP_Num_in_burst = int(input_array[4], 0) & 0x1FF
                                 TL_nTM_ACQ_choice = int(input_array[5], 0) & 0x1
                                 Periodic_L1_Enable_pattern = int(input_array[6], 0) & 0x1
+                                Enab_Auto_L1_from_TP_bit_param= int(input_array[7], 0) & 0x1
+
                                 # acr 2018-04-23 DAQ_set_and_TL_start(gemroc_DAQ_XX, GEMROC_ID, TCAM_Enable_pattern, Periodic_FEB_TP_Enable_pattern)
                                 # acr 2018-05-31 DAQ_set(gemroc_DAQ_XX, GEMROC_ID, TCAM_Enable_pattern, Periodic_FEB_TP_Enable_pattern, TP_repeat_burst, TP_Num_in_burst)
                                 # acr 2018-06-04 DAQ_set(gemroc_DAQ_XX, GEMROC_ID, TCAM_Enable_pattern, Periodic_FEB_TP_Enable_pattern, TP_repeat_burst, TP_Num_in_burst, TL_nTM_ACQ_choice)
                                 gemroc_DAQ_XX = GEM_COM1.gemroc_DAQ_XX
-                                GEM_COM1.DAQ_set(gemroc_DAQ_XX, TCAM_Enable_pattern, Periodic_FEB_TP_Enable_pattern, TP_repeat_burst, TP_Num_in_burst, TL_nTM_ACQ_choice, Periodic_L1_Enable_pattern)
+                                GEM_COM1.DAQ_set(gemroc_DAQ_XX, TCAM_Enable_pattern, Periodic_FEB_TP_Enable_pattern, TP_repeat_burst, TP_Num_in_burst, TL_nTM_ACQ_choice, Periodic_L1_Enable_pattern,Enab_Auto_L1_from_TP_bit_param)
                                 print '\nStart TL DAQ from enable TCAM pattern: %d on GEMROC %d' % (TCAM_Enable_pattern, GEMROC_ID)
                                 time.sleep(2)
                                 os.system('clear')
@@ -824,12 +826,11 @@ def Menu_and_prompt():
                             # time.sleep(1)
                             # TP_disable_FE and TriggerMode bit setting in the channel configuration for selected (n_channel = 2 * N_TIGER) channels
                             #for nT in range(0, NumTigerToConfigure):
-                            for nT in range(0, 8):
-                                channel_ID_for_TPEn = nT
-                                if ((Pattern_of_Tiger_To_Configure & (0x1 << nT)) != 0):
-                                    GEM_COM1.Set_GEMROC_TIGER_ch_TPEn(c_inst, nT, channel_ID_for_TPEn, 0, 1)
-                                    print '\nTo TIGER %d on GEMROC %d: TP_disable_FE bit set to %d and TriggerMode bit set to %d for channel %d' %(nT, GEMROC_ID, 0, 1, channel_ID_for_TPEn)
-                            time.sleep(1)
+                            # for nT in range(0, 8):
+                            #     channel_ID_for_TPEn = nT
+                            #     if ((Pattern_of_Tiger_To_Configure & (0x1 << nT)) != 0):
+                            #         GEM_COM1.Set_GEMROC_TIGER_ch_TPEn(c_inst, nT, channel_ID_for_TPEn, 0, 1)
+                            #         print '\nTo TIGER %d on GEMROC %d: TP_disable_FE bit set to %d and TriggerMode bit set to %d for channel %d' %(nT, GEMROC_ID, 0, 1, channel_ID_for_TPEn)
                             # TMSET 358 66
                             L1_lat_B3clk_local_param = 358
                             TM_window_in_B3clk_local_param = 66
@@ -881,7 +882,7 @@ def Menu_and_prompt():
                             # acr 2018-11-02 BEGIN using the most recent definition of function DAQ_set
                             # DAQ_set(gemroc_DAQ_XX, GEMROC_ID, TCAM_Enable_pattern_local, Periodic_FEB_TP_Enable_pattern_local,
                             #        TP_repeat_burst_local, DI_TP_Num_in_burst, DI_TL_nTM_option, DI_Periodic_L1_Enable_bit, DI_Enab_Auto_L1_from_TP_bit)
-                            GEM_COM1.DAQ_set(GEM_COM1.gemroc_DAQ_XX, TCAM_Enable_pattern_local, Periodic_FEB_TP_Enable_pattern_local, TP_repeat_burst_local, DI_TP_Num_in_burst, DI_TL_nTM_option, DI_Periodic_L1_Enable_bit)
+                            GEM_COM1.DAQ_set(GEM_COM1.gemroc_DAQ_XX, TCAM_Enable_pattern_local, Periodic_FEB_TP_Enable_pattern_local, TP_repeat_burst_local, DI_TP_Num_in_burst, DI_TL_nTM_option, DI_Periodic_L1_Enable_bit, DI_Enab_Auto_L1_from_TP_bit)
                             # acr 2018-11-02 END   using the most recent definition of function DAQ_set
                             #print '\nStart DAQ from enabled TCAMs: %d on GEMROC %d; TL_nTM flag: %d' % ( TCAM_Enable_pattern_local, GEMROC_ID, DI_TL_nTM_option)
                             print '\nStart DAQ in %s mode. Enable TIGERs pattern: %d on GEMROC %d. Periodic TP enable: %d. Number of periodic TP in burst: %d. Periodic_L1_Enable_bit: %d. DI_Enab_Auto_L1_from_TP_bit: %d.' % ( GEM_COM1.print_TL_vs_nTM(DI_TL_nTM_option), TCAM_Enable_pattern_local, GEMROC_ID, TP_repeat_burst_local, DI_TP_Num_in_burst, DI_Periodic_L1_Enable_bit, DI_Enab_Auto_L1_from_TP_bit )

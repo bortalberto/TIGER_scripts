@@ -1070,21 +1070,33 @@ class communication: ##The directory are declared here to avoid multiple declara
         return
 
     ## ACR 2018-07-23 END
+    def DAQ_set_Periodic_L1_EN_bit(self,gemroc_DAQ_inst, Per_L1_En_bit_param):  # acr 2018-11-12 added function definition
+        Dbg_funct_ctrl_bits_U4_HI_localcopy = gemroc_DAQ_inst.get_Dbg_functions_ctrl_bits_HiNibble()
+        Dbg_funct_ctrl_bits_U4_HI_localcopy &= 0xE
+        Dbg_funct_ctrl_bits_U4_HI_localcopy |= ((Per_L1_En_bit_param & 0x1) << 0)
+        print '\n Dbg_funct_ctrl_bits_U4_HI_localcopy = %d' % Dbg_funct_ctrl_bits_U4_HI_localcopy
+        gemroc_DAQ_inst.set_Dbg_functions_ctrl_bits_HiNibble(Dbg_funct_ctrl_bits_U4_HI_localcopy)
+        COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
+        command_echo = self.send_GEMROC_DAQ_CMD (gemroc_DAQ_inst, COMMAND_STRING)
+        return command_echo
 
-    def DAQ_set(self, gemroc_DAQ_inst, TCAM_Enable_pattern_param, Per_FEB_TP_Enable_pattern_param, TP_repeat_burst_param, TP_Num_in_burst_param, TL_nTM_ACQ_param, Periodic_L1_Enable_param, print_mode=True):
+    # acr 2018-11-02 BEGIN added function definition
+    def DAQ_set(self, gemroc_DAQ_inst, TCAM_Enable_pattern_param, Per_FEB_TP_Enable_pattern_param, TP_repeat_burst_param, TP_Num_in_burst_param, TL_nTM_ACQ_param, Per_L1_En_bit_param, Enab_Auto_L1_from_TP_bit_param=0,print_mode=True):
         gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
         gemroc_DAQ_inst.set_EN_TM_TCAM_pattern(TCAM_Enable_pattern_param)
         gemroc_DAQ_inst.set_TP_width(5)
         gemroc_DAQ_inst.set_AUTO_TP_EN_bit(0x0)
         gemroc_DAQ_inst.set_Periodic_TP_EN_pattern(Per_FEB_TP_Enable_pattern_param)
         #gemroc_DAQ_inst.set_Periodic_L1_EN_pattern(Periodic_L1_Enable_param)
-        self.set_Periodic_L1_EN_pattern(gemroc_DAQ_inst,Periodic_L1_Enable_param)
+            # acr 2018-11-02 updated definition BEGIN
+        gemroc_DAQ_inst.DAQ_set_Periodic_L1_EN_bit(gemroc_DAQ_inst, Per_L1_En_bit_param) # acr 2018-11-12 added DAQ_set_Periodic_L1_EN_bit function definition
+        gemroc_DAQ_inst.set_AUTO_L1_EN_bit(Enab_Auto_L1_from_TP_bit_param)
         gemroc_DAQ_inst.set_TL_nTM_ACQ(TL_nTM_ACQ_param)
         gemroc_DAQ_inst.set_TP_Pos_nNeg(1)
-        gemroc_DAQ_inst.set_TP_period(8)
+        gemroc_DAQ_inst.set_TP_period(256)
         number_of_repetitions = ((TP_repeat_burst_param & 0X1) << 9) + TP_Num_in_burst_param
         if print_mode:
-            print 'DAQSET {0} {1} {2} {3} {4} {5} '.format(TCAM_Enable_pattern_param,Per_FEB_TP_Enable_pattern_param, TP_repeat_burst_param, TP_Num_in_burst_param, TL_nTM_ACQ_param,Periodic_L1_Enable_param)
+            print 'DAQSET {0} {1} {2} {3} {4} {5} '.format(TCAM_Enable_pattern_param,Per_FEB_TP_Enable_pattern_param, TP_repeat_burst_param, TP_Num_in_burst_param, TL_nTM_ACQ_param,Per_L1_En_bit_param)
             print '\n number_of_repetitions = %03X' % number_of_repetitions
             print '\n number_of_repetitions = %d' % number_of_repetitions
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
@@ -1480,62 +1492,58 @@ class communication: ##The directory are declared here to avoid multiple declara
         L_array.fromstring(command_echo_param)
         L_array.byteswap()
         if (display_enable_param == 1):
-            print ('\nList of DAQ related GEMROC Config Register parameters read back RESPONDING GEMROC%d:' % (((L_array[0] >> 16) & 0X1f)))
-            print ('\nUDP_DATA_DESTINATION_IPADDR: %d' % ((L_array[0] >> 8) & 0xFF))
-            print ('\nUDP_DATA_DESTINATION_IPPORT: %d' % ((L_array[4] >> 26) & 0xF))
-            print ('\nL1_latency_OBSOLETE: %d' % ((L_array[1] >> 20) & 0x3FF))
-            print ('\nTP_width: %d' % ((L_array[1] >> 16) & 0xF))
-            print ('\nL1_win_upper_edge_offset: %d' % ((L_array[1] >> 0) & 0xFFFF))
-            print ('\nL1_period: %d' % ((L_array[2] >> 20) & 0x3FF))
-            # print ('\nPeriodic_L1_EN_pattern: %X' % ((L_array[2] >> 16) & 0xF))
-            print ('\nDbg_functions_ctrl_bits_HiNibble: %X' % ((L_array[2] >> 16) & 0xF))
-            print ('\nL1_win_lower_edge_offset: %d' % ((L_array[2] >> 0) & 0xFFFF))
-            print ('\nTP_period: %d' % ((L_array[3] >> 20) & 0x3FF))
-            print ('\nPeriodic_TP_EN_pattern: %X' % ((L_array[3] >> 16) & 0xF))
-            print ('\nDbg_functions_ctrl_bits_LoNibble: %X' % ((L_array[3] >> 12) & 0xF))
-            print ('\nTL_nTM_ACQ: %d' % ((L_array[3] >> 11) & 0x1))
-            print ('\nAUTO_L1_EN: %d' % ((L_array[3] >> 10) & 0x1))
-            print ('\nAUTO_TP_EN: %d' % ((L_array[3] >> 9) & 0x1))
-            print ('\nTP_Pos_nNeg: %d' % ((L_array[3] >> 8) & 0x1))
-            print ('\nEN_TM_TCAM_pattern: %X' % ((L_array[3] >> 0) & 0xFF))
-            # ACR 2018-04-26 print ('\nnumber_of_repetitions: %d'        %( (L_array[4]>>16)&0x3FF ) )
-            print ('\nTest Pulse Burst Repeat Enable: %d' % ((L_array[4] >> 25) & 0x1))  # ACR 2018-04-26 "TP_repeat_burst": Test Pulse repeat Enable
-            print ('\nNumber of TP in one burst: %d' % (((L_array[4] >> 16) & 0x1FF) << 2))  # ACR 2018-04-26
-            print ('\ntarget_TCAM_ID: %d' % ((L_array[4] >> 8) & 0x3))
-            print ('\nto_ALL_TCAM_enable: %d' % ((L_array[4] >> 6) & 0x1))
-            print ('\ntop_daq_pll_locked: %d' % ((L_array[4] >> 0) & 0x1))  # acr 2018-04-26
-            print ('\nEnable_DAQPause_Until_First_Trigger: %d' % ((L_array[3] >> 15) & 0x1))  # acr 2018-04-26
-            print ('\nDAQPause_Set: %d' % ((L_array[3] >> 14) & 0x1))  # acr 2018-04-26
-            print ('\nTpulse_generation_w_ext_trigger_enable: %d' % ((L_array[3] >> 13) & 0x1))  # acr 2018-04-26
-            print ('\nEXT_nINT_B3clk: %d' % ((L_array[3] >> 12) & 0x1))  # acr 2018-04-26
+            print ('List of DAQ related GEMROC Config Register parameters read back RESPONDING GEMROC%d:' % (
+                ((L_array[0] >> 16) & 0X1f)))
+            print ('UDP_DATA_DESTINATION_IPADDR: %d' % ((L_array[0] >> 8) & 0xFF))
+            print ('UDP_DATA_DESTINATION_IPPORT: %d' % ((L_array[4] >> 26) & 0xF))
+            print ('Simulated L1_latency: %d' % ((L_array[1] >> 20) & 0x3FF))
+            print ('TP_width: %d' % ((L_array[1] >> 16) & 0xF))
+            print ('UpperDataScanWindowOffset: %d' % ((L_array[1] >> 0) & 0xFFFF))
+            print ('L1_period: %d' % ((L_array[2] >> 20) & 0x3FF))
+            print ('Debug_Funct_Ctl_patt_Hi4bit: %X' % ((L_array[2] >> 16) & 0xF))
+            print ('Debug_Funct_Ctl_patt_Lo4bit: %X' % ((L_array[3] >> 12) & 0xF))  # acr 2018-11-02
+            print ('Debug_Fun_Ctl_Lo4bit[3] = Enable_DAQPause_Until_First_Trigger: %X' % ((L_array[3] >> 15) & 0x1))  # acr 2018-11-02
+            print ('Debug_Fun_Ctl_Lo4bit[2] = DAQPause_Set                       : %X' % ((L_array[3] >> 14) & 0x1))  # acr 2018-11-02
+            print ('Debug_Fun_Ctl_Lo4bit[1] = Tpulse_gen_w_ext_trigger_enable    : %X' % ((L_array[3] >> 13) & 0x1))  # acr 2018-11-02
+            print ('Debug_Fun_Ctl_Lo4bit[0] = EXT_nINT_B3clk                     : %X' % ((L_array[3] >> 12) & 0x1))  # acr 2018-11-02
+            print ('LowerDataScanWindowOffset: %d' % ((L_array[2] >> 0) & 0xFFFF))
+            print ('TP_period: %d' % ((L_array[3] >> 20) & 0x3FF))
+            print ('Periodic_TP_EN_pattern: %X' % ((L_array[3] >> 16) & 0xF))
+            print ('TL_nTM_ACQ: %d' % ((L_array[3] >> 11) & 0x1))
+            print ('AUTO_L1_EN: %d' % ((L_array[3] >> 10) & 0x1))
+            print ('AUTO_TP_EN: %d' % ((L_array[3] >> 9) & 0x1))
+            print ('TP_Pos_nNeg: %d' % ((L_array[3] >> 8) & 0x1))
+            print ('EN_TM_TCAM_pattern: %X' % ((L_array[3] >> 0) & 0xFF))
+            print ('number_of_repetitions: %d' % ((L_array[4] >> 16) & 0x3FF))
+            print ('target_TCAM_ID: %d' % ((L_array[4] >> 8) & 0x3))
+            print ('to_ALL_TCAM_enable: %d' % ((L_array[4] >> 6) & 0x1))
         if (log_enable_param == 1):
-            self.log_file.write('\nList of DAQ related GEMROC Config Register parameters read back RESPONDING GEMROC%d:' % (((L_array[0] >> 16) & 0X1f)))
+            self.log_file.write(
+                '\nList of DAQ related GEMROC Config Register parameters read back RESPONDING GEMROC%d:' % (
+                    ((L_array[0] >> 16) & 0X1f)))
             self.log_file.write('\nUDP_DATA_DESTINATION_IPADDR: %d' % ((L_array[0] >> 8) & 0xFF))
             self.log_file.write('\nUDP_DATA_DESTINATION_IPPORT: %d' % ((L_array[4] >> 26) & 0xF))
-            self.log_file.write('\nL1_latency_OBSOLETE: %d' % ((L_array[1] >> 20) & 0x3FF))
+            self.log_file.write('\nL1_latency: %d' % ((L_array[1] >> 20) & 0x3FF))
             self.log_file.write('\nTP_width: %d' % ((L_array[1] >> 16) & 0xF))
-            self.log_file.write('\nL1_win_upper_edge_offset: %d' % ((L_array[1] >> 0) & 0xFFFF))
+            self.log_file.write('\nUpperDataScanWindowOffset: %d' % ((L_array[1] >> 0) & 0xFFFF))
             self.log_file.write('\nL1_period: %d' % ((L_array[2] >> 20) & 0x3FF))
-            self.log_file.write('\nDbg_functions_ctrl_bits_HiNibble: %X' % ((L_array[2] >> 16) & 0xF))
-            self.log_file.write('\nL1_win_lower_edge_offset: %d' % ((L_array[2] >> 0) & 0xFFFF))
+            self.log_file.write('\nDebug_Funct_Ctl_patt_Hi4bit: %X' % ((L_array[2] >> 16) & 0xF))
+            self.log_file.write('\nDebug_Funct_Ctl_patt_Lo4bit: %X' % ((L_array[3] >> 12) & 0xF))  # acr 2018-11-02
+            self.log_file.write('\nDebug_Fun_Ctl_Lo4bit[3] = Enable_DAQPause_Until_First_Trigger: %X' % ((L_array[3] >> 15) & 0x1))  # acr 2018-11-02
+            self.log_file.write('\nDebug_Fun_Ctl_Lo4bit[2] = DAQPause_Set                       : %X' % ((L_array[3] >> 14) & 0x1))  # acr 2018-11-02
+            self.log_file.write('\nDebug_Fun_Ctl_Lo4bit[1] = Tpulse_gen_w_ext_trigger_enable    : %X' % ((L_array[3] >> 13) & 0x1))  # acr 2018-11-02
+            self.log_file.write('\nDebug_Fun_Ctl_Lo4bit[0] = EXT_nINT_B3clk                     : %X' % ((L_array[3] >> 12) & 0x1))  # acr 2018-11-02
+            self.log_file.write('\nLowerDataScanWindowOffset: %d' % ((L_array[2] >> 0) & 0xFFFF))
             self.log_file.write('\nTP_period: %d' % ((L_array[3] >> 20) & 0x3FF))
             self.log_file.write('\nPeriodic_TP_EN_pattern: %X' % ((L_array[3] >> 16) & 0xF))
-            self.log_file.write('\nDbg_functions_ctrl_bits_LoNibble: %X' % ((L_array[3] >> 12) & 0xF))
             self.log_file.write('\nTL_nTM_ACQ: %d' % ((L_array[3] >> 11) & 0x1))
             self.log_file.write('\nAUTO_L1_EN: %d' % ((L_array[3] >> 10) & 0x1))
             self.log_file.write('\nAUTO_TP_EN: %d' % ((L_array[3] >> 9) & 0x1))
             self.log_file.write('\nTP_Pos_nNeg: %d' % ((L_array[3] >> 8) & 0x1))
             self.log_file.write('\nEN_TM_TCAM_pattern: %X' % ((L_array[3] >> 0) & 0xFF))
-            # ACR 2018-04-26 self.log_file.write('\nnumber_of_repetitions: %d'        %( (L_array[4]>>16)&0x3FF ) )
-            self.log_file.write('\nTest Pulse Burst Repeat Enable: %d' % ((L_array[4] >> 25) & 0x1))  # ACR 2018-04-26 "TP_repeat_burst": Test Pulse repeat Enable
-            self.log_file.write('\nNumber of TP in one burst: %d' % (((L_array[4] >> 16) & 0x1FF) << 2))  # ACR 2018-04-26
+            self.log_file.write('\nnumber_of_repetitions: %d' % ((L_array[4] >> 16) & 0x3FF))
             self.log_file.write('\ntarget_TCAM_ID: %d' % ((L_array[4] >> 8) & 0x3))
             self.log_file.write('\nto_ALL_TCAM_enable: %d' % ((L_array[4] >> 6) & 0x1))
-            self.log_file.write('\ntop_daq_pll_locked: %d' % ((L_array[4] >> 0) & 0x1))  # acr 2018-04-26
-            self.log_file.write('\nEnable_DAQPause_Until_First_Trigger: %d' % ((L_array[3] >> 15) & 0x1))  # acr 2018-04-26
-            self.log_file.write('\nDAQPause_Set: %d' % ((L_array[3] >> 14) & 0x1))  # acr 2018-04-26
-            self.log_file.write('\nTpulse_generation_w_ext_trigger_enable: %d' % ((L_array[3] >> 13) & 0x1))  # acr 2018-04-26
-            self.log_file.write('\nEXT_nINT_B3clk: %d' % ((L_array[3] >> 12) & 0x1))  # acr 2018-04-26
 
 
     def Read_GEMROC_DAQ_CfgReg(self, gemroc_inst_param):
