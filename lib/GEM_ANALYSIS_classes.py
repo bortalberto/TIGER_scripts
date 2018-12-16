@@ -168,11 +168,12 @@ class analisys_conf: #Analysis class used for configurations10
         thr_scan_matrix=np.zeros((8,64,64))
         for T in range(first_TIGER_to_SCAN, last_TIGER_to_SCAN):
             self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, 64, 1, 3)
-            self.GEM_COM.DAQ_set(self.GEM_COM.gemroc_DAQ_XX, 2**T, 0, 0, 0, 1, 0)
+            self.GEM_COM.DAQ_set(self.GEM_COM.gemroc_DAQ_XX, 0, 0, 0, 0, 1, 1)
 
             for j in range (0,64):  #Channel cycle
-                self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 0)
-                for i in range(0,64):#VTH Cycle
+                self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 0, 0)
+                for i in range(0,64):#VTH Cycle, i)**
+                        # with open(self.log_path, 'a') as log_file:
                         command_sent = self.GEM_COM.Set_Vth_T1(self.c_inst, T, j, i)
                         # with open(self.log_path, 'a') as log_file:
                         #     log_file.write("@@@@@@   {} -- Set Vth={} on channel {} \n".format(time.ctime(),i,j))
@@ -619,9 +620,9 @@ class analisys_conf: #Analysis class used for configurations10
         for TD in range (0,64):
             print ("Setting delay {}".format(TD))
             self.GEM_COM.set_FEB_timing_delays(TD, TD, TD, TD)
+            self.GEM_COM.DAQ_set(self.GEM_COM.gemroc_DAQ_XX, 0, 0xff, 1, 256, 1, 1, False)
+            self.GEM_COM.SynchReset_to_TgtTCAM(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
             for Ts in range(0, 4):
-                self.GEM_COM.DAQ_set(self.GEM_COM.gemroc_DAQ_XX, 0xff, 0xff, 1, 256, 1, 1,False)
-                self.GEM_COM.SynchReset_to_TgtTCAM(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
                 self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
                 self.GEM_COM.set_counter((Ts * 2), 1, 0)
                 self.GEM_COM.reset_counter()
@@ -989,8 +990,10 @@ class analisys_read:
                 ydata[i]=1
 
         xdata = np.arange(0, 64)
-
-        popt, pcov = curve_fit(errorfunc, xdata, ydata, p0=(32,2,1),method='lm', maxfev=5000)
+        try:
+            popt, pcov = curve_fit(errorfunc, xdata, ydata, p0=(32,2,1),method='lm', maxfev=5000)
+        except:
+            pass
 
         print ("\n")
         print popt
