@@ -595,10 +595,11 @@ def Menu_and_prompt():
 
                     elif input_array[0].lower() == 'load_auto':
                         if len(input_array) == 2:
-
-
-                            GEM_COM1.Load_VTH_fromfile_autotuned(c_inst, int(input_array[1]))
-
+                            if int(input_array[1])!=8:
+                                GEM_COM1.Load_VTH_fromfile_autotuned(c_inst, int(input_array[1]))
+                            else:
+                                for T in range (0,8):
+                                    GEM_COM1.Load_VTH_fromfile_autotuned(c_inst, T)
                             time.sleep(0.8)
                             os.system('clear')
                             sys.stdout.write(menu_string)
@@ -643,13 +644,30 @@ def Menu_and_prompt():
                             test_r.__del__()
                             test_c.__del__()
                         else:
+                        # if len(input_array) == 3:
+                        #     test_c = AN_CLASS.analisys_conf(GEM_COM1, c_inst, g_inst)
+                        #     test_r = AN_CLASS.analisys_read(GEM_COM1, c_inst)
+                        #     test_c.thr_preconf()
+                        #     test_c.thr_conf(test_r, int(input_array[1]), int(input_array[2]))
+                        #
+                        #     test_r.save_scan_on_file()
+                        #
+                        #     test_r.make_rate()
+                        #     test_r.colorPlot(GEM_COM1.Tscan_folder + sep + "GEMROC{}".format(GEMROC_ID) + sep + "GEMROC {}".format(GEMROC_ID) + "rate", int(input_array[1]), int(input_array[2]), True)
+                        #     test_r.colorPlot(GEM_COM1.Tscan_folder + sep + "GEMROC{}".format(GEMROC_ID) + sep + "GEMROC {}".format(GEMROC_ID) + "conteggi", int(input_array[1]), int(input_array[2]))
+                        #
+                        #     test_r.normalize_rate(int(input_array[1]), int(input_array[2]))
+                        #     test_r.global_sfit(int(input_array[1]), int(input_array[2]))
+                        #     test_r.__del__()
+                        #     test_c.__del__()
+                        # else:
                             print ("Declare first and last TIGER")
                         sys.stdout.write(menu_string)
                     elif input_array[0].lower() == 'dt':
                         if (len(input_array) == 2):  # 5):
                             TCAM_Enable_pattern = int(input_array[1], 0) & 0xFF
                             gemroc_DAQ_XX = GEM_COM1.gemroc_DAQ_XX
-                            GEM_COM1.DAQ_TIGER_SET(GEM_COM1.gemroc_DAQ_XX, TCAM_Enable_pattern)
+                            GEM_COM1.DAQ_set(gemroc_DAQ_XX, TCAM_Enable_pattern, TCAM_Enable_pattern, 0, 0, 0, 0, 0)
                             GEM_COM1.SynchReset_to_TgtFEB(GEM_COM1.gemroc_DAQ_XX, 0, 1)
                             GEM_COM1.SynchReset_to_TgtTCAM(GEM_COM1.gemroc_DAQ_XX, 0, 1)
                             time.sleep(2)
@@ -850,6 +868,7 @@ def Menu_and_prompt():
                                 # SRst 4 : Synchronous timing reset to all Tiger Configuration and Acquisition modules (TCAM)
                                 GEM_COM1.SynchReset_to_TgtFEB(GEM_COM1.gemroc_DAQ_XX, 4, 1)
                                 print '\nToALL_on GEMROC %d: sent synchronous reset' % (GEMROC_ID)
+                                GEM_COM1.SynchReset_to_TgtTCAM(GEM_COM1.gemroc_DAQ_XX, 4, 1)
                                 # PAUSE FLAG set
                                 GEM_COM1.DAQ_Toggle_Set_Pause_bit(GEM_COM1.gemroc_DAQ_XX)
                                 print '\nDAQ Pause Set bit TOGGLED on GEMROC %d' % (GEMROC_ID)

@@ -76,7 +76,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.receiveSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 106496 )
-        self.receiveSock.settimeout(10)
+        self.receiveSock.settimeout(30)
 
         self.receiveSock.bind((self.HOST_IP, self.HOST_PORT_RECEIVE))
         self.remote_IP_Address = '192.168.1.%d' % (self.GEMROC_ID + 16)
@@ -1074,14 +1074,14 @@ class communication: ##The directory are declared here to avoid multiple declara
         Dbg_funct_ctrl_bits_U4_HI_localcopy = gemroc_DAQ_inst.get_Dbg_functions_ctrl_bits_HiNibble()
         Dbg_funct_ctrl_bits_U4_HI_localcopy &= 0xE
         Dbg_funct_ctrl_bits_U4_HI_localcopy |= ((Per_L1_En_bit_param & 0x1) << 0)
-        print '\n Dbg_funct_ctrl_bits_U4_HI_localcopy = %d' % Dbg_funct_ctrl_bits_U4_HI_localcopy
+        # print '\n Dbg_funct_ctrl_bits_U4_HI_localcopy = %d' % Dbg_funct_ctrl_bits_U4_HI_localcopy
         gemroc_DAQ_inst.set_Dbg_functions_ctrl_bits_HiNibble(Dbg_funct_ctrl_bits_U4_HI_localcopy)
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
         command_echo = self.send_GEMROC_DAQ_CMD (gemroc_DAQ_inst, COMMAND_STRING)
         return command_echo
 
     # acr 2018-11-02 BEGIN added function definition
-    def DAQ_set(self, gemroc_DAQ_inst, TCAM_Enable_pattern_param, Per_FEB_TP_Enable_pattern_param, TP_repeat_burst_param, TP_Num_in_burst_param, TL_nTM_ACQ_param, Per_L1_En_bit_param, Enab_Auto_L1_from_TP_bit_param=0,print_mode=True):
+    def DAQ_set(self, gemroc_DAQ_inst, TCAM_Enable_pattern_param, Per_FEB_TP_Enable_pattern_param, TP_repeat_burst_param, TP_Num_in_burst_param, TL_nTM_ACQ_param, Per_L1_En_bit_param, Enab_Auto_L1_from_TP_bit_param=0,print_mode=False):
         gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
         gemroc_DAQ_inst.set_EN_TM_TCAM_pattern(TCAM_Enable_pattern_param)
         gemroc_DAQ_inst.set_TP_width(5)
@@ -1089,7 +1089,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         gemroc_DAQ_inst.set_Periodic_TP_EN_pattern(Per_FEB_TP_Enable_pattern_param)
         #gemroc_DAQ_inst.set_Periodic_L1_EN_pattern(Periodic_L1_Enable_param)
             # acr 2018-11-02 updated definition BEGIN
-        gemroc_DAQ_inst.DAQ_set_Periodic_L1_EN_bit(gemroc_DAQ_inst, Per_L1_En_bit_param) # acr 2018-11-12 added DAQ_set_Periodic_L1_EN_bit function definition
+        self.DAQ_set_Periodic_L1_EN_bit(gemroc_DAQ_inst, Per_L1_En_bit_param) # acr 2018-11-12 added DAQ_set_Periodic_L1_EN_bit function definition
         gemroc_DAQ_inst.set_AUTO_L1_EN_bit(Enab_Auto_L1_from_TP_bit_param)
         gemroc_DAQ_inst.set_TL_nTM_ACQ(TL_nTM_ACQ_param)
         gemroc_DAQ_inst.set_TP_Pos_nNeg(1)
@@ -1117,11 +1117,11 @@ class communication: ##The directory are declared here to avoid multiple declara
         gemroc_DAQ_inst.set_TP_Pos_nNeg(1)
         gemroc_DAQ_inst.set_TP_period(8)
         number_of_repetitions = ((TP_repeat_burst_param & 0X1) << 9) + TP_Num_in_burst_param
-        print 'DAQSET {0} {1} {2} {3} {4} {5} '.format(TCAM_Enable_pattern_param, Per_FEB_TP_Enable_pattern_param,
-                                                       TP_repeat_burst_param, TP_Num_in_burst_param,
-                                                       TL_nTM_ACQ_param, Periodic_L1_Enable_param)
-        print '\n number_of_repetitions = %03X' % number_of_repetitions
-        print '\n number_of_repetitions = %d' % number_of_repetitions
+        # print 'DAQSET {0} {1} {2} {3} {4} {5} '.format(TCAM_Enable_pattern_param, Per_FEB_TP_Enable_pattern_param,
+        #                                                TP_repeat_burst_param, TP_Num_in_burst_param,
+        #                                                TL_nTM_ACQ_param, Periodic_L1_Enable_param)
+        # print '\n number_of_repetitions = %03X' % number_of_repetitions
+        # print '\n number_of_repetitions = %d' % number_of_repetitions
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
         # acr 2018-04-023 command_echo = send_GEMROC_DAQ_CMD(self.GEMROC_ID, gemroc_DAQ_inst, COMMAND_STRING)
         command_echo = self.send_GEMROC_DAQ_CMD_num_rep(gemroc_DAQ_inst, COMMAND_STRING, number_of_repetitions)
