@@ -481,6 +481,7 @@ class reader:
                         s = 'DATA   : TIGER: %01X ' % ((int_x >> 59) & 0x7) + 'L1_TS - TIGERCOARSE_TS: %d ' % (LOCAL_L1_TS_minus_TIGER_COARSE_TS) + 'LAST TIGER FRAME NUM[2:0]: %01X ' % ((int_x >> 56) & 0x7) + 'TIGER DATA: ChID: %02X ' % ((int_x >> 50) & 0x3F) + 'tacID: %01X ' % (
                                     (int_x >> 48) & 0x3) + 'Tcoarse: %04X ' % ((int_x >> 32) & 0xFFFF) + 'Ecoarse: %03X ' % ((int_x >> 20) & 0x3FF) + 'Tfine: %03X ' % ((int_x >> 10) & 0x3FF) + 'Efine: %03X \n' % (int_x & 0x3FF)
                         TIGER_not_missing[int((int_x >> 59) & 0x7)] = 1
+                        self.thr_scan_rate[((int_x >> 59) & 0x7)][(int_x >> 50) & 0x3F]+=1
                         #print "C'e il TIGER!"
                     #print s
 
@@ -492,3 +493,62 @@ class reader:
                 if TIGER_not_missing[i]==0:
                     TIGER_out.append(i)
         return TIGER_out, packet_missing
+
+    def check_TL_Frame_TIGERS(self, path):
+        self.thr_scan_matrix = np.zeros((8, 64))  # Tiger,Channel
+        self.thr_scan_frames = np.ones(8)
+        self.thr_scan_rate = np.zeros((8, 64))
+        statinfo = os.stat(path)
+        last_framecount = np.zeros(8)
+        first_frameword = np.zeros(8)
+        TIGER_not_missing = np.zeros((8))
+        frame_missing =np.zeros((8))
+        print ("size={}\n".format(statinfo.st_size))
+        with open(path, 'r') as f:
+            for i in range(0, statinfo.st_size / 8):
+                data = f.read(8)
+                hexdata = binascii.hexlify(data)
+
+                for x in range(0, len(hexdata) - 1, 16):
+                    int_x = 0
+                    for b in range(7, 0, -1):
+                        hex_to_int = (int(hexdata[x + b * 2], 16)) * 16 + int(hexdata[x + b * 2 + 1], 16)
+                        int_x = (int_x + hex_to_int) << 8
+
+                    hex_to_int = (int(hexdata[x], 16)) * 16 + int(hexdata[x + 1], 16)
+                    int_x = (int_x + hex_to_int)
+
+                    if (((int_x & 0xFF00000000000000) >> 59) == 0x04):  # It's a framword
+
+                        self.thr_scan_frames[(int_x >> 56) & 0x7] = self.thr_scan_frames[(int_x >> 56) & 0x7] + 1
+
+                        this_framecount = ((int_x >> 15) & 0xFFFF)
+                        this_tiger = ((int_x >> 56) & 0x7)
+
+                        if first_frameword[this_tiger] == 0:
+                            last_framecount[this_tiger] = this_framecount
+                            first_frameword[this_tiger] = 1
+                        else:
+                            if this_framecount == 0xffff:
+                                first_frameword[this_tiger] = 0
+                            else:
+                                for F in range(int(last_framecount[this_tiger]), int(this_framecount)):
+                                    if last_framecount[this_tiger] + 1 == this_framecount:
+                                        last_framecount[this_tiger] = this_framecount
+                                        break
+                                    else:
+                                        print ("Frameword {} from Tiger {} missing".format(hex(F + 1), this_tiger))
+                                        last_framecount[this_tiger] = last_framecount[this_tiger] + 1
+                                        frame_missing[this_tiger]=1
+
+                    if (((int_x & 0xFF00000000000000) >> 59) == 0x00):
+                        self.thr_scan_matrix[(int_x >> 56) & 0x7, int(int_x >> 48) & 0x3F] = self.thr_scan_matrix[(int_x >> 56) & 0x7, int(int_x >> 48) & 0x3F] + 1
+                        TIGER_not_missing[((int_x >> 56) & 0x7)]=1
+        for i in range(0, 8):
+            self.thr_scan_rate[i, :] = (self.thr_scan_matrix[i, :] / self.thr_scan_frames[i]) * (1 / 0.0002048)
+
+            TIGER_out=[]
+            for i in range (0,8):
+                if TIGER_not_missing[i]==0:
+                    TIGER_out.append(i)
+        return TIGER_out, frame_missing
