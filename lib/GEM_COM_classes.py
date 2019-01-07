@@ -873,8 +873,8 @@ class communication: ##The directory are declared here to avoid multiple declara
     def Set_GEMROC_TIGER_ch_TPEn(self, ChCFGReg_setting_inst, TIGER_ID_param, Channel_ID_param, TP_disable_FE_param,
                                  TriggerMode_param):
         self.Set_param_dict_channel(ChCFGReg_setting_inst, "TP_disable_FE", TIGER_ID_param, Channel_ID_param, TP_disable_FE_param)
-        last_command_echo = self.Set_param_dict_channel(ChCFGReg_setting_inst, "TriggerMode", TIGER_ID_param, Channel_ID_param, TriggerMode_param)
-        return last_command_echo
+        self.Set_param_dict_channel(ChCFGReg_setting_inst, "TriggerMode", TIGER_ID_param, Channel_ID_param, TriggerMode_param)
+        return
     # ChCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
         # ChCFGReg_setting_inst.set_target_TIGER(TIGER_ID_param)
         # ChCFGReg_setting_inst.set_to_ALL_param(            0)  ## let's do multiple configuration under script control rather than under GEMROC NIOS2 processor control
@@ -1458,9 +1458,8 @@ class communication: ##The directory are declared here to avoid multiple declara
         for T in range (0,8):
             for ch in range (0,64):
                 self.Set_param_dict_channel(ChCFGReg_setting_inst, "QdcMode", T, ch, 1)
-                last_command_echo = self.Set_param_dict_channel(ChCFGReg_setting_inst, "Integ", T, ch, 1)
-                self.WriteTgtGEMROC_TIGER_ChCfgReg(ChCFGReg_setting_inst, T, ch)
-                return last_command_echo
+                self.Set_param_dict_channel(ChCFGReg_setting_inst, "Integ", T, ch, 1)
+        return 0
 
         # ChCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
         # ChCFGReg_setting_inst.set_target_TIGER(TIGER_ID_param)

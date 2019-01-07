@@ -652,10 +652,14 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
    def save_ch_conf(self,filename):
         with  open(filename,'wb') as f:
             pickle.dump(self.Channel_cfg_list,f)
+        with open("file.txt", "w") as output:
+                output.write(str(self.Channel_cfg_list))
         return 0
    def load_ch_conf(self,filename):
         with  open(filename,'rb') as f:
             self.Channel_cfg_list=pickle.load(f)
+        with open("file2.txt", "w") as output:
+            output.write(str(self.Channel_cfg_list))
         return 0
 ###CCCCCCCCCCCCCCCC###     CLASS gemroc_cmd_LV_settings BEGIN  ###CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC###
 # acr 2018-01-13 split the handling of the GEMROC LV and DAQ configuration parameters
