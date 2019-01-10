@@ -94,7 +94,7 @@ class analisys_conf: #Analysis class used for configurations10
 
             self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, 64, 1, 3)
 
-            self.GEM_COM.DAQ_set(self.GEM_COM.gemroc_DAQ_XX, 2 ** T, 0, 0, 0, 1, 0)
+            self.GEM_COM.DAQ_set(2 ** T, 0, 0, 0, 1, 0)
             for j in range (0,64):  #Channel cycle
                 self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 0)
                 self.GEM_COM.Set_param_dict_channel(self.c_inst, "CounterMode", T, j, int(0x2))
@@ -168,7 +168,7 @@ class analisys_conf: #Analysis class used for configurations10
         thr_scan_matrix=np.zeros((8,64,64))
         for T in range(first_TIGER_to_SCAN, last_TIGER_to_SCAN):
             self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, 64, 1, 3)
-            self.GEM_COM.DAQ_set(self.GEM_COM.gemroc_DAQ_XX, 0, 0, 0, 0, 1, 1)
+            self.GEM_COM.DAQ_set(0, 0, 0, 0, 1, 1)
 
             for j in range (0,64):  #Channel cycle
                 self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 0, 0)
@@ -354,7 +354,7 @@ class analisys_conf: #Analysis class used for configurations10
             # self.GEM_COM.DAQ_set(self.GEM_COM.gemroc_DAQ_XX, self.GEMROC_ID, 2 ** T, 0x0, 0, 0, 1, 0)
             self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, 64, 1, 0)
             self.GEM_COM.Load_VTH_fromMatrix(self.c_inst, T, self.vthr_matrix)
-            self.GEM_COM.DAQ_set(self.GEM_COM.gemroc_DAQ_XX, 2 ** T, 0x0, 0, 0, 1, 0)
+            self.GEM_COM.DAQ_set(2 ** T, 0x0, 0, 0, 1, 0)
             self.GEM_COM.SynchReset_to_TgtTCAM(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
             test_r.start_socket()
             while frame_count < frameMax and not self.timedOut:
@@ -433,7 +433,7 @@ class analisys_conf: #Analysis class used for configurations10
             # self.GEM_COM.DAQ_set(self.GEM_COM.gemroc_DAQ_XX, self.GEMROC_ID, 2 ** T, 0x0, 0, 0, 1, 0)
             self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, 64, 1, 0)
             self.GEM_COM.Load_VTH_fromMatrix(self.c_inst, T, self.vthr_matrix)
-            self.GEM_COM.DAQ_set(self.GEM_COM.gemroc_DAQ_XX, 2 ** T, 0x0, 0, 0, 1, 0)
+            self.GEM_COM.DAQ_set(2 ** T, 0x0, 0, 0, 1, 0)
             self.GEM_COM.SynchReset_to_TgtTCAM(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
             for j in range (0,64):
                 self.GEM_COM.set_counter(T, 0, j)
@@ -620,7 +620,7 @@ class analisys_conf: #Analysis class used for configurations10
         for TD in range (0,64):
             print ("Setting delay {}".format(TD))
             self.GEM_COM.set_FEB_timing_delays(TD, TD, TD, TD)
-            self.GEM_COM.DAQ_set(self.GEM_COM.gemroc_DAQ_XX, 0, 0xff, 1, 256, 1, 1, False)
+            self.GEM_COM.DAQ_set(0, 0xff, 1, 256, 1, 1, False)
             self.GEM_COM.SynchReset_to_TgtTCAM(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
             for Ts in range(0, 4):
                 self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, 0, 1)

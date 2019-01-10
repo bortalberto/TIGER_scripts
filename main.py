@@ -81,7 +81,7 @@ menu_string = "-- GEMROC {} --\n".format(GEMROC_ID)+"\
 \n (VT1)_ch  <TIGER_ID>(0 thru 7) <channel_ID>(0 thru 64) <VthT1 param> (0 thru 63); if channel_ID = 64 then act on VthT1 for ALL channels\
 \n SRst     <SynchRst_TargetFEB>(0 to 4)                                            send a sycnh rst to the target FEB(0 to 3); if 4 is input then send synch rst to ALL FEBs  \
 \n DRst     <SynchRst_TargetTCAM>(0 to 4)                                           send a sycnh rst to the TIGER Data Processing unit (TCAM)0 to 3; if 4 is input then send synch rst to ALL TCAMs    \
-\n DAQSET   <TCAM_En_pattern>(0x0 thru 0xF) <FEB_TP_En_pattern>(0x0 thru 0xF) <TP_repeat_burst>(0 or 1) <TP_Num_in_burst>(0 thru 511) <TL_nTM_ACQ_choice>(0 or 1) <Periodic_L1_Enable>(0 or 1)  set DAQ related parameters  \
+\n DAQSET   <TCAM_En_pattern>(0x0 thru 0xF) <FEB_TP_En_pattern>(0x0 thru 0xF) <TP_repeat_burst>(0 or 1) <TP_Num_in_burst>(0 thru 511) <TL_nTM_ACQ_choice>(0 or 1) <Periodic_L1_Enable>(0 or 1) <L1_from_TP_bit_param> (0 or 1) set DAQ related parameters  \
 \n DT   <TCAM_En_pattern>(0x0 thru 0xF)                                             read from selected pattern with default values  \
 \n ENPM     <On_Off_param>                                                          Enable PAUSE mode for DAQ and test pulsing: if set then it allows DAQ_PAUSE_SET to pause DAQ which will restart after reception of first trigger \
 \n PAUSE                                                                            Set DAQ in Pause; first trigger received will stop pausing \
@@ -277,7 +277,8 @@ def Menu_and_prompt():
                             sys.stdout.write(menu_string)
                     elif input_array[0] == 'DAQCR':
                         if len(input_array) == 1:
-                            command_reply = GEM_COM1.Read_GEMROC_DAQ_CfgReg(GEM_COM1.gemroc_DAQ_XX)
+                            command_reply = GEM_COM1.Read_GEMROC_DAQ_CfgReg()
+                            command_reply = GEM_COM1.Read_GEMROC_DAQ_CfgReg()
                             print '\nDAQCR command_reply: %s' %binascii.b2a_hex(command_reply)
                             GEM_COM1.display_log_GEMROC_DAQ_CfgReg_readback(command_reply, 1, 1)
                             print '\npress RETURN to continue'
@@ -442,7 +443,8 @@ def Menu_and_prompt():
                                 # acr 2018-05-31 DAQ_set(gemroc_DAQ_XX, GEMROC_ID, TCAM_Enable_pattern, Periodic_FEB_TP_Enable_pattern, TP_repeat_burst, TP_Num_in_burst)
                                 # acr 2018-06-04 DAQ_set(gemroc_DAQ_XX, GEMROC_ID, TCAM_Enable_pattern, Periodic_FEB_TP_Enable_pattern, TP_repeat_burst, TP_Num_in_burst, TL_nTM_ACQ_choice)
                                 gemroc_DAQ_XX = GEM_COM1.gemroc_DAQ_XX
-                                GEM_COM1.DAQ_set(gemroc_DAQ_XX, TCAM_Enable_pattern, Periodic_FEB_TP_Enable_pattern, TP_repeat_burst, TP_Num_in_burst, TL_nTM_ACQ_choice, Periodic_L1_Enable_pattern,Enab_Auto_L1_from_TP_bit_param)
+
+                                GEM_COM1.DAQ_set(TCAM_Enable_pattern, Periodic_FEB_TP_Enable_pattern, TP_repeat_burst, TP_Num_in_burst, TL_nTM_ACQ_choice, Periodic_L1_Enable_pattern, Enab_Auto_L1_from_TP_bit_param)
                                 print '\nStart TL DAQ from enable TCAM pattern: %d on GEMROC %d' % (TCAM_Enable_pattern, GEMROC_ID)
                                 time.sleep(2)
                                 os.system('clear')
@@ -667,7 +669,7 @@ def Menu_and_prompt():
                         if (len(input_array) == 2):  # 5):
                             TCAM_Enable_pattern = int(input_array[1], 0) & 0xFF
                             gemroc_DAQ_XX = GEM_COM1.gemroc_DAQ_XX
-                            GEM_COM1.DAQ_set(gemroc_DAQ_XX, TCAM_Enable_pattern, TCAM_Enable_pattern, 0, 0, 0, 0, 0)
+                            GEM_COM1.DAQ_set(TCAM_Enable_pattern, TCAM_Enable_pattern, 0, 0, 1, 0, 0)
                             GEM_COM1.SynchReset_to_TgtFEB(GEM_COM1.gemroc_DAQ_XX, 0, 1)
                             GEM_COM1.SynchReset_to_TgtTCAM(GEM_COM1.gemroc_DAQ_XX, 0, 1)
                             time.sleep(2)
@@ -901,7 +903,7 @@ def Menu_and_prompt():
                             # acr 2018-11-02 BEGIN using the most recent definition of function DAQ_set
                             # DAQ_set(gemroc_DAQ_XX, GEMROC_ID, TCAM_Enable_pattern_local, Periodic_FEB_TP_Enable_pattern_local,
                             #        TP_repeat_burst_local, DI_TP_Num_in_burst, DI_TL_nTM_option, DI_Periodic_L1_Enable_bit, DI_Enab_Auto_L1_from_TP_bit)
-                            GEM_COM1.DAQ_set(GEM_COM1.gemroc_DAQ_XX, TCAM_Enable_pattern_local, Periodic_FEB_TP_Enable_pattern_local, TP_repeat_burst_local, DI_TP_Num_in_burst, DI_TL_nTM_option, DI_Periodic_L1_Enable_bit, DI_Enab_Auto_L1_from_TP_bit)
+                            GEM_COM1.DAQ_set(TCAM_Enable_pattern_local, Periodic_FEB_TP_Enable_pattern_local, TP_repeat_burst_local, DI_TP_Num_in_burst, DI_TL_nTM_option, DI_Periodic_L1_Enable_bit, DI_Enab_Auto_L1_from_TP_bit)
                             # acr 2018-11-02 END   using the most recent definition of function DAQ_set
                             #print '\nStart DAQ from enabled TCAMs: %d on GEMROC %d; TL_nTM flag: %d' % ( TCAM_Enable_pattern_local, GEMROC_ID, DI_TL_nTM_option)
                             print '\nStart DAQ in %s mode. Enable TIGERs pattern: %d on GEMROC %d. Periodic TP enable: %d. Number of periodic TP in burst: %d. Periodic_L1_Enable_bit: %d. DI_Enab_Auto_L1_from_TP_bit: %d.' % ( GEM_COM1.print_TL_vs_nTM(DI_TL_nTM_option), TCAM_Enable_pattern_local, GEMROC_ID, TP_repeat_burst_local, DI_TP_Num_in_burst, DI_Periodic_L1_Enable_bit, DI_Enab_Auto_L1_from_TP_bit )
