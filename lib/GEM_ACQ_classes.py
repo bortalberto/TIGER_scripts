@@ -547,8 +547,8 @@ class reader:
         for i in range(0, 8):
             self.thr_scan_rate[i, :] = (self.thr_scan_matrix[i, :] / self.thr_scan_frames[i]) * (1 / 0.0002048)
 
-            TIGER_out=[]
-            for i in range (0,8):
-                if TIGER_not_missing[i]==0:
-                    TIGER_out.append(i)
+        TIGER_out=[]
+        for i in range (0,8):
+            if TIGER_not_missing[i]==0:
+                TIGER_out.append(i)
         return TIGER_out, frame_missing

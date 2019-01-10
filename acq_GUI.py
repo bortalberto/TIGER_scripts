@@ -1,4 +1,3 @@
-
 from Tkinter import *
 import numpy as np
 from lib import GEM_ACQ_classes as GEM_ACQ
@@ -18,9 +17,8 @@ else:
 	sys.exit()
 
 
-class menu(Frame):
+class menu():
     def __init__(self):
-        Frame.__init__(self)
         self.GEM_to_read=np.zeros((20))
         self.GEM_to_read_last=np.zeros((20))
         self.errors_counters_810=np.zeros((20))
@@ -32,12 +30,14 @@ class menu(Frame):
         self.FIELD_TIGER=[]
         self.LED_UDP=[]
         self.plotting_gemroc=0
-        self.plotting_TIGER=6
+        self.plotting_TIGER=0
 
         self.time=2
         self.GEM=[]
         self.thread=[]
-        self.master_window = Toplevel()
+        self.master_window = Tk()
+        self.master_window.title("GEMROC acquisition")
+
         Label(self.master_window,text='Acquisition setting',font=("Courier", 25)).pack()
 
         self.master = Frame(self.master_window)
@@ -119,8 +119,9 @@ class menu(Frame):
         self.FIELD_TIGER.grid(row=4, column=2)
 
 
-        self.plot_window = Toplevel()
-        self.plot_window.geometry('900x800')
+        self.plot_window = Frame(self.master_window)
+        self.plot_window.pack()
+        #self.plot_window.geometry('900x800')
         self.corn0=Frame(self.plot_window)
         self.corn0.pack()
         self.LBOCC=Label(self.corn0,text='Channel occupancy',font=("Times", 18 ))
@@ -304,15 +305,16 @@ class menu(Frame):
 
         for i in range(0, len(self.GEM)):
             if self.mode=='TL':
-                #self.TL_errors.append(self.GEM[i].check_TL_Frame_TIGERS("./data_folder/Spill_2018_12_11_11_02_03_GEMROC_3.dat"))
-                self.TL_errors.append(self.GEM[i].check_TL_Frame_TIGERS(self.GEM[i].datapath))
+                self.TL_errors.append(self.GEM[i].check_TL_Frame_TIGERS("./data_folder/Spill_2018_12_11_11_02_03_GEMROC_3.dat"))
+                # self.TL_errors.append(self.GEM[i].check_TL_Frame_TIGERS(self.GEM[i].datapath))
                 print self.TL_errors
             else:
-                #self.TM_errors.append(self.GEM[i].check_TM_continuity("./data_folder/Spill_2018_12_12_17_39_51_GEMROC_0.dat"))
-                self.TM_errors.append(self.GEM[i].check_TM_continuity(self.GEM[i].datapath))
+                self.TM_errors.append(self.GEM[i].check_TM_continuity("./data_folder/Spill_2018_12_12_17_39_51_GEMROC_0.dat"))
+                #self.TM_errors.append(self.GEM[i].check_TM_continuity(self.GEM[i].datapath))
 
                 print self.TM_errors
         self.refresh_error_status()
+        self.refresh_plot()
         self.but7.config(state='normal')
 
 
