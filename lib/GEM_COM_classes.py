@@ -43,7 +43,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         IVT_log_fname = "."+sep+"log_folder"+sep+"GEMROC{}_IVT_log_{}.txt".format(self.GEMROC_ID,datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         self.IVT_log_file = open(IVT_log_fname, 'w')
 
-        local_test=False
+        local_test=True
 
         if local_test==True:
             # HOST_DYNAMIC_IP_ADDRESS = "192.168.1.%d" %(GEMROC_ID)
@@ -860,7 +860,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         return command_echo
 
 
-    def ReadTgtGEMROC_TIGER_ChCfgReg(self, ChCFGReg_setting_inst, TIGER_ID_param, channel_ID_param, verbose_mode):
+    def ReadTgtGEMROC_TIGER_ChCfgReg(self, ChCFGReg_setting_inst, TIGER_ID_param, channel_ID_param, verbose_mode=0):
         ChCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
         ChCFGReg_setting_inst.set_target_TIGER(TIGER_ID_param)
         ChCFGReg_setting_inst.set_target_channel(channel_ID_param)
@@ -923,7 +923,7 @@ class communication: ##The directory are declared here to avoid multiple declara
     def Set_param_dict_global(self, GCFGReg_setting_inst, field, TIGER_ID, value):
         GCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
         GCFGReg_setting_inst.set_target_TIGER(TIGER_ID)
-        time.sleep(1)
+        #time.sleep(1)
         GCFGReg_setting_inst.Global_cfg_list[TIGER_ID][field] = value
 
         COMMAND_STRING = 'WR'
@@ -983,19 +983,19 @@ class communication: ##The directory are declared here to avoid multiple declara
         # last_command_echo = command_echo
         # return last_command_echo
         return last_command_echo
-    def SynchReset_to_TgtFEB(self, gemroc_DAQ_inst, TargetFEB_param, To_ALL_param):
-        gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
-        gemroc_DAQ_inst.set_target_TCAM_ID(TargetFEB_param, To_ALL_param)
+    def SynchReset_to_TgtFEB(self, TargetFEB_param=1, To_ALL_param=1):
+        self.gemroc_DAQ_XX.set_target_GEMROC(self.GEMROC_ID)
+        self.gemroc_DAQ_XX.set_target_TCAM_ID(TargetFEB_param, To_ALL_param)
         COMMAND_STRING = 'CMD_GEMROC_DAQ_TIGER_SYNCH_RST'
-        command_echo = self.send_GEMROC_DAQ_CMD(gemroc_DAQ_inst, COMMAND_STRING)
+        command_echo = self.send_GEMROC_DAQ_CMD(self.gemroc_DAQ_XX, COMMAND_STRING)
         return command_echo
 
 
-    def SynchReset_to_TgtTCAM(self, gemroc_DAQ_inst, TargetTCAM_param, To_ALL_param):
-        gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
-        gemroc_DAQ_inst.set_target_TCAM_ID(TargetTCAM_param, To_ALL_param)
+    def SynchReset_to_TgtTCAM(self, TargetTCAM_param=1, To_ALL_param=1):
+        self.gemroc_DAQ_XX.set_target_GEMROC(self.GEMROC_ID)
+        self.gemroc_DAQ_XX.set_target_TCAM_ID(TargetTCAM_param, To_ALL_param)
         COMMAND_STRING = 'CMD_GEMROC_DAQ_TCAM_SYNCH_RST'
-        command_echo = self.send_GEMROC_DAQ_CMD(gemroc_DAQ_inst, COMMAND_STRING)
+        command_echo = self.send_GEMROC_DAQ_CMD(self.gemroc_DAQ_XX, COMMAND_STRING)
         return command_echo
 
     ###-------Enables coommunication with a pattern of TIGER--and starts data trasmission-----------------------------###
@@ -1015,8 +1015,8 @@ class communication: ##The directory are declared here to avoid multiple declara
 
 
 
-    def DAQ_set_Pause_Mode(self, gemroc_DAQ_inst, DAQ_PauseMode_Enable_param):
-        gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
+    def DAQ_set_Pause_Mode(self, DAQ_PauseMode_Enable_param):
+        gemroc_DAQ_inst=self.gemroc_DAQ_XX
         Dbg_funct_ctrl_bits_U4_localcopy = gemroc_DAQ_inst.get_Dbg_functions_ctrl_bits_LoNibble()
         Dbg_funct_ctrl_bits_U4_localcopy &= 0x7
         Dbg_funct_ctrl_bits_U4_localcopy |= ((DAQ_PauseMode_Enable_param & 0x1) << 3)  # acr 2018-04-24 keep a copy of the "debug functions control bits"; initialize it to 0
@@ -1027,8 +1027,8 @@ class communication: ##The directory are declared here to avoid multiple declara
         command_echo = self.send_GEMROC_DAQ_CMD(gemroc_DAQ_inst, COMMAND_STRING)
         return command_echo
 
-    def DAQ_Toggle_Set_Pause_bit(self, gemroc_DAQ_inst):
-        gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
+    def DAQ_Toggle_Set_Pause_bit(self):
+        gemroc_DAQ_inst=self.gemroc_DAQ_XX
         Dbg_funct_ctrl_bits_U4_localcopy = gemroc_DAQ_inst.get_Dbg_functions_ctrl_bits_LoNibble()
         Dbg_funct_ctrl_bits_U4_localcopy &= 0xB
         print '\n Dbg_funct_ctrl_bits_U4_localcopy = %d' % Dbg_funct_ctrl_bits_U4_localcopy
@@ -1048,8 +1048,8 @@ class communication: ##The directory are declared here to avoid multiple declara
         command_echo = self.send_GEMROC_DAQ_CMD(gemroc_DAQ_inst, COMMAND_STRING)
         return command_echo
 
-    def DAQ_set_DAQck_source(self, gemroc_DAQ_inst, DAQck_source_param):
-        gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
+    def DAQ_set_DAQck_source(self, DAQck_source_param):
+        gemroc_DAQ_inst=self.gemroc_DAQ_XX
         # Dbg_funct_ctrl_bits_U4_localcopy = gemroc_DAQ_inst.get_Dbg_functions_ctrl_bits_LoNibble()
         Dbg_funct_ctrl_bits_U4_localcopy = gemroc_DAQ_inst.get_Dbg_functions_ctrl_bits_LoNibble()
         Dbg_funct_ctrl_bits_U4_localcopy &= 0xE
@@ -1666,6 +1666,30 @@ class communication: ##The directory are declared here to avoid multiple declara
         print '\nrestored gemroc_DAQ_inst.number_of_repetitions: %d' % gemroc_DAQ_inst.number_of_repetitions
         return command_echo
     ## acr 2018-08-08 END
+    def global_set_check(self,command_echo_param,command_read_param):
+        L_array = array.array('I')  # L is an array of unsigned long
+        L_array.fromstring(command_echo_param)
+        L_array.byteswap()
+        Tiger=((L_array[11] >> 8) & 0X7)
+        Gemroc=((L_array[0] >> 16) & 0X1f)  # acr 2018-01-23
+
+        command_sent = command_echo_param
+        command_reply =command_read_param
+        if (int(binascii.b2a_hex(command_sent), 16)) != ((int(binascii.b2a_hex(command_reply), 16)) - 2048):
+            print "!!! ERROR IN CONFIGURATION  GEMROC{},TIGER {}!!!".format(Gemroc,Tiger)
+            raise Exception ("!!! ERROR IN CONFIGURATION  GEMROC{},TIGER {}!!!".format(Gemroc,Tiger))
+
+    def channel_set_check_GUI(self,command_echo_param,command_read_param):
+        L_array = array.array('I')  # L is an array of unsigned long
+        L_array.fromstring(command_echo_param)
+        L_array.byteswap()
+        Tiger=((L_array[9] >> 8) & 0X7)
+        Gemroc=((L_array[9] >> 16) & 0X1f)  # acr 2018-01-23
+        Channel=((L_array[9]) & 0x3F)
+        command_sent = command_echo_param
+        command_reply =command_read_param
+        if (int(binascii.b2a_hex(command_sent), 16)) != ((int(binascii.b2a_hex(command_reply), 16)) - 2048):
+            raise Exception ("!!! ERROR IN CONFIGURATION")
     def Channel_set_check(self, command_echo_param, command_read_param,log): #check for differnces between configuration and lecture
         L_array = array.array('I')  # L is an array of unsigned long
         L_array.fromstring(command_echo_param)

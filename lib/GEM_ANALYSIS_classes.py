@@ -69,8 +69,8 @@ class analisys_conf: #Analysis class used for configurations10
              print '\nCRd   command_reply: %s' % binascii.b2a_hex(command_reply)
 
              print ("_-_-_-_-_-Send syncronous reset_-_-_-_-_-\n")
-             self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, 1, True)
-             self.GEM_COM.SynchReset_to_TgtTCAM(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
+             self.GEM_COM.SynchReset_to_TgtFEB(1, True)
+             self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
 
              print ("_-_-_-_-_-Setting  channels for scan_-_-_-_-_-\n")
 
@@ -113,8 +113,8 @@ class analisys_conf: #Analysis class used for configurations10
                             log_file.write("@@@@@@   {} -- Set Vth={} on channel {} \n".format(time.ctime(),i,j))
 
                         word_count = 0
-                        self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
-                        self.GEM_COM.SynchReset_to_TgtTCAM(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
+                        self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
+                        self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
                         test_r.start_socket()
                         while word_count < 60:
                             #print word_count
@@ -178,8 +178,8 @@ class analisys_conf: #Analysis class used for configurations10
                         # with open(self.log_path, 'a') as log_file:
                         #     log_file.write("@@@@@@   {} -- Set Vth={} on channel {} \n".format(time.ctime(),i,j))
                         self.GEM_COM.set_counter(T, 0, j)
-                        self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
-                        self.GEM_COM.SynchReset_to_TgtTCAM(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
+                        self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
+                        self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
                         self.GEM_COM.reset_counter()
                         time.sleep(0.03)
                         thr_scan_matrix[T, j, i] = self.GEM_COM.GEMROC_counter_get()
@@ -343,7 +343,7 @@ class analisys_conf: #Analysis class used for configurations10
     def thr_autotune(self, T, desired_rate, test_r, max_iter=16, final_lowering=True):
         frameMax = 104
         frame_count = 0
-        self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
+        self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
         doing_tuning_matrix = np.ones((64))
 
 
@@ -355,7 +355,7 @@ class analisys_conf: #Analysis class used for configurations10
             self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, 64, 1, 0)
             self.GEM_COM.Load_VTH_fromMatrix(self.c_inst, T, self.vthr_matrix)
             self.GEM_COM.DAQ_set(2 ** T, 0x0, 0, 0, 1, 0)
-            self.GEM_COM.SynchReset_to_TgtTCAM(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
+            self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
             test_r.start_socket()
             while frame_count < frameMax and not self.timedOut:
                 frame_count, autotune_scan_matrix = self.acquire_rate(frame_count, autotune_scan_matrix, test_r)
@@ -423,7 +423,7 @@ class analisys_conf: #Analysis class used for configurations10
         print (X)
 
     def thr_autotune_wth_counter(self, T, desired_rate, test_r, max_iter=16, tempo=0.2):
-        self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
+        self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
         doing_tuning_matrix = np.ones((64))
 
         for iter in range(0, max_iter):
@@ -434,11 +434,11 @@ class analisys_conf: #Analysis class used for configurations10
             self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, 64, 1, 0)
             self.GEM_COM.Load_VTH_fromMatrix(self.c_inst, T, self.vthr_matrix)
             self.GEM_COM.DAQ_set(2 ** T, 0x0, 0, 0, 1, 0)
-            self.GEM_COM.SynchReset_to_TgtTCAM(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
+            self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
             for j in range (0,64):
                 self.GEM_COM.set_counter(T, 0, j)
-                self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
-                self.GEM_COM.SynchReset_to_TgtTCAM(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
+                self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
+                self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
                 self.GEM_COM.reset_counter()
                 time.sleep(tempo)
                 autotune_scan_matrix[T,j]=self.GEM_COM.GEMROC_counter_get()
@@ -604,7 +604,7 @@ class analisys_conf: #Analysis class used for configurations10
         print "Checking synchronization for GEMROC {}".format(self.GEMROC_ID)
         print "--------------------------"
 
-        self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
+        self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
         self.check_sync()
     def TIGER_delay_tuning(self):
         for T in range (0,8):
@@ -621,14 +621,14 @@ class analisys_conf: #Analysis class used for configurations10
             print ("Setting delay {}".format(TD))
             self.GEM_COM.set_FEB_timing_delays(TD, TD, TD, TD)
             self.GEM_COM.DAQ_set(0, 0xff, 1, 256, 1, 1, False)
-            self.GEM_COM.SynchReset_to_TgtTCAM(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
+            self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
             for Ts in range(0, 4):
-                self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
+                self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
                 self.GEM_COM.set_counter((Ts * 2), 1, 0)
                 self.GEM_COM.reset_counter()
                 time.sleep(0.2)
                 counter1=self.GEM_COM.GEMROC_counter_get()
-                self.GEM_COM.SynchReset_to_TgtFEB(self.GEM_COM.gemroc_DAQ_XX, 0, 1)
+                self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
                 self.GEM_COM.set_counter((Ts * 2+1), 1, 0)
                 self.GEM_COM.reset_counter()
                 time.sleep(0.2)

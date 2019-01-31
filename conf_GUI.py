@@ -1,9 +1,11 @@
 from Tkinter import *
+import Tkinter, Tkconstants, tkFileDialog
 import numpy as np
 from lib import GEM_COM_classes as COM_class
 from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
 import sys
 import array
+
 
 
 OS = sys.platform
@@ -15,6 +17,10 @@ else:
 	print("ERROR: OS {} non compatible".format(OS))
 	sys.exit()
 
+#TODO: RESET
+#TODO: LV settings
+
+#TODO: advanced procedures
 
 class menu():
     def __init__(self):
@@ -29,23 +35,31 @@ class menu():
         self.entry_text=StringVar(self.main_window)
 
         self.showing_TIGER =StringVar(self.main_window)
-        self.showing_CHANNEL= 0
+        self.showing_CHANNEL= StringVar(self.main_window)
         self.configure_MODE=StringVar(self.main_window)
+
+        self.all_channels=StringVar(self.main_window)
+        self.all_TIGERs=StringVar(self.main_window)
+        self.all_GEMROCs=StringVar(self.main_window)
+
+
         fields_options=["DAQ configuration", "LV configuration", "Global Tiger configuration", "Channel Tiger configuration"]
         Label(self.main_window,text='Configuration',font=("Courier", 25)).pack()
-
-        self.first_row_frame=Frame(self.main_window)
-        self.first_row_frame.pack()
+        self.conf_frame=Frame(self.main_window)
+        self.conf_frame.pack()
+        self.first_row_frame=Frame(self.conf_frame)
+        self.first_row_frame.grid(row=0, column=0, sticky=NW, pady=4)
         self.select_MODE = OptionMenu(self.first_row_frame, self.configure_MODE,*fields_options)
         self.select_MODE.grid(row=0, column=0, sticky=NW, pady=4)
 
-        self.second_row_frame=Frame(self.main_window)
-        self.second_row_frame.pack()
-
-
+        self.second_row_frame=Frame(self.conf_frame)
+        self.second_row_frame.grid(row=1, column=0, sticky=NW, pady=4)
+        self.label_array = []
+        self.field_array=[]
+        self.input_array=[]
         self.configure_MODE.trace('w',self.update_menu)
-
-        self.third_row_frame = Frame(self.main_window)
+        self.dict_pram_list=[]
+        self.third_row_frame = Frame(self.conf_frame)
 
 
         ##Select window
@@ -56,32 +70,35 @@ class menu():
         Label(self.select_window,text='GEMROC to configure',font=("Courier", 25)).pack()
         self.grid_frame=Frame(self.select_window)
         self.grid_frame.pack()
-        Button(self.grid_frame, text='ROC 00', command=lambda: self.toggle(0)).grid(row=0, column=0, sticky=NW, pady=4)
-        Button(self.grid_frame, text='ROC 01', command=lambda: self.toggle(1)).grid(row=0, column=2, sticky=NW, pady=4)
-        Button(self.grid_frame, text='ROC 02', command=lambda: self.toggle(2)).grid(row=0, column=4, sticky=NW, pady=4)
-        Button(self.grid_frame, text='ROC 03', command=lambda: self.toggle(3)).grid(row=0, column=6, sticky=W, pady=4)
-        Button(self.grid_frame, text='ROC 04', command=lambda: self.toggle(4)).grid(row=0, column=8, sticky=W, pady=4)
-        Button(self.grid_frame, text='ROC 05', command=lambda: self.toggle(5)).grid(row=0, column=10, sticky=W, pady=4)
-        Button(self.grid_frame, text='ROC 06', command=lambda: self.toggle(6)).grid(row=0, column=12, sticky=NW, pady=4)
-        Button(self.grid_frame, text='ROC 07', command=lambda: self.toggle(7)).grid(row=0, column=14, sticky=NW, pady=4)
-        Button(self.grid_frame, text='ROC 08', command=lambda: self.toggle(8)).grid(row=0, column=16, sticky=NW, pady=4)
-        Button(self.grid_frame, text='ROC 09', command=lambda: self.toggle(9)).grid(row=0, column=18, sticky=NW, pady=4)
-        Button(self.grid_frame, text='ROC 10', command=lambda: self.toggle(10)).grid(row=1, column=0, sticky=NW, pady=4)
-        Button(self.grid_frame, text='ROC 11', command=lambda: self.toggle(11)).grid(row=1, column=2, sticky=NW, pady=4)
-        Button(self.grid_frame, text='ROC 12', command=lambda: self.toggle(12)).grid(row=1, column=4, sticky=W, pady=4)
-        Button(self.grid_frame, text='ROC 13', command=lambda: self.toggle(13)).grid(row=1, column=6, sticky=W, pady=4)
-        Button(self.grid_frame, text='ROC 14', command=lambda: self.toggle(14)).grid(row=1, column=8, sticky=W, pady=4)
-        Button(self.grid_frame, text='ROC 15', command=lambda: self.toggle(15)).grid(row=1, column=10, sticky=NW, pady=4)
-        Button(self.grid_frame, text='ROC 16', command=lambda: self.toggle(16)).grid(row=1, column=12, sticky=NW, pady=4)
-        Button(self.grid_frame, text='ROC 17', command=lambda: self.toggle(17)).grid(row=1, column=14, sticky=NW, pady=4)
-        Button(self.grid_frame, text='ROC 18', command=lambda: self.toggle(18)).grid(row=1, column=16, sticky=NW, pady=4)
-        Button(self.grid_frame, text='ROC 19', command=lambda: self.toggle(19)).grid(row=1, column=18, sticky=NW, pady=4)
+        Button(self.grid_frame, text='ROC 00', command=lambda: self.toggle(0)).grid(row=0, column=0, sticky=NW,   pady=15)
+        Button(self.grid_frame, text='ROC 01', command=lambda: self.toggle(1)).grid(row=0, column=2, sticky=NW,   pady=15)
+        Button(self.grid_frame, text='ROC 02', command=lambda: self.toggle(2)).grid(row=0, column=4, sticky=NW,   pady=15)
+        Button(self.grid_frame, text='ROC 03', command=lambda: self.toggle(3)).grid(row=0, column=6, sticky=W,    pady=15)
+        Button(self.grid_frame, text='ROC 04', command=lambda: self.toggle(4)).grid(row=0, column=8, sticky=W,    pady=15)
+        Button(self.grid_frame, text='ROC 05', command=lambda: self.toggle(5)).grid(row=0, column=10, sticky=W,   pady=15)
+        Button(self.grid_frame, text='ROC 06', command=lambda: self.toggle(6)).grid(row=0, column=12, sticky=NW,  pady=15)
+        Button(self.grid_frame, text='ROC 07', command=lambda: self.toggle(7)).grid(row=0, column=14, sticky=NW,  pady=15)
+        Button(self.grid_frame, text='ROC 08', command=lambda: self.toggle(8)).grid(row=0, column=16, sticky=NW,  pady=15)
+        Button(self.grid_frame, text='ROC 09', command=lambda: self.toggle(9)).grid(row=0, column=18, sticky=NW,  pady=15)
+        Button(self.grid_frame, text='ROC 10', command=lambda: self.toggle(10)).grid(row=1, column=0, sticky=NW,  pady=15)
+        Button(self.grid_frame, text='ROC 11', command=lambda: self.toggle(11)).grid(row=1, column=2, sticky=NW,  pady=15)
+        Button(self.grid_frame, text='ROC 12', command=lambda: self.toggle(12)).grid(row=1, column=4, sticky=W,   pady=15)
+        Button(self.grid_frame, text='ROC 13', command=lambda: self.toggle(13)).grid(row=1, column=6, sticky=W,   pady=15)
+        Button(self.grid_frame, text='ROC 14', command=lambda: self.toggle(14)).grid(row=1, column=8, sticky=W,   pady=15)
+        Button(self.grid_frame, text='ROC 15', command=lambda: self.toggle(15)).grid(row=1, column=10, sticky=NW, pady=15)
+        Button(self.grid_frame, text='ROC 16', command=lambda: self.toggle(16)).grid(row=1, column=12, sticky=NW, pady=15)
+        Button(self.grid_frame, text='ROC 17', command=lambda: self.toggle(17)).grid(row=1, column=14, sticky=NW, pady=15)
+        Button(self.grid_frame, text='ROC 18', command=lambda: self.toggle(18)).grid(row=1, column=16, sticky=NW, pady=15)
+        Button(self.grid_frame, text='ROC 19', command=lambda: self.toggle(19)).grid(row=1, column=18, sticky=NW, pady=15)
         self.error_frame=Frame(self.select_window)
         self.error_frame.pack()
         Label(self.error_frame,text='Message ').grid(row=0, column=1, sticky=NW, pady=4)
         self.Launch_error_check=Label(self.error_frame, text='-', background='white')
         self.Launch_error_check.grid(row=0, column=2, sticky=NW, pady=4)
-
+        Tante_frame=Frame(self.select_window)
+        Tante_frame.pack()
+        Button(Tante_frame,text="Sync Reset to all", command=self.Synch_reset).pack( side=LEFT)
+        Button(Tante_frame,text="Set ext clock to all", command=lambda : self.change_clock_mode(1,1)).pack(side=LEFT)
 
         self.LED=[]
         for i in range (0,len(self.GEM_to_config)):
@@ -131,14 +148,14 @@ class menu():
 
     def update_menu(self, a,b ,c):
         self.second_row_frame.destroy()
-        self.second_row_frame = Frame(self.main_window)
-        self.second_row_frame.pack()
+        self.second_row_frame = Frame(self.conf_frame)
+        self.second_row_frame.grid(row=1, column=0, sticky=NW, pady=4)
         self.GEMROC_reading_dict = {}
         for i in range (0,len (self.handler_list)):
             ID=self.handler_list[i].GEMROC_ID
             self.GEMROC_reading_dict["GEMROC {}".format(ID)]=self.handler_list[i]
         Label(self.second_row_frame,text='GEMROC   ').grid(row=0, column=0, sticky=NW, pady=4)
-        print self.GEMROC_reading_dict.keys()
+        #print self.GEMROC_reading_dict.keys()
         self.select_GEMROC = OptionMenu(self.second_row_frame, self.showing_GEMROC,*self.GEMROC_reading_dict.keys() )
         self.select_GEMROC.grid(row=1, column=0, sticky=NW, pady=4)
         fields_options=["DAQ configuration", "LV configuration", "Global Tiger configuration", "Channel Tiger configuration"]
@@ -157,7 +174,7 @@ class menu():
             Label(self.second_row_frame, text='TIGER   ').grid(row=0, column=1, sticky=NW, pady=4)
             self.select_TIGER = OptionMenu(self.second_row_frame, self.showing_TIGER, *range(8))
             self.select_TIGER.grid(row=1, column=1, sticky=NW, pady=4)
-            self.Go=Button(self.second_row_frame, text='Go', command=self.update_menu)
+            self.Go=Button(self.second_row_frame, text='Go', command=self.TIGER_GLOBAL_configurator)
             self.Go.grid(row=1, column=5, sticky=NW, pady=4)
 
 
@@ -169,24 +186,157 @@ class menu():
             self.Channel_IN=Entry(self.second_row_frame, width=4,textvariable = self.entry_text)
             self.entry_text.trace("w", lambda *args: character_limit(self.entry_text))
             self.Channel_IN.grid(row=1, column=2, sticky=W, pady=4)
-            self.Go = Button(self.second_row_frame, text='Go', command=self.update_menu)
+            self.Go = Button(self.second_row_frame, text='Go', command=self.TIGER_CHANNEL_configurator)
             self.Go.grid(row=1, column=5, sticky=NW, pady=4)
+    def TIGER_CHANNEL_configurator(self):
+        self.dict_pram_list=self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].c_inst.Channel_cfg_list[int(self.showing_TIGER.get())][int(self.Channel_IN.get())].keys()
+        self.third_row_frame.destroy()
+        self.third_row_frame = Frame(self.conf_frame)
+        self.third_row_frame.grid(row=2, column=0, sticky=NW, pady=4)
+        single_use_frame = Frame(self.third_row_frame)
+        single_use_frame.grid(row=1, column=0, sticky=W, pady=2)
+        tasti = Frame(self.third_row_frame)
+        tasti.grid(row=0, column=0, sticky=W, pady=2)
+        Button(tasti, text='Read configuration', command=self.read_TIGER_channel).grid(row=0, column=1, sticky=W, pady=2)
+        Button(tasti, text='Write configuration', command= self.write_CHANNEL_Handling).grid(row=0, column=2, sticky=W, pady=2)
+        OptionMenu(tasti, self.all_channels, *["All Channels","-"]).grid(row=0, column=3, sticky=W, pady=2)
+        OptionMenu(tasti, self.all_TIGERs, *["All TIGERs","-"]).grid(row=0, column=4, sticky=W, pady=2)
+        OptionMenu(tasti, self.all_GEMROCs, *["All GEMROCs","-"]).grid(row=0, column=5, sticky=W, pady=2)
+        self.label_array = []
+        self.field_array = []
+        self.input_array = {}
+        with open("lib" + sep + "keys" + sep + "channel_conf_file_keys", 'r') as f:
+            i = 0
+            j=0
+            lenght = len(f.readlines())
+            # print lenght
+            f.seek(0)
+            Label(single_use_frame, text="Read").grid(row=1, column=1, sticky=W, pady=0,padx=2)
+            Label(single_use_frame, text="To load").grid(row=1, column=2, sticky=W, pady=0,padx=2)
+            Label(single_use_frame, text="Read").grid(row=1, column=4, sticky=W, pady=0,padx=2)
+            Label(single_use_frame, text="To load").grid(row=1, column=5, sticky=W, pady=0,padx=2)
+
+            for line in f.readlines():
+                line=line.rstrip('\n')
+                self.field_array.append(Label(single_use_frame, text='-'))
+                if line in self.dict_pram_list:
+                    self.input_array[line]=(Entry(single_use_frame, width=3))
+                self.label_array.append(Label(single_use_frame, text=line))
+
+                if i < lenght / 2:
+                    self.label_array[i].grid(row=i + 2, column=0, sticky=W, pady=0)
+                    # print line
+                    # print dict_pram_list
+                    if str(line) in self.dict_pram_list:
+                        self.input_array[line].grid(row=i + 2, column=2, sticky=W, pady=0)
+                        j+=1
+                    self.field_array[i].grid(row=i + 2, column=1, sticky=W, pady=0)
+                else:
+                    self.label_array[i].grid(row=i + 2 - lenght / 2, column=3, sticky=W, pady=0)
+                    if line in self.dict_pram_list:
+                        self.input_array[line].grid(row=i + 2 - lenght / 2, column=5, sticky=W, pady=0)
+                        j+=1
+                    self.field_array[i].grid(row=i + 2 - lenght / 2, column=4, sticky=W, pady=0)
+
+                i += 1
+            saveframe = Frame(self.third_row_frame)
+            saveframe.grid(row=4, column=0, sticky=W, pady=2)
+            Button(saveframe, text="Save", command=self.SAVE).pack(side=LEFT)
+            Button(saveframe, text="Load", command=self.LOAD).pack(side=LEFT)
+            self.LOAD_ON=Button(saveframe, text= "Load on TIGER",command= self.LOAD_on_TIGER,state='disable')
+            self.LOAD_ON.pack(side= LEFT)
+
+    def TIGER_GLOBAL_configurator(self):
+        self.third_row_frame.destroy()
+        self.third_row_frame = Frame(self.conf_frame)
+        self.third_row_frame.grid(row=2, column=0, sticky=NW, pady=4)
+        single_use_frame = Frame(self.third_row_frame)
+        single_use_frame.grid(row=1, column=0, sticky=W, pady=2)
+        tasti=Frame(self.third_row_frame)
+        tasti.grid(row=0, column=0, sticky=W, pady=2)
+        Button(tasti, text='Read configuration', command=self.read_TIGER_global).grid(row=0, column=1, sticky=W, pady=2)
+        Button(tasti, text='Write configuration', command=self.write_TIGER_GLOBAL).grid(row=0, column=2, sticky=W, pady=2)
+        Button(tasti, text='Write configuration to all TIGERs on this GEMROC', command=self.write_TIGER_GLOBAL_allGEM).grid(row=0, column=3, sticky=W, pady=2)
+        Button(tasti, text='Write configuration to all TIGERs', command=self.write_TIGER_GLOBAL_allsystem).grid(row=0, column=4, sticky=W, pady=2)
+        self.label_array = []
+        self.field_array=[]
+        self.input_array=[]
+        with open ("lib"+sep+"keys"+sep+"global_conf_file_keys", 'r') as f:
+            i=0
+            lenght=len(f.readlines())
+            #print lenght
+            f.seek(0)
+            Label(single_use_frame, text="Read").grid(row=1, column=1, sticky=W, pady=0)
+            Label(single_use_frame, text="To load").grid(row=1, column=2, sticky=W, pady=0)
+            Label(single_use_frame, text="Read").grid(row=1, column=4, sticky=W, pady=0)
+            Label(single_use_frame, text="To load").grid(row=1, column=5, sticky=W, pady=0)
+
+            for line in f.readlines():
+                self.field_array.append(Label(single_use_frame,text='-'))
+                self.input_array.append(Entry(single_use_frame,width = 3))
+                self.label_array.append(Label(single_use_frame, text=line))
+
+                if i<lenght/2:
+                    self.label_array[i].grid(row=i + 2, column=0, sticky=W, pady=0)
+                    self.input_array[i].grid(row=i+2, column=2, sticky=W, pady=0)
+                    self.field_array[i].grid(row=i+2, column=1, sticky=W, pady=0)
+                else:
+                    self.label_array[i].grid(row=i+2-lenght/2, column=3, sticky=W, pady=0)
+                    self.input_array[i].grid(row=i+2-lenght/2, column=5, sticky=W, pady=0)
+                    self.field_array[i].grid(row=i+2-lenght/2, column=4, sticky=W, pady=0)
+
+                i+=1
+        saveframe=Frame(self.third_row_frame)
+        saveframe.grid(row=4,column=0, sticky=W, pady=2)
+        Button(saveframe, text= "Save",command= self.SAVE).pack(side= LEFT)
+        Button(saveframe, text= "Load",command= self.LOAD).pack(side= LEFT)
+
+
+
+    def SAVE(self):
+        if self.configure_MODE.get() == "Global Tiger configuration":
+            File_name=tkFileDialog.asksaveasfilename(initialdir="."+sep+"conf"+sep+"saves", title="Select file name", filetypes=(("Global configuration saves", "*.gs"), ("all files", "*.*")))
+            GEM_NAME=str(self.showing_GEMROC.get())
+            self.GEMROC_reading_dict[GEM_NAME].g_inst.save_glob_conf(File_name)
+
+        if self.configure_MODE.get() == "Channel Tiger configuration":
+            File_name = tkFileDialog.asksaveasfilename(initialdir="." + sep + "conf" + sep + "saves", title="Select file name", filetypes=(("Channels configuration saves", "*.cs"), ("all files", "*.*")))
+            GEM_NAME = str(self.showing_GEMROC.get())
+            self.GEMROC_reading_dict[GEM_NAME].c_inst.save_ch_conf(File_name)
+
+    def LOAD (self):
+        if self.configure_MODE.get() == "Global Tiger configuration":
+            GEM_NAME=str(self.showing_GEMROC.get())
+            File_name=tkFileDialog.askopenfilename(initialdir = "."+sep+"conf"+sep+"saves",title = "Select file",filetypes=(("Global configuration saves", "*.gs"), ("all files", "*.*")))
+            self.GEMROC_reading_dict[GEM_NAME].g_inst.load_glob_conf(File_name)
+
+        if self.configure_MODE.get() == "Channel Tiger configuration":
+            GEM_NAME=str(self.showing_GEMROC.get())
+            File_name=tkFileDialog.askopenfilename(initialdir = "."+sep+"conf"+sep+"saves",title = "Select file",filetypes=(("Channels configuration saves", "*.cs"), ("all files", "*.*")))
+            self.GEMROC_reading_dict[GEM_NAME].c_inst.load_ch_conf(File_name)
+        self.LOAD_ON.config(state='normal')
+    def LOAD_on_TIGER(self):
+        GEMROC=self.showing_GEMROC.get()
+        for T in range (0,8):
+            self.write_CHANNEL(self.GEMROC_reading_dict[GEMROC],T,64,False)
+
 
     def DAQ_configurator(self):
         self.third_row_frame.destroy()
-        self.third_row_frame = Frame(self.main_window)
-        self.third_row_frame.pack()
+        self.third_row_frame = Frame(self.conf_frame)
+        self.third_row_frame.grid(row=2, column=0, sticky=NW, pady=4)
         single_use_frame = Frame(self.third_row_frame)
         single_use_frame.grid(row=0, column=0, sticky=W, pady=2)
         Button(single_use_frame, text='Read configuration', command=self.read_DAQ_CR).grid(row=0, column=1, sticky=W, pady=2)
-
         self.field_array=[]
         self.input_array=[]
+        self.label_array=[]
         with open ("lib"+sep+"keys"+sep+"DAQ_cr_keys", 'r') as f:
             i=0
 
             for line in f.readlines():
-                Label(single_use_frame,text=line).grid(row=i+1, column=0, sticky=W, pady=0)
+                self.label_array.append(Label(single_use_frame,text=line.rstrip('\n')))
+                self.label_array[i].grid(row=i+1, column=0, sticky=W, pady=0)
                 self.field_array.append(Label(single_use_frame,text='-'))
                 self.field_array[i].grid(row=i+1, column=1, sticky=W, pady=0)
                 # self.input_array.append(Entry(single_use_frame,))
@@ -234,11 +384,63 @@ class menu():
         self.IN11 = Entry(another_frame)
         self.IN11.grid(row=12, column=1, sticky=S, pady=0)
 
-        Button(another_frame, text='Set', command= self.load_DAQ_CR).grid(row=15, column=15, sticky=W, pady=2)
-        Button(another_frame, text='Set on all active GEMROCs', command= self.load_DAQ_CR).grid(row=15, column=16, sticky=W, pady=2)
+        Button(another_frame, text='Set', command= self.write_DAQ_CR).grid(row=15, column=15, sticky=W, pady=2)
+        Button(another_frame, text='Set on all active GEMROCs', command= lambda : self.write_DAQ_CR(1)).grid(row=15, column=16, sticky=W, pady=2)
+        I_love_frames=Frame(self.third_row_frame)
+        I_love_frames.grid(row=1, column=1, sticky=W, pady=2)
+
+        Button(I_love_frames,text="Sync Reset this GEMROC", command= lambda : self.Synch_reset(0)).pack(side=LEFT)
+        Button(I_love_frames,text="Pause this GEMROC", command= lambda : self.Synch_reset(0)).pack(side=LEFT)
+        self.Clock_state=Button(I_love_frames,text="Internal clock", command= self.change_clock_mode)
+        self.check_clock_state()
+        self.Clock_state.pack(side=LEFT)
+
+    def check_clock_state(self):
+        button=self.Clock_state
+        for label,field in zip(self.label_array,self.field_array):
+            if label.cget('text').split()[0]=="Debug_Fun_Ctl_Lo4bit[0]":
+                if field.cget('text')==1:
+                    button['text']="External clock"
+                    button['state']="normal"
+
+                elif field.cget('text')==0:
+                    button['text']="Internal clock"
+                    button['state']="normal"
+
+                else:
+                    button['text'] = "----------"
+                    button['state']="disable"
+                break
+    def set_pause_mode(self,to_all=False,value=1):
+        if to_all==False:
+            GEMROC= self.GEMROC_reading_dict[self.showing_GEMROC.get()]
+        if to_all==True:
+            for number, GEMROC in self.GEMROC_reading_dict.items():
+                GEMROC.GEM_COM.DAQ_set_Pause_Mode(value)
+                if value==1:
+                    GEMROC.GEM_COM.DAQ_Toggle_Set_Pause_bit
 
 
-    def load_DAQ_CR(self):
+    def change_clock_mode(self,to_all=0,value=0):
+        if to_all==0:
+            GEMROC = self.GEMROC_reading_dict[self.showing_GEMROC.get()]
+
+            if self.Clock_state['text']=="Internal clock":
+                GEMROC.GEM_COM.DAQ_set_DAQck_source(1)
+            else:
+                GEMROC.GEM_COM.DAQ_set_DAQck_source(0)
+            self.read_DAQ_CR()
+            self.check_clock_state()
+        if to_all==1:
+            for number, GEMROC in self.GEMROC_reading_dict.items():
+                GEMROC.GEM_COM.DAQ_set_DAQck_source(value)
+
+    def switch_mode(self,modebut):
+        if modebut['text']=="Trigger matched":
+            modebut['text'] = "Trigger less"
+        elif modebut['text']=="Trigger less":
+            modebut['text'] = "Trigger matched"
+    def write_DAQ_CR(self, to_all=0):#TODO fix it
         TCAM_Enable_pattern = int(self.IN1.get()) & 0xFF
         Periodic_FEB_TP_Enable_pattern = int(self.IN2.get()) & 0xFF
         TP_repeat_burst = int(self.IN3.get()) & 0x1
@@ -252,14 +454,17 @@ class menu():
         PauseMode_Enable_Option = int(self.IN8.get()) & 0x1
 
         #DI_Enab_Auto_L1_from_TP_bit = int(input_array[8], 0) & 0x1  # ACR 2018-11-02 added parameter
-        self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.DAQ_set(TCAM_Enable_pattern, Periodic_FEB_TP_Enable_pattern, TP_repeat_burst, TP_Num_in_burst, TL_nTM_ACQ_choice, Periodic_L1_Enable_pattern, Enab_Auto_L1_from_TP_bit_param)
+        if to_all==1:
 
-        print "ok"
-    def switch_mode(self,modebut):
-        if modebut['text']=="Trigger matched":
-            modebut['text'] = "Trigger less"
-        elif modebut['text']=="Trigger less":
-            modebut['text'] = "Trigger matched"
+            for i,j in self.GEMROC_reading_dict.items():
+                # print "ID:{} Istance {}".format(i,j)
+                j.GEM_COM.DAQ_set(TCAM_Enable_pattern, Periodic_FEB_TP_Enable_pattern, TP_repeat_burst, TP_Num_in_burst, TL_nTM_ACQ_choice, Periodic_L1_Enable_pattern, Enab_Auto_L1_from_TP_bit_param)
+
+        else:
+            self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.DAQ_set(TCAM_Enable_pattern, Periodic_FEB_TP_Enable_pattern, TP_repeat_burst, TP_Num_in_burst, TL_nTM_ACQ_choice, Periodic_L1_Enable_pattern, Enab_Auto_L1_from_TP_bit_param)
+
+        #print "ok"
+
     def read_DAQ_CR(self):
         command_reply = self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.Read_GEMROC_DAQ_CfgReg()
         #self.GEMROC_reading_dict[self.showing_GEMROC.get()].GEM_COM.display_log_GEMROC_DAQ_CfgReg_readback(command_reply, 1, 1)
@@ -291,6 +496,17 @@ class menu():
         self.field_array[18] = ((L_array[4] >> 8) & 0x3)
         #self.field_array[23]['text'] = ((L_array[4] >> 6) & 0x1)
 
+        self.IN1.delete(0,END)
+        self.IN2.delete(0,END)
+        self.IN3.delete(0,END)
+        self.IN4.delete(0,END)
+        self.IN5.delete(0,END)
+        self.IN6.delete(0,END)
+        self.IN7.delete(0,END)
+        self.IN8.delete(0,END)
+
+        self.IN11.delete(0,END)
+
         self.IN1.insert(END,(L_array[3] >> 0) & 0xFF)
         self.IN2.insert(END,(L_array[3] >> 16) & 0xF)
         self.IN3.insert(END,(L_array[3] >> 9) & 0x1 )#TODO verificare!
@@ -303,6 +519,285 @@ class menu():
         # self.IN9.insert(END,((L_array[3] >> 14) & 0x1))
         # self.IN10.insert(END,((L_array[3] >> 13) & 0x1))
         self.IN11.insert(END,((L_array[3] >> 12) & 0x1))
+        self.check_clock_state()
+    def read_TIGER_global (self):
+        TIGER_N=int( self.showing_TIGER.get())
+        command_reply = self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst,TIGER_N)
+
+        L_array = array.array('I')  # L is an array of unsigned long
+        L_array.fromstring(command_reply)
+        L_array.byteswap()
+        for i in range (0,len(self.input_array)):
+            self.input_array[i].delete(0,END)
+            self.input_array[i].insert(END,self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())][self.label_array[i]['text'].rstrip('\n')])
+
+        # self.input_array[0].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["BufferBias"] & 0x3) ## BufferBias_param; default 0
+        # self.input_array[1].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TDCVcasN"]& 0xF)  # acr 2018-01-25 ## TDCVcasN_param; default 0
+        # self.input_array[2].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TDCVcasP"]& 0x1F)  # acr 2018-01-25 ## TDCVcasP_param; default 0
+        # self.input_array[3].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TDCVcasPHyst"] & 0x3F)  # acr 2018-01-25 ## TDCVcasPHyst_param; default 55
+        # self.input_array[4].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["DiscFE_Ibias"] & 0x3F)  # acr 2018-01-25 ## DiscFE_Ibias_param; default 50
+        # self.input_array[5].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["BiasFE_PpreN"] & 0x3F)  ## BiasFE_PpreN_param; default 10
+        # self.input_array[6].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["AVcasp_global"] & 0x1F)  # acr 2018-01-25 ## AVcasp_global_param; default 20
+        # self.input_array[7].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TDCcompVcas"] & 0xF)  # acr 2018-01-25 ## TDCcompVcas_param; default 0
+        # self.input_array[8].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TDCIref_cs"] & 0x1f)  # acr 2018-01-25 ## TDCIref_cs_param; default 20
+        # self.input_array[9].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["DiscVcasN"] & 0xF)  # acr 2018-01-25 elf.parameter_array [9] ## DiscVcasN_param; default 7
+        # self.input_array[10].insert(END,self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["IntegVb1"] & 0x3F ) # acr 2018-01-25 ## IntegVb1_param; default 27
+        # self.input_array[11].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["BiasFE_A1"] & 0xF)  ## BiasFE_A1_param; default 8
+        # self.input_array[12].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["Vcasp_Vth"] & 0x3F)  # acr 2018-01-25 ## Vcasp_Vth_param; default 55
+        # self.input_array[13].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TAC_I_LSB"] & 0x1F ) ## TAC_I_LSB_param; default 0
+        # self.input_array[14].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TAC_I_LSB"] & 0x1F)  ## TDCcompVbias_param; default 0
+        # self.input_array[15].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["Vref_Integ"] & 0x3F)  # acr 2018-01-25 ## Vref_Integ_param; default 55
+        # self.input_array[16].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["IBiasTPcal"] & 0x1f)  # acr 2018-01-25 ## IBiasTPcal_param; default 29
+        # self.input_array[17].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TP_Vcal"] & 0x1F)  # acr 2018-01-25 ## TP_Vcal_param; default 8
+        # self.input_array[18].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["ShaperIbias"] & 0xF)  ## ShaperIbias_param; default 0
+        # self.input_array[19].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["IPostamp"] & 0x1F)  # acr 2018-01-25 ## IPostamp_param; default 26
+        # self.input_array[20].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TP_Vcal_ref"] & 0x1F ) # acr 2018-01-25 ## TP_Vcal_ref_param; default 23
+        # self.input_array[21].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["Vref_integ_diff"] & 0x3F ) # acr 2018-01-25 ## Vref_integ_diff_param; default 39
+        # self.input_array[22].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["Sig_pol"] & 0x1 ) ## Sig_pol_param; default p-type (1?)
+        # self.input_array[23].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["FE_TPEnable"] & 0x1 ) ## FE_TPEnable_param; default X (1?)
+        # self.input_array[24].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["DataClkDiv"] & 0x3 ) # acr 2018-01-25 [25] ## DataClkDiv_param; default 0
+        # self.input_array[25].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TACrefreshPeriod"] & 0xF ) # acr 2018-01-25 [26] ## TACrefreshPeriod_param; default 9
+        # self.input_array[26].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TACrefreshEnable"] & 0x1 ) # acr 2018-01-25 [27] ## TACrefreshEnable_param; default X (1?)
+        # self.input_array[27].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["CounterPeriod"] & 0x7)  # acr 2018-01-25 [28] ## CounterPeriod_param; default 6
+        # self.input_array[28].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["CounterEnable"] & 0x1 ) # acr 2018-01-25 [29] ## CounterEnable_param; default EMPTYBOX (0?)
+        # self.input_array[29].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["StopRampEnable"] & 0x3)  # acr 2018-01-25 [30] ## StopRampEnable_param; default 0
+        # self.input_array[30].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["RClkEnable"] & 0x1F ) # acr 2018-01-25 [31] ## RClkEnable_param; default 7
+        # self.input_array[31].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TDCClkdiv"] & 0x1)  # acr 2018-01-25 [32] ## TDCClkdiv_param; default EMPTYBOX (0?)
+        # self.input_array[32].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["VetoMode"] & 0x3F)  # acr 2018-01-25 [33] ## VetoMode_param; default 0
+        # self.input_array[33].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["Ch_DebugMode"] & 0x1  )# acr 2018-01-25 [34] ## Ch_DebugMode_param; default EMPTYBOX (0?)
+        # self.input_array[34].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TxMode"] & 0x3)  # acr 2018-01-25 [35] ## TxMode_param; default 2
+        # self.input_array[35].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TxDDR"] & 0x1 ) # =cr 2018-01-25 [36] ## TxDDR_param; default X (1?)
+        # self.input_array[36].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TxLinks"] & 0x3 ) # acr 2018-01-25 [37] ## TxLinks_param; default 2 links nel GUI di Torino; dovrebbe corrispondeere ad un codice 1 per 2 links
+
+
+        self.field_array[0]['text']=  ((L_array[1] >> 24) & 0x3)
+        self.field_array[1]['text']=(GEM_CONF.swap_order_N_bits(((L_array[1] >> 16) & 0xF), 4))
+        self.field_array[2]['text']=(GEM_CONF.swap_order_N_bits(((L_array[1] >> 8) & 0x1F), 5))
+        self.field_array[3]['text'] =(GEM_CONF.swap_order_N_bits(((L_array[1] >> 0) & 0x3F), 6))
+        self.field_array[4]['text']=(GEM_CONF.swap_order_N_bits(((L_array[2] >> 24) & 0x3F), 6))
+        self.field_array[5]['text']= ((L_array[2] >> 16) & 0x3F)
+        self.field_array[6]['text']= (GEM_CONF.swap_order_N_bits(((L_array[2] >> 8) & 0x1F), 5))
+        self.field_array[7]['text']= (GEM_CONF.swap_order_N_bits(((L_array[2] >> 0) & 0xF), 4))
+        self.field_array[8]['text']=(GEM_CONF.swap_order_N_bits(((L_array[3] >> 24) & 0x1F), 5))
+        self.field_array[9]['text']= (GEM_CONF.swap_order_N_bits(((L_array[3] >> 16) & 0xF), 4))
+        self.field_array[10]['text']= (GEM_CONF.swap_order_N_bits(((L_array[3] >> 8) & 0x3F), 6))
+        self.field_array[11]['text']= ((L_array[3] >> 0) & 0xF)
+        self.field_array[12]['text']= (GEM_CONF.swap_order_N_bits(((L_array[4] >> 24) & 0x3F), 6))
+        self.field_array[13]['text']= ((L_array[4] >> 16) & 0x1F)
+        self.field_array[14]['text']= ((L_array[4] >> 8) & 0x1F)
+        self.field_array[15]['text']=(GEM_CONF.swap_order_N_bits(((L_array[4] >> 0) & 0x3F), 6))
+        self.field_array[16]['text']=(GEM_CONF.swap_order_N_bits(((L_array[5] >> 24) & 0x1F), 5))
+        self.field_array[17]['text']=  (GEM_CONF.swap_order_N_bits(((L_array[5] >> 16) & 0x1F), 5))
+        self.field_array[18]['text']= ((L_array[5] >> 8) & 0xF)
+        self.field_array[19]['text']= (GEM_CONF.swap_order_N_bits(((L_array[5] >> 0) & 0x1F), 5))
+        self.field_array[20]['text']= (GEM_CONF.swap_order_N_bits(((L_array[6] >> 24) & 0x1F), 5))
+        self.field_array[21]['text']=(GEM_CONF.swap_order_N_bits(((L_array[6] >> 16) & 0x3F), 6))
+        self.field_array[22]['text']=  ((L_array[6] >> 8) & 0x1)
+        self.field_array[23]['text']= ((L_array[6] >> 0) & 0x1)
+        self.field_array[24]['text']=((L_array[7] >> 16) & 0x3)
+        self.field_array[25]['text']=((L_array[7] >> 8) & 0xF)
+        self.field_array[26]['text']=((L_array[7] >> 0) & 0x1)
+        self.field_array[27]['text']=((L_array[8] >> 24) & 0x7)
+        self.field_array[28]['text']=((L_array[8] >> 16) & 0x1)
+        self.field_array[29]['text']=((L_array[8] >> 8) & 0x3)
+        self.field_array[30]['text']=((L_array[8] >> 0) & 0x1F)
+        self.field_array[31]['text']=((L_array[9] >> 24) & 0x1)
+        self.field_array[32]['text']= ((L_array[9] >> 16) & 0x3F)
+        self.field_array[33]['text']=((L_array[9] >> 8) & 0x1)
+        self.field_array[34]['text']= ((L_array[9] >> 0) & 0x3)
+        self.field_array[35]['text']= ((L_array[10] >> 24) & 0x1)
+        self.field_array[36]['text']= ((L_array[10] >> 16) & 0x3)
+        i=0
+        for input in self.input_array:
+            if int(input.get())!=int(self.field_array[i]['text']):
+                input.config({"background": "Red"})
+                i+=1
+            else:
+                input.config({"background": "White"})
+
+    def read_TIGER_channel(self):
+        TIGER_N = int(self.showing_TIGER.get())
+        command_reply = self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.ReadTgtGEMROC_TIGER_ChCfgReg(self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].c_inst, TIGER_N,int(self.Channel_IN.get()))
+
+        L_array = array.array('I')  # L is an array of unsigned long
+        L_array.fromstring(command_reply)
+        L_array.byteswap()
+        #
+        for line in self.dict_pram_list:
+            self.input_array[line].delete(0, END)
+            self.input_array[line].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].c_inst.Channel_cfg_list[int(self.showing_TIGER.get())][int(self.Channel_IN.get())][line])
+
+        # self.input_array[0].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["BufferBias"] & 0x3) ## BufferBias_param; default 0
+        # self.input_array[1].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TDCVcasN"]& 0xF)  # acr 2018-01-25 ## TDCVcasN_param; default 0
+        # self.input_array[2].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TDCVcasP"]& 0x1F)  # acr 2018-01-25 ## TDCVcasP_param; default 0
+        # self.input_array[3].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TDCVcasPHyst"] & 0x3F)  # acr 2018-01-25 ## TDCVcasPHyst_param; default 55
+        # self.input_array[4].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["DiscFE_Ibias"] & 0x3F)  # acr 2018-01-25 ## DiscFE_Ibias_param; default 50
+        # self.input_array[5].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["BiasFE_PpreN"] & 0x3F)  ## BiasFE_PpreN_param; default 10
+        # self.input_array[6].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["AVcasp_global"] & 0x1F)  # acr 2018-01-25 ## AVcasp_global_param; default 20
+        # self.input_array[7].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TDCcompVcas"] & 0xF)  # acr 2018-01-25 ## TDCcompVcas_param; default 0
+        # self.input_array[8].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TDCIref_cs"] & 0x1f)  # acr 2018-01-25 ## TDCIref_cs_param; default 20
+        # self.input_array[9].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["DiscVcasN"] & 0xF)  # acr 2018-01-25 elf.parameter_array [9] ## DiscVcasN_param; default 7
+        # self.input_array[10].insert(END,self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["IntegVb1"] & 0x3F ) # acr 2018-01-25 ## IntegVb1_param; default 27
+        # self.input_array[11].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["BiasFE_A1"] & 0xF)  ## BiasFE_A1_param; default 8
+        # self.input_array[12].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["Vcasp_Vth"] & 0x3F)  # acr 2018-01-25 ## Vcasp_Vth_param; default 55
+        # self.input_array[13].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TAC_I_LSB"] & 0x1F ) ## TAC_I_LSB_param; default 0
+        # self.input_array[14].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TAC_I_LSB"] & 0x1F)  ## TDCcompVbias_param; default 0
+        # self.input_array[15].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["Vref_Integ"] & 0x3F)  # acr 2018-01-25 ## Vref_Integ_param; default 55
+        # self.input_array[16].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["IBiasTPcal"] & 0x1f)  # acr 2018-01-25 ## IBiasTPcal_param; default 29
+        # self.input_array[17].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TP_Vcal"] & 0x1F)  # acr 2018-01-25 ## TP_Vcal_param; default 8
+        # self.input_array[18].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["ShaperIbias"] & 0xF)  ## ShaperIbias_param; default 0
+        # self.input_array[19].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["IPostamp"] & 0x1F)  # acr 2018-01-25 ## IPostamp_param; default 26
+        # self.input_array[20].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TP_Vcal_ref"] & 0x1F ) # acr 2018-01-25 ## TP_Vcal_ref_param; default 23
+        # self.input_array[21].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["Vref_integ_diff"] & 0x3F ) # acr 2018-01-25 ## Vref_integ_diff_param; default 39
+        # self.input_array[22].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["Sig_pol"] & 0x1 ) ## Sig_pol_param; default p-type (1?)
+        # self.input_array[23].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["FE_TPEnable"] & 0x1 ) ## FE_TPEnable_param; default X (1?)
+        # self.input_array[24].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["DataClkDiv"] & 0x3 ) # acr 2018-01-25 [25] ## DataClkDiv_param; default 0
+        # self.input_array[25].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TACrefreshPeriod"] & 0xF ) # acr 2018-01-25 [26] ## TACrefreshPeriod_param; default 9
+        # self.input_array[26].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TACrefreshEnable"] & 0x1 ) # acr 2018-01-25 [27] ## TACrefreshEnable_param; default X (1?)
+        # self.input_array[27].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["CounterPeriod"] & 0x7)  # acr 2018-01-25 [28] ## CounterPeriod_param; default 6
+        # self.input_array[28].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["CounterEnable"] & 0x1 ) # acr 2018-01-25 [29] ## CounterEnable_param; default EMPTYBOX (0?)
+        # self.input_array[29].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["StopRampEnable"] & 0x3)  # acr 2018-01-25 [30] ## StopRampEnable_param; default 0
+        # self.input_array[30].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["RClkEnable"] & 0x1F ) # acr 2018-01-25 [31] ## RClkEnable_param; default 7
+        # self.input_array[31].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TDCClkdiv"] & 0x1)  # acr 2018-01-25 [32] ## TDCClkdiv_param; default EMPTYBOX (0?)
+        # self.input_array[32].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["VetoMode"] & 0x3F)  # acr 2018-01-25 [33] ## VetoMode_param; default 0
+        # self.input_array[33].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["Ch_DebugMode"] & 0x1  )# acr 2018-01-25 [34] ## Ch_DebugMode_param; default EMPTYBOX (0?)
+        # self.input_array[34].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TxMode"] & 0x3)  # acr 2018-01-25 [35] ## TxMode_param; default 2
+        # self.input_array[35].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TxDDR"] & 0x1 ) # =cr 2018-01-25 [36] ## TxDDR_param; default X (1?)
+        # self.input_array[36].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TxLinks"] & 0x3 ) # acr 2018-01-25 [37] ## TxLinks_param; default 2 links nel GUI di Torino; dovrebbe corrispondeere ad un codice 1 per 2 links
+
+        self.field_array[0]['text'] =       ((L_array[1] >> 24) & 0x1)
+        self.field_array[1]['text'] =       ((L_array[1] >> 16) & 0x7)
+        self.field_array[2]['text'] =       ((L_array[1] >> 8) & 0x7)
+        self.field_array[3]['text'] =       ((L_array[1] >> 0) & 0x1)
+        self.field_array[4]['text'] =       ((L_array[2] >> 24) & 0x1)
+        self.field_array[5]['text'] =       (L_array[2] >> 16) & 0xF
+        self.field_array[6]['text'] =       ((L_array[2] >> 8) & 0xF)
+        self.field_array[7]['text'] =       ((L_array[2] >> 0) & 0x1)
+        self.field_array[8]['text'] =       ((L_array[3] >> 24) & 0x3)
+        self.field_array[9]['text'] =       ((L_array[3] >> 16) & 0x1F)
+        self.field_array[10]['text'] =      ((L_array[3] >> 8) & 0x3F)
+        self.field_array[11]['text'] =      ((L_array[3] >> 0) & 0x3F)
+        self.field_array[12]['text'] =      ((L_array[4] >> 24) & 0x1)
+        self.field_array[13]['text'] =      ((L_array[4] >> 16) & 0x7F)
+        self.field_array[14]['text'] =      ((L_array[4] >> 8) & 0x7F)
+        self.field_array[15]['text'] =      ((L_array[4] >> 0) & 0x1)
+        self.field_array[16]['text'] =      ((L_array[5] >> 24) & 0x1)
+        self.field_array[17]['text'] =      ((L_array[5] >> 16) & 0x1)
+        self.field_array[18]['text'] =      ((L_array[5] >> 8) & 0x1)
+        self.field_array[19]['text'] =      ((L_array[5] >> 0) & 0x7)
+        self.field_array[20]['text'] =      ((L_array[6] >> 24) & 0x3)
+        self.field_array[21]['text'] =      ((L_array[6] >> 16) & 0x7)
+        self.field_array[22]['text'] =      ((L_array[6] >> 8) & 0x3)
+        self.field_array[23]['text'] =      ((L_array[6] >> 0) & 0x1F)
+        self.field_array[24]['text'] =      ((L_array[7] >> 24) & 0x1F)
+        self.field_array[25]['text'] =      ((L_array[7] >> 16) & 0xF)
+        self.field_array[26]['text'] =      ((L_array[7] >> 8) & 0x3F)
+        self.field_array[27]['text'] =      ((L_array[7] >> 0) & 0x3)
+        self.field_array[28]['text'] =      ((L_array[8] >> 24) & 0x3)
+        self.field_array[29]['text'] =      ((L_array[8] >> 16) & 0x3)
+
+
+        i = 0
+        for key, input in self.input_array.iteritems():
+            if int(input.get()) != int(self.field_array[i]['text']):
+                input.config({"background": "Red"})
+                i += 1
+            else:
+                input.config({"background": "White"})
+    def write_TIGER_GLOBAL(self):
+        GEMROC=self.showing_GEMROC.get()
+        TIGER=int(self.showing_TIGER.get())
+        i=0
+        for key in self.label_array:
+            self.GEMROC_reading_dict['{}'.format(GEMROC)].g_inst.Global_cfg_list[TIGER][key['text'].rstrip('\n')]=int(self.input_array[i].get())
+            i+=1
+        write=self.GEMROC_reading_dict['{}'.format(GEMROC)].GEM_COM.Set_param_dict_global(self.GEMROC_reading_dict[GEMROC].g_inst, "TxDDR", TIGER, 0)
+        read=self.GEMROC_reading_dict['{}'.format(GEMROC)].GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(self.GEMROC_reading_dict[GEMROC].g_inst, TIGER)
+        self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.global_set_check(write, read)
+
+    def write_TIGER_GLOBAL_allGEM(self):
+        for TIGER in range (0,8):
+            i=0
+            for key in self.label_array:
+                self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(TIGER)][key['text'].rstrip('\n')]=int(self.input_array[i].get())
+                i+=1
+            write=self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.Set_param_dict_global(self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst, "TxDDR", int(TIGER), 0)
+            read = self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst, int(TIGER))
+            try:
+                self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.global_set_check(write, read)
+            except:
+                0
+
+
+    def write_TIGER_GLOBAL_allsystem(self):
+        for number, GEMROC in self.GEMROC_reading_dict.items():
+            #print number
+            for TIGER in range (0,8):
+
+                i=0
+                for key in self.label_array:
+                    GEMROC.g_inst.Global_cfg_list[int(TIGER)][key['text'].rstrip('\n')]=int(self.input_array[i].get())
+                    i+=1
+                write=GEMROC.GEM_COM.Set_param_dict_global(GEMROC.g_inst, "TxDDR", int(TIGER), 0)
+                read=GEMROC.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(GEMROC.g_inst,int(TIGER))
+                GEMROC.GEM_COM.global_set_check(write,read)
+    def write_CHANNEL_Handling(self):
+        if self.all_channels.get()=="All Channels":
+            CHANNEL=64
+        else:
+            CHANNEL=self.Channel_IN.get()
+        if self.all_TIGERs.get()=="All TIGERs":
+            TIGER_LIST=[0,1,2,3,4,5,6,7]
+        else:
+            TIGER_LIST=[self.showing_TIGER.get()]
+        for TIGER in TIGER_LIST:
+            if self.all_GEMROCs.get()=="All GEMROCs":
+                for number, GEMROC in self.GEMROC_reading_dict.items():
+                    self.write_CHANNEL(GEMROC,TIGER,CHANNEL)
+            else:
+                print "TIGER {}".format(TIGER)
+                self.write_CHANNEL(self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())],TIGER,CHANNEL)
+
+
+    def write_CHANNEL(self,GEMROC,TIGER,CHANNEL,update_fields=True):
+        TIGER=int (TIGER)
+        CHANNEL=int (CHANNEL)
+        if update_fields==True:
+            for key, elem in self.input_array.iteritems():
+                if CHANNEL!=64:
+                    GEMROC.c_inst.Channel_cfg_list[TIGER][CHANNEL][key]=int(elem.get())
+                else:
+                    for CH in range (0,64):
+                        GEMROC.c_inst.Channel_cfg_list[TIGER][CH][key]=int(elem.get())
+
+        if CHANNEL != 64:
+
+            write = GEMROC.GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg(GEMROC.c_inst, TIGER, CHANNEL)
+            read  = GEMROC.GEM_COM.ReadTgtGEMROC_TIGER_ChCfgReg(GEMROC.c_inst, TIGER, CHANNEL)
+            try:
+                GEMROC.GEM_COM.channel_set_check_GUI(write,read)
+            except:
+                print "!!! ERROR IN CONFIGURATION  GEMROC {},TIGER {},CHANNEL {}!!!".format(GEMROC.GEM_COM.GEMROC_ID, TIGER, CHANNEL)
+        else:
+            for CH in range(0, 64):
+                write = GEMROC.GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg(GEMROC.c_inst, TIGER, CH)
+                read  = GEMROC.GEM_COM.ReadTgtGEMROC_TIGER_ChCfgReg(GEMROC.c_inst, TIGER, CH)
+                try:
+                    GEMROC.GEM_COM.channel_set_check_GUI(write,read)
+                except:
+                    print "!!! ERROR IN CONFIGURATION  GEMROC {},TIGER {},CHANNEL {}!!!".format(GEMROC.GEM_COM.GEMROC_ID, TIGER, CHANNEL)
+    def Synch_reset(self,to_all=1):
+        if to_all==1:
+            for number, GEMROC in self.GEMROC_reading_dict.items():
+                GEMROC.GEM_COM.SynchReset_to_TgtFEB()
+                GEMROC.GEM_COM.SynchReset_to_TgtTCAM()
+                print "{} reset".format(number)
+        else:
+            GEMROC=self.showing_GEMROC.get()
+            self.GEMROC_reading_dict[GEMROC].GEM_COM.SynchReset_to_TgtFEB()
+            self.GEMROC_reading_dict[GEMROC].GEM_COM.SynchReset_to_TgtTCAM()
+            print "{} reset".format(self.showing_GEMROC.get())
+
 
 def character_limit(entry_text):
     try:
@@ -326,7 +821,6 @@ class GEMROC_HANDLER:
         self.c_inst = GEM_CONF.ch_reg_settings(GEMROC_ID, default_ch_inst_settigs_filename)
     def __del__(self):
         self.GEM_COM.__del__()
-
 
 Main_menu=menu()
 Main_menu.runna()
