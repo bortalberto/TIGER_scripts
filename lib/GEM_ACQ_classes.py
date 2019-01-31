@@ -37,6 +37,8 @@ class Thread_handler(Thread):
 
         time0 = time.time()
         data_list = []
+        self.TIMED_out = False
+
         print "Acquiring GEMROC {} for {} seconds".format(self.reader.GEMROC_ID, self.acq_time)
         self.reader.start_socket()
         while time.time() - time0 < self.acq_time and self.running:
@@ -48,7 +50,7 @@ class Thread_handler(Thread):
                 print ("\n---TIMED_OUT!!!...\n")
                 self.reader.dataSock.close()
                 self.running = False
-
+                self.reader.TIMED_out = True
                 return 0
         self.reader.dataSock.close()
         self.reader.data_list = list(data_list)
@@ -93,6 +95,8 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
                     print ("Acquiring")
                 except:
                     print ("\n---TIMED_OUT!!!...\n")
+                    self.reader.TIMED_out = True
+
                     self.reader.dataSock.close()
                     self.running=False
                     return 0
@@ -126,6 +130,7 @@ class reader:
         # self.log_path = "Acq_log_{}.txt".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         self.HOST_IP = "192.168.1.200"
         self.HOST_PORT = 58880 + self.GEMROC_ID  # 58880 + 1 # original +2
+        self.TIMED_out=False
 
         self.thr_scan_matrix = np.zeros((8, 64))  # Tiger,Channel
         self.thr_scan_frames = np.ones(8)
@@ -137,9 +142,16 @@ class reader:
         self.datalist = []
 
     def start_socket(self):
-        self.dataSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.dataSock.settimeout(10)
-        self.dataSock.bind((self.HOST_IP, self.HOST_PORT))
+        self.TIMED_out=False
+
+        try:
+            self.dataSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.dataSock.settimeout(10)
+            self.dataSock.bind((self.HOST_IP, self.HOST_PORT))
+        except:
+            self.TIMED_out=True
+            print "Can't bind the socket"
+
         # self.dataSock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 8388608 )
         # print self.dataSock.getsockopt(socket.SOL_SOCKET,socket.SO_RCVBUF)
 

@@ -21,6 +21,7 @@ class menu():
     def __init__(self):
         self.GEM_to_read=np.zeros((20))
         self.GEM_to_read_last=np.zeros((20))
+        self.first_an=True
         self.errors_counters_810=np.zeros((20))
         # for i in range (0,20):
         #     self.errors_counters_810[i]=i*20
@@ -244,7 +245,7 @@ class menu():
                 with open(self.logfile, 'a') as f:
                     f.write("Acquiring from GEMROC {} in {} mode".format(i,self.mode))
 
-        for i in range(0, len(self.GEM)):
+        for i in range(0, len(self.GEM)): #TODO pallino rosso se timed_out
             if self.mode=='TL':
                 self.thread.append(GEM_ACQ.Thread_handler("GEM ".format(i),float(self.time) , self.GEM[i]))
 
@@ -254,7 +255,6 @@ class menu():
         self.GEM_to_read_last=self.GEM_to_read
         for i in range(0, len(self.GEM)):
             self.thread[i].start()
-            print
 
     def refresh_error_status(self):
         self.LBGEM_err['text']='GEMROC {}'.format(self.plotting_gemroc)
@@ -292,6 +292,7 @@ class menu():
             self.LED_UDP['image'] = self.icon_off
             self.FIELD_TIGER['text']= '-'
         self.FIELD_810['text']='{}'.format(int(self.errors_counters_810[self.plotting_gemroc]))
+
     def stop_acq(self):
         print "Stopping"
         self.but6.config(state='normal')
@@ -302,17 +303,20 @@ class menu():
         for i in range (0,len(self.GEM)):
             if self.thread[i].isAlive():
                 self.thread[i].join()
+        for i in self.GEM:
+            if i.TIMED_out==True:
+                self.LED[int(i.GEMROC_ID)]['image']=self.icon_bad
+        if self.first_an==True:
+            for i in range(0, len(self.GEM)):
+                if self.mode=='TL':
+                    self.TL_errors.append(self.GEM[i].check_TL_Frame_TIGERS("./data_folder/Spill_2018_12_11_11_02_03_GEMROC_3.dat"))
+                    # self.TL_errors.append(self.GEM[i].check_TL_Frame_TIGERS(self.GEM[i].datiapath))
+                    print self.TL_errors
+                else:
+                    self.TM_errors.append(self.GEM[i].check_TM_continuity("./data_folder/Spill_2018_12_12_17_39_51_GEMROC_0.dat"))
+                    #self.TM_errors.append(self.GEM[i].check_TM_continuity(self.GEM[i].datapath))
 
-        for i in range(0, len(self.GEM)):
-            if self.mode=='TL':
-                self.TL_errors.append(self.GEM[i].check_TL_Frame_TIGERS("./data_folder/Spill_2018_12_11_11_02_03_GEMROC_3.dat"))
-                # self.TL_errors.append(self.GEM[i].check_TL_Frame_TIGERS(self.GEM[i].datapath))
-                print self.TL_errors
-            else:
-                self.TM_errors.append(self.GEM[i].check_TM_continuity("./data_folder/Spill_2018_12_12_17_39_51_GEMROC_0.dat"))
-                #self.TM_errors.append(self.GEM[i].check_TM_continuity(self.GEM[i].datapath))
-
-                print self.TM_errors
+                    print self.TM_errors
         self.refresh_error_status()
         self.refresh_plot()
         self.but7.config(state='normal')

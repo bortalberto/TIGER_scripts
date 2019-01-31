@@ -291,6 +291,7 @@ def Menu_and_prompt():
                             GEM_COM1.ResetTgtGEMROC_ALL_TIGER_GCfgReg(GEM_COM1.gemroc_DAQ_XX)
                             os.system('clear')
                             sys.stdout.write(menu_string)
+
                     elif (input_array[0] == 'GWdef') or (input_array[0] == 'GW'):
                         if len(input_array) == 2:
                             command_sent = GEM_COM1.WriteTgtGEMROC_TIGER_GCfgReg(g_inst, int(input_array[1]))
@@ -397,7 +398,7 @@ def Menu_and_prompt():
                             else:
                                 To_ALL_FEB_enable = 1
                             TargetFEB = int(input_array[1]) & 0x3
-                            GEM_COM1.SynchReset_to_TgtFEB(GEM_COM1.gemroc_DAQ_XX, TargetFEB, To_ALL_FEB_enable)
+                            GEM_COM1.SynchReset_to_TgtFEB(TargetFEB, To_ALL_FEB_enable)
                             print '\nTo FEB %d or ToALL_FEB: %d on GEMROC %d: sent synchronous reset' %( TargetFEB, To_ALL_FEB_enable, GEMROC_ID )
                             time.sleep(2)
                             os.system('clear')
@@ -409,7 +410,7 @@ def Menu_and_prompt():
                             else:
                                 To_ALL_TCAM_enable = 1
                             TargetTCAM = int(input_array[1]) & 0x3
-                            GEM_COM1.SynchReset_to_TgtTCAM(GEM_COM1.gemroc_DAQ_XX, TargetTCAM, To_ALL_TCAM_enable)
+                            GEM_COM1.SynchReset_to_TgtTCAM(TargetTCAM, To_ALL_TCAM_enable)
                             print '\nTo TCAM %d or ToALL_TCAM: %d on GEMROC %d: sent synchronous reset' %( TargetTCAM, To_ALL_TCAM_enable, GEMROC_ID )
                             time.sleep(2)
                             os.system('clear')
@@ -422,7 +423,7 @@ def Menu_and_prompt():
                             else:
                                 To_ALL_TCAM_enable = 1
                             TargetTCAM = int(input_array[1]) & 0x3
-                            GEM_COM1.SynchReset_to_TgtTCAM(GEM_COM1.gemroc_DAQ_XX, TargetTCAM, To_ALL_TCAM_enable)
+                            GEM_COM1.SynchReset_to_TgtTCAM(TargetTCAM, To_ALL_TCAM_enable)
                             print '\nTo TCAM %d or ToALL_TCAM: %d on GEMROC %d: sent synchronous reset' % (TargetTCAM, To_ALL_TCAM_enable, GEMROC_ID)
                             time.sleep(2)
                             os.system('clear')
@@ -452,7 +453,7 @@ def Menu_and_prompt():
                     elif (input_array[0] == 'ENPM'):
                             if (len(input_array) == 2):
                                 Enable_DAQ_Pause_Mode = int(input_array[1], 0) & 0x1
-                                GEM_COM1.DAQ_set_Pause_Mode(GEM_COM1.gemroc_DAQ_XX, Enable_DAQ_Pause_Mode)
+                                GEM_COM1.DAQ_set_Pause_Mode(Enable_DAQ_Pause_Mode)
                                 print '\nEnable DAQ Pause Mode: %d on GEMROC %d' % (Enable_DAQ_Pause_Mode, GEMROC_ID)
                                 time.sleep(2)
                                 os.system('clear')
@@ -460,7 +461,7 @@ def Menu_and_prompt():
                     elif (input_array[0] == 'CKEXT'):
                         if (len(input_array) == 2):
                             Derive_DAQck_From_Ext_nInt_source = int(input_array[1], 0) & 0x1
-                            GEM_COM1.DAQ_set_DAQck_source(GEM_COM1.gemroc_DAQ_XX, Derive_DAQck_From_Ext_nInt_source)
+                            GEM_COM1.DAQ_set_DAQck_source(Derive_DAQck_From_Ext_nInt_source)
                             print '\nDAQ_set_DAQck_source: %d on GEMROC %d' % (Derive_DAQck_From_Ext_nInt_source, GEMROC_ID)
                             time.sleep(2)
                             os.system('clear')
@@ -475,7 +476,7 @@ def Menu_and_prompt():
                             sys.stdout.write(menu_string)
                     elif (input_array[0] == 'PAUSE'):
                         if (len(input_array) == 1):
-                            GEM_COM1.DAQ_Toggle_Set_Pause_bit(GEM_COM1.gemroc_DAQ_XX)
+                            GEM_COM1.DAQ_Toggle_Set_Pause_bit()
                             print '\nDAQ Pause Set bit TOGGLED on GEMROC %d' % (GEMROC_ID)
                             time.sleep(2)
                             os.system('clear')
@@ -670,8 +671,8 @@ def Menu_and_prompt():
                             TCAM_Enable_pattern = int(input_array[1], 0) & 0xFF
                             gemroc_DAQ_XX = GEM_COM1.gemroc_DAQ_XX
                             GEM_COM1.DAQ_set(TCAM_Enable_pattern, TCAM_Enable_pattern, 0, 0, 1, 0, 0)
-                            GEM_COM1.SynchReset_to_TgtFEB(GEM_COM1.gemroc_DAQ_XX, 0, 1)
-                            GEM_COM1.SynchReset_to_TgtTCAM(GEM_COM1.gemroc_DAQ_XX, 0, 1)
+                            GEM_COM1.SynchReset_to_TgtFEB(0, 1)
+                            GEM_COM1.SynchReset_to_TgtTCAM(0, 1)
                             time.sleep(2)
                             os.system('clear')
                             sys.stdout.write(menu_string)
@@ -703,7 +704,7 @@ def Menu_and_prompt():
                     elif input_array[0].lower() == 'config_pause':
                         #CKEXT 1
                         Derive_DAQck_From_Ext_nInt_source = int("1", 0) & 0x1
-                        GEM_COM1.DAQ_set_DAQck_source(GEM_COM1.gemroc_DAQ_XX, Derive_DAQck_From_Ext_nInt_source)
+                        GEM_COM1.DAQ_set_DAQck_source(Derive_DAQck_From_Ext_nInt_source)
                         print '\nDAQ_set_DAQck_source: %d on GEMROC %d' % (Derive_DAQck_From_Ext_nInt_source, GEMROC_ID)
                         #GRST
                         GEM_COM1.ResetTgtGEMROC_ALL_TIGER_GCfgReg(GEM_COM1.gemroc_DAQ_XX)
@@ -717,10 +718,10 @@ def Menu_and_prompt():
                         print("Channel configuration set\n")
                         #ENPM
                         Enable_DAQ_Pause_Mode = int("1", 0) & 0x1
-                        GEM_COM1.DAQ_set_Pause_Mode(GEM_COM1.gemroc_DAQ_XX, Enable_DAQ_Pause_Mode)
+                        GEM_COM1.DAQ_set_Pause_Mode(Enable_DAQ_Pause_Mode)
                         print '\nEnable DAQ Pause Mode: %d on GEMROC %d' % (Enable_DAQ_Pause_Mode, GEMROC_ID)
                         #PAUSE
-                        GEM_COM1.DAQ_Toggle_Set_Pause_bit(GEM_COM1.gemroc_DAQ_XX)
+                        GEM_COM1.DAQ_Toggle_Set_Pause_bit()
                         print '\nDAQ Pause Set bit TOGGLED on GEMROC %d' % (GEMROC_ID)
                         time.sleep(0.5)
                         os.system('clear')
@@ -810,7 +811,7 @@ def Menu_and_prompt():
                             DI_Periodic_L1_Enable_bit = int(input_array[7], 0) & 0x1    # ACR 2018-10-30 added parameter
                             DI_Enab_Auto_L1_from_TP_bit = int(input_array[8], 0) & 0x1    # ACR 2018-11-02 added parameter
                             # SET TIMING SOURCE: 1 for External, 0 for Internal
-                            GEM_COM1.DAQ_set_DAQck_source(GEM_COM1.gemroc_DAQ_XX, DI_Ext_nInt_Clk_option)
+                            GEM_COM1.DAQ_set_DAQck_source(DI_Ext_nInt_Clk_option)
                             print '\nDAQ_set_DAQck_source: %s' % GEM_COM1.print_int_vs_n_ext(DI_Ext_nInt_Clk_option)
                             # TIGER INITIALIZATION
                             # GEM_COM1.ResetTgtGEMROC_ALL_TIGER_GCfgReg(GEM_COM1.gemroc_DAQ_XX)
@@ -865,21 +866,21 @@ def Menu_and_prompt():
                             # print '\nEnable/nDisable TP from L1CHK signal: %d on GEMROC %d' % (Enab_nDisab_TP_from_L1_Chk_local, GEMROC_ID)
                             # ENPM SET TO 1; REMEMBER TO STOP THE TRIGGER GENERATION AT THIS POINT
                             if (PauseMode_Enable_Option == 1):
-                                GEM_COM1.DAQ_set_Pause_Mode(GEM_COM1.gemroc_DAQ_XX, 1)
+                                GEM_COM1.DAQ_set_Pause_Mode(1)
                                 print '\nEnable DAQ Pause Mode: %d on GEMROC %d' % (1, GEMROC_ID)
                                 # SRst 4 : Synchronous timing reset to all Tiger Configuration and Acquisition modules (TCAM)
-                                GEM_COM1.SynchReset_to_TgtFEB(GEM_COM1.gemroc_DAQ_XX, 4, 1)
+                                GEM_COM1.SynchReset_to_TgtFEB(4, 1)
                                 print '\nToALL_on GEMROC %d: sent synchronous reset' % (GEMROC_ID)
-                                GEM_COM1.SynchReset_to_TgtTCAM(GEM_COM1.gemroc_DAQ_XX, 4, 1)
+                                GEM_COM1.SynchReset_to_TgtTCAM(4, 1)
                                 # PAUSE FLAG set
-                                GEM_COM1.DAQ_Toggle_Set_Pause_bit(GEM_COM1.gemroc_DAQ_XX)
+                                GEM_COM1.DAQ_Toggle_Set_Pause_bit()
                                 print '\nDAQ Pause Set bit TOGGLED on GEMROC %d' % (GEMROC_ID)
                                 print '\nDAQ waiting for first trigger'
                             else:
-                                GEM_COM1.DAQ_set_Pause_Mode(GEM_COM1.gemroc_DAQ_XX, 0)
+                                GEM_COM1.DAQ_set_Pause_Mode(0)
                                 print '\nEnable DAQ Pause Mode: %d on GEMROC %d' % (0, GEMROC_ID)
                                 # SRst 4 : Synchronous timing reset to all Tiger Configuration and Acquisition modules (TCAM)
-                                GEM_COM1.SynchReset_to_TgtFEB(GEM_COM1.gemroc_DAQ_XX, 4, 1)
+                                GEM_COM1.SynchReset_to_TgtFEB(4, 1)
                                 print '\nToALL_on GEMROC %d: sent synchronous reset' % (GEMROC_ID)
                             # DAQSET 0Xpattern 0xf 0 0 tl/TM 0
                             # TCAM_Enable_pattern_local = enable_pattern_array[NumTigerToConfigure]

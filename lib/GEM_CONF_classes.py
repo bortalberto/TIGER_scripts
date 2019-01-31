@@ -6,7 +6,7 @@
 # acr 2018-01-25 removing unused parameter self.CompactDataFormat 
 # acr 2018-01-13 split the handling of the GEMROC LV and DAQ configuration parameters
 import pickle
-
+import copy
 command_code_shift = 11 # acr 2017-08-29
 target_TIGER_ID_shift = 8 # acr 2017-08-29
 GEMROC_CMD_LV_Num_of_params = 31 # acr 2018-01-15
@@ -297,7 +297,7 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
           VetoMode = self.Global_cfg_list[self.target_TIGER_ID]["VetoMode"]& 0x3F   # acr 2018-01-25 [33] ## VetoMode_param; default 0
           Ch_DebugMode = self.Global_cfg_list[self.target_TIGER_ID]["Ch_DebugMode"] & 0x1  # acr 2018-01-25 [34] ## Ch_DebugMode_param; default EMPTYBOX (0?)
           TxMode = self.Global_cfg_list[self.target_TIGER_ID]["TxMode"] & 0x3  # acr 2018-01-25 [35] ## TxMode_param; default 2
-          TxDDR = self.Global_cfg_list[self.target_TIGER_ID]["TxDDR"] & 0x1  # acr 2018-01-25 [36] ## TxDDR_param; default X (1?)
+          TxDDR = self.Global_cfg_list[self.target_TIGER_ID]["TxDDR"] & 0x1  # =cr 2018-01-25 [36] ## TxDDR_param; default X (1?)
           TxLinks = self.Global_cfg_list[self.target_TIGER_ID]["TxLinks"] & 0x3   # acr 2018-01-25 [37] ## TxLinks_param; default 2 links nel GUI di Torino; dovrebbe corrispondeere ad un codice 1 per 2 links
 
           self.cmd_word10 = (BufferBias << 24) + ( TDCVcasN << 16)  + (TDCVcasP << 8)  + TDCVcasPHyst
@@ -457,7 +457,8 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
         sav_channel_chlist.append(sav_channel_dic.copy())
       self.Channel_cfg_list=[]
       for T in range (0,8):
-          self.Channel_cfg_list.append(sav_channel_chlist[:])
+          copia=copy.deepcopy(sav_channel_chlist)
+          self.Channel_cfg_list.append(copia)
 
       self.is_a_write = 0x1
       self.target_TIGER_ID = 0x1
