@@ -2,6 +2,8 @@ from Tkinter import *
 import Tkinter, Tkconstants, tkFileDialog
 import numpy as np
 from lib import GEM_COM_classes as COM_class
+import binascii
+
 from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
 import sys
 import array
@@ -17,17 +19,20 @@ else:
 	print("ERROR: OS {} non compatible".format(OS))
 	sys.exit()
 
-#TODO: RESET
+#TODO Aggiungere comandi per default config, cambio modalita e simili dal global
 #TODO: LV settings
-
-#TODO: advanced procedures
-
+#TODO: Tasto per cambiare da TM a TL
+#TODO: load_VTHR
+#TODO: comando singolo per DAQSET
 class menu():
     def __init__(self):
         self.GEM_to_config = np.zeros((20))
         self.configuring_gemroc=0
         #main window
         self.main_window=Tk()
+        self.icon_on = PhotoImage(file="."+sep+'icons'+sep+'on.gif')
+        self.icon_off = PhotoImage(file="."+sep+'icons'+sep+'off.gif')
+        self.icon_bad = PhotoImage(file="."+sep+'icons'+sep+'bad.gif')
         self.main_window.title("GEMROC configurer")
         self.handler_list=[]
         self.GEMROC_reading_dict={}
@@ -43,7 +48,8 @@ class menu():
         self.all_GEMROCs=StringVar(self.main_window)
 
 
-        fields_options=["DAQ configuration", "LV configuration", "Global Tiger configuration", "Channel Tiger configuration"]
+        #fields_options=["DAQ configuration", "LV configuration", "Global Tiger configuration", "Channel Tiger configuration"]
+        fields_options=["DAQ configuration", "Global Tiger configuration", "Channel Tiger configuration"]
         Label(self.main_window,text='Configuration',font=("Courier", 25)).pack()
         self.conf_frame=Frame(self.main_window)
         self.conf_frame.pack()
@@ -51,7 +57,9 @@ class menu():
         self.first_row_frame.grid(row=0, column=0, sticky=NW, pady=4)
         self.select_MODE = OptionMenu(self.first_row_frame, self.configure_MODE,*fields_options)
         self.select_MODE.grid(row=0, column=0, sticky=NW, pady=4)
-
+        Label(self.first_row_frame,text="Errors").grid(row=0,column=1,sticky=W,padx=10)
+        self.ERROR_LED=Label(self.first_row_frame, image=self.icon_off)
+        self.ERROR_LED.grid(row=0,column=2,sticky=W,padx=1)
         self.second_row_frame=Frame(self.conf_frame)
         self.second_row_frame.grid(row=1, column=0, sticky=NW, pady=4)
         self.label_array = []
@@ -64,9 +72,7 @@ class menu():
 
         ##Select window
         self.select_window = Toplevel(self.main_window)
-        self.icon_on = PhotoImage(file="."+sep+'icons'+sep+'on.gif')
-        self.icon_off = PhotoImage(file="."+sep+'icons'+sep+'off.gif')
-        self.icon_bad = PhotoImage(file="."+sep+'icons'+sep+'bad.gif')
+
         Label(self.select_window,text='GEMROC to configure',font=("Courier", 25)).pack()
         self.grid_frame=Frame(self.select_window)
         self.grid_frame.pack()
@@ -99,6 +105,15 @@ class menu():
         Tante_frame.pack()
         Button(Tante_frame,text="Sync Reset to all", command=self.Synch_reset).pack( side=LEFT)
         Button(Tante_frame,text="Set ext clock to all", command=lambda : self.change_clock_mode(1,1)).pack(side=LEFT)
+        Button(Tante_frame,text="Set int clock to all", command=lambda : self.change_clock_mode(1,0)).pack(side=LEFT)
+        Button(Tante_frame,text="Set pause mode to all", command=lambda : self.set_pause_mode(True,1)).pack(side=LEFT)
+        Button(Tante_frame,text="Disable pause mode to all", command=lambda : self.set_pause_mode(True,0)).pack(side=LEFT)
+        Button(Tante_frame,text="Set trigger-less mode to all", command=lambda : self.change_acquisition_mode(True,1)).pack(side=LEFT)
+        Button(Tante_frame,text="Set trigger-matched to all", command=lambda : self.change_acquisition_mode(True,0)).pack(side=LEFT)
+        Tantissime_frame=Frame(self.select_window)
+        Tantissime_frame.pack()
+        Button(Tantissime_frame,text="Configure all chips with default settings", command=self.load_default_config).pack( side=LEFT)
+        Button(Tantissime_frame,text="Load thresholds", command=lambda : self.change_clock_mode(1,1)).pack(side=LEFT) #TODO finirlo
 
         self.LED=[]
         for i in range (0,len(self.GEM_to_config)):
@@ -353,7 +368,7 @@ class menu():
         Label(another_frame,text="TP_repeat_burst").grid(row=4, column=0,sticky=S, pady=0)
         Label(another_frame,text="TP_Num_in_burst").grid(row=5, column=0,sticky=S, pady=0)
         Label(another_frame,text="TL_nTM_ACQ_choice").grid(row=6, column=0,sticky=S, pady=0)
-        Label(another_frame,text="Periodic_L1_Enable_pattern").grid(row=7, column=0,sticky=S, pady=0)
+        #Label(another_frame,text="Periodic_L1_Enable_BIT").grid(row=7, column=0,sticky=S, pady=0) #E' lo stesso di periodic FEB_TP_Enable pattern
         Label(another_frame,text="Enab_Auto_L1_from_TP_bit_param").grid(row=8, column=0,sticky=S, pady=0)
         Label(another_frame,text="Enable_DAQPause_Until_First_Trigger").grid(row=9, column=0,sticky=S, pady=0)
         # Label(another_frame,text="DAQPause_Set").grid(row=10, column=0,sticky=S, pady=0)
@@ -371,8 +386,8 @@ class menu():
         self.IN4.grid(row=5, column=1,sticky=S, pady=0)
         self.IN5=Entry(another_frame)
         self.IN5.grid(row=6, column=1,sticky=S, pady=0)
-        self.IN6=Entry(another_frame)
-        self.IN6.grid(row=7, column=1,sticky=S, pady=0)
+        #self.IN6=Entry(another_frame)
+        #self.IN6.grid(row=7, column=1,sticky=S, pady=0)
         self.IN7 = Entry(another_frame)
         self.IN7.grid(row=8, column=1, sticky=S, pady=0)
         self.IN8 = Entry(another_frame)
@@ -390,11 +405,15 @@ class menu():
         I_love_frames.grid(row=1, column=1, sticky=W, pady=2)
 
         Button(I_love_frames,text="Sync Reset this GEMROC", command= lambda : self.Synch_reset(0)).pack(side=LEFT)
-        Button(I_love_frames,text="Pause this GEMROC", command= lambda : self.Synch_reset(0)).pack(side=LEFT)
+        self.Pause_state=Button(I_love_frames, text="GEMROC_paused", command= self.set_pause_mode)
         self.Clock_state=Button(I_love_frames,text="Internal clock", command= self.change_clock_mode)
+        self.Acq_state=Button(I_love_frames,text="Trigger matched", command= self.change_acquisition_mode)
         self.check_clock_state()
+        self.check_acq_state()
+        self.check_pause_state()
         self.Clock_state.pack(side=LEFT)
-
+        self.Pause_state.pack(side=LEFT)
+        self.Acq_state.pack(side=LEFT)
     def check_clock_state(self):
         button=self.Clock_state
         for label,field in zip(self.label_array,self.field_array):
@@ -411,14 +430,60 @@ class menu():
                     button['text'] = "----------"
                     button['state']="disable"
                 break
+    def check_acq_state(self):
+        button=self.Acq_state
+        for label,field in zip(self.label_array,self.field_array):
+            if label.cget('text').split()[0]=="TL_nTM_ACQ":
+                if field.cget('text')==1:
+                    button['text']="Trigger-less"
+                    button['state']="normal"
+
+                elif field.cget('text')==0:
+                    button['text']="Trigger-Matched"
+                    button['state']="normal"
+
+                else:
+                    button['text'] = "----------"
+                    button['state']="disable"
+                break
+    def check_pause_state(self):
+        button=self.Pause_state
+        for label,field in zip(self.label_array,self.field_array):
+            if label.cget('text').split()[0]=="Debug_Fun_Ctl_Lo4bit[3]":
+                if field.cget('text')==1:
+                    button['text']="Pause mode set, running"
+                    button['state']="normal"
+                    for label, field in zip(self.label_array, self.field_array):
+                        if label.cget('text').split()[0]=="Debug_Fun_Ctl_Lo4bit[2]"==0:
+                            button['text'] = "Paused"
+                            button['state'] = "normal"
+                            break
+
+
+
+                elif field.cget('text')==0:
+                    button['text']="Un-paused"
+                    button['state']="normal"
+
+                else:
+                    button['text'] = "----------"
+                    button['state']="disable"
+                break
     def set_pause_mode(self,to_all=False,value=1):
         if to_all==False:
             GEMROC= self.GEMROC_reading_dict[self.showing_GEMROC.get()]
+            if self.Pause_state['text']=="Paused":
+                GEMROC.GEM_COM.DAQ_set_Pause_Mode(0)
+            else:
+                GEMROC.GEM_COM.DAQ_set_Pause_Mode(1)
+                GEMROC.GEM_COM.DAQ_Toggle_Set_Pause_bit()
+            self.read_DAQ_CR()
+            self.check_pause_state()
         if to_all==True:
             for number, GEMROC in self.GEMROC_reading_dict.items():
                 GEMROC.GEM_COM.DAQ_set_Pause_Mode(value)
                 if value==1:
-                    GEMROC.GEM_COM.DAQ_Toggle_Set_Pause_bit
+                    GEMROC.GEM_COM.DAQ_Toggle_Set_Pause_bit()
 
 
     def change_clock_mode(self,to_all=0,value=0):
@@ -434,6 +499,20 @@ class menu():
         if to_all==1:
             for number, GEMROC in self.GEMROC_reading_dict.items():
                 GEMROC.GEM_COM.DAQ_set_DAQck_source(value)
+    def change_acquisition_mode(self, to_all=False, value=1):
+        if to_all == 0:
+            GEMROC = self.GEMROC_reading_dict[self.showing_GEMROC.get()]
+
+            if self.Acq_state['text'] == "Trigger-less":
+                GEMROC.GEM_COM.change_acq_mode(0)
+            else:
+                GEMROC.GEM_COM.change_acq_mode(1)
+            self.read_DAQ_CR()
+            self.check_acq_state()
+        if to_all == 1:
+            for number, GEMROC in self.GEMROC_reading_dict.items():
+                GEMROC.GEM_COM.change_acq_mode(value)
+
 
     def switch_mode(self,modebut):
         if modebut['text']=="Trigger matched":
@@ -446,7 +525,8 @@ class menu():
         TP_repeat_burst = int(self.IN3.get()) & 0x1
         TP_Num_in_burst = int(self.IN4.get()) & 0x1FF
         TL_nTM_ACQ_choice = int(self.IN5.get()) & 0x1
-        Periodic_L1_Enable_pattern = int(self.IN6.get()) & 0x1
+        #Periodic_L1_Enable_bit = int(self.IN6.get()) & 0x1
+        Periodic_L1_Enable_bit = int(self.IN2.get()) & 0x1
         Enab_Auto_L1_from_TP_bit_param = int(self.IN7.get()) & 0x1
 
 
@@ -458,11 +538,14 @@ class menu():
 
             for i,j in self.GEMROC_reading_dict.items():
                 # print "ID:{} Istance {}".format(i,j)
-                j.GEM_COM.DAQ_set(TCAM_Enable_pattern, Periodic_FEB_TP_Enable_pattern, TP_repeat_burst, TP_Num_in_burst, TL_nTM_ACQ_choice, Periodic_L1_Enable_pattern, Enab_Auto_L1_from_TP_bit_param)
-
+                j.GEM_COM.DAQ_set(TCAM_Enable_pattern, Periodic_FEB_TP_Enable_pattern, TP_repeat_burst, TP_Num_in_burst, TL_nTM_ACQ_choice, Periodic_L1_Enable_bit, Enab_Auto_L1_from_TP_bit_param)
+                j.GEM_COM.DAQ_set_Pause_Mode(PauseMode_Enable_Option)
+                j.GEM_COM.DAQ_set_DAQck_source(DI_Ext_nInt_Clk_option)
         else:
-            self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.DAQ_set(TCAM_Enable_pattern, Periodic_FEB_TP_Enable_pattern, TP_repeat_burst, TP_Num_in_burst, TL_nTM_ACQ_choice, Periodic_L1_Enable_pattern, Enab_Auto_L1_from_TP_bit_param)
-
+            GEMROC=self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())]
+            GEMROC.GEM_COM.DAQ_set(TCAM_Enable_pattern, Periodic_FEB_TP_Enable_pattern, TP_repeat_burst, TP_Num_in_burst, TL_nTM_ACQ_choice, Periodic_L1_Enable_bit, Enab_Auto_L1_from_TP_bit_param)
+            GEMROC.GEM_COM.DAQ_set_Pause_Mode(PauseMode_Enable_Option)
+            GEMROC.GEM_COM.DAQ_set_DAQck_source(DI_Ext_nInt_Clk_option)
         #print "ok"
 
     def read_DAQ_CR(self):
@@ -501,7 +584,7 @@ class menu():
         self.IN3.delete(0,END)
         self.IN4.delete(0,END)
         self.IN5.delete(0,END)
-        self.IN6.delete(0,END)
+        #self.IN6.delete(0,END)
         self.IN7.delete(0,END)
         self.IN8.delete(0,END)
 
@@ -512,7 +595,7 @@ class menu():
         self.IN3.insert(END,(L_array[3] >> 9) & 0x1 )#TODO verificare!
         self.IN4.insert(END,(L_array[4] >> 16) & 0x3FF)
         self.IN5.insert(END,(L_array[3] >> 11) & 0x1)
-        self.IN6.insert(END,(L_array[3] >> 16) & 0xF)
+        #self.IN6.insert(END,(L_array[3] >> 16) & 0xF)
         self.IN7.insert(END, 0)
 
         self.IN8.insert(END,((L_array[3] >> 15) & 0x1))
@@ -520,54 +603,22 @@ class menu():
         # self.IN10.insert(END,((L_array[3] >> 13) & 0x1))
         self.IN11.insert(END,((L_array[3] >> 12) & 0x1))
         self.check_clock_state()
+        self.check_pause_state()
+        self.check_acq_state()
     def read_TIGER_global (self):
         TIGER_N=int( self.showing_TIGER.get())
-        command_reply = self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst,TIGER_N)
-
+        try:
+            command_reply = self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst,TIGER_N)
+        except Exception as err:
+            print "Can't read configuration - ERROR: {}".format(err)
+            self.error_led_update()
+            return 0
         L_array = array.array('I')  # L is an array of unsigned long
         L_array.fromstring(command_reply)
         L_array.byteswap()
         for i in range (0,len(self.input_array)):
             self.input_array[i].delete(0,END)
             self.input_array[i].insert(END,self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())][self.label_array[i]['text'].rstrip('\n')])
-
-        # self.input_array[0].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["BufferBias"] & 0x3) ## BufferBias_param; default 0
-        # self.input_array[1].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TDCVcasN"]& 0xF)  # acr 2018-01-25 ## TDCVcasN_param; default 0
-        # self.input_array[2].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TDCVcasP"]& 0x1F)  # acr 2018-01-25 ## TDCVcasP_param; default 0
-        # self.input_array[3].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TDCVcasPHyst"] & 0x3F)  # acr 2018-01-25 ## TDCVcasPHyst_param; default 55
-        # self.input_array[4].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["DiscFE_Ibias"] & 0x3F)  # acr 2018-01-25 ## DiscFE_Ibias_param; default 50
-        # self.input_array[5].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["BiasFE_PpreN"] & 0x3F)  ## BiasFE_PpreN_param; default 10
-        # self.input_array[6].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["AVcasp_global"] & 0x1F)  # acr 2018-01-25 ## AVcasp_global_param; default 20
-        # self.input_array[7].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TDCcompVcas"] & 0xF)  # acr 2018-01-25 ## TDCcompVcas_param; default 0
-        # self.input_array[8].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TDCIref_cs"] & 0x1f)  # acr 2018-01-25 ## TDCIref_cs_param; default 20
-        # self.input_array[9].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["DiscVcasN"] & 0xF)  # acr 2018-01-25 elf.parameter_array [9] ## DiscVcasN_param; default 7
-        # self.input_array[10].insert(END,self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["IntegVb1"] & 0x3F ) # acr 2018-01-25 ## IntegVb1_param; default 27
-        # self.input_array[11].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["BiasFE_A1"] & 0xF)  ## BiasFE_A1_param; default 8
-        # self.input_array[12].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["Vcasp_Vth"] & 0x3F)  # acr 2018-01-25 ## Vcasp_Vth_param; default 55
-        # self.input_array[13].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TAC_I_LSB"] & 0x1F ) ## TAC_I_LSB_param; default 0
-        # self.input_array[14].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TAC_I_LSB"] & 0x1F)  ## TDCcompVbias_param; default 0
-        # self.input_array[15].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["Vref_Integ"] & 0x3F)  # acr 2018-01-25 ## Vref_Integ_param; default 55
-        # self.input_array[16].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["IBiasTPcal"] & 0x1f)  # acr 2018-01-25 ## IBiasTPcal_param; default 29
-        # self.input_array[17].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TP_Vcal"] & 0x1F)  # acr 2018-01-25 ## TP_Vcal_param; default 8
-        # self.input_array[18].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["ShaperIbias"] & 0xF)  ## ShaperIbias_param; default 0
-        # self.input_array[19].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["IPostamp"] & 0x1F)  # acr 2018-01-25 ## IPostamp_param; default 26
-        # self.input_array[20].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TP_Vcal_ref"] & 0x1F ) # acr 2018-01-25 ## TP_Vcal_ref_param; default 23
-        # self.input_array[21].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["Vref_integ_diff"] & 0x3F ) # acr 2018-01-25 ## Vref_integ_diff_param; default 39
-        # self.input_array[22].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["Sig_pol"] & 0x1 ) ## Sig_pol_param; default p-type (1?)
-        # self.input_array[23].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["FE_TPEnable"] & 0x1 ) ## FE_TPEnable_param; default X (1?)
-        # self.input_array[24].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["DataClkDiv"] & 0x3 ) # acr 2018-01-25 [25] ## DataClkDiv_param; default 0
-        # self.input_array[25].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TACrefreshPeriod"] & 0xF ) # acr 2018-01-25 [26] ## TACrefreshPeriod_param; default 9
-        # self.input_array[26].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TACrefreshEnable"] & 0x1 ) # acr 2018-01-25 [27] ## TACrefreshEnable_param; default X (1?)
-        # self.input_array[27].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["CounterPeriod"] & 0x7)  # acr 2018-01-25 [28] ## CounterPeriod_param; default 6
-        # self.input_array[28].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["CounterEnable"] & 0x1 ) # acr 2018-01-25 [29] ## CounterEnable_param; default EMPTYBOX (0?)
-        # self.input_array[29].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["StopRampEnable"] & 0x3)  # acr 2018-01-25 [30] ## StopRampEnable_param; default 0
-        # self.input_array[30].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["RClkEnable"] & 0x1F ) # acr 2018-01-25 [31] ## RClkEnable_param; default 7
-        # self.input_array[31].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TDCClkdiv"] & 0x1)  # acr 2018-01-25 [32] ## TDCClkdiv_param; default EMPTYBOX (0?)
-        # self.input_array[32].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["VetoMode"] & 0x3F)  # acr 2018-01-25 [33] ## VetoMode_param; default 0
-        # self.input_array[33].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["Ch_DebugMode"] & 0x1  )# acr 2018-01-25 [34] ## Ch_DebugMode_param; default EMPTYBOX (0?)
-        # self.input_array[34].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TxMode"] & 0x3)  # acr 2018-01-25 [35] ## TxMode_param; default 2
-        # self.input_array[35].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TxDDR"] & 0x1 ) # =cr 2018-01-25 [36] ## TxDDR_param; default X (1?)
-        # self.input_array[36].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TxLinks"] & 0x3 ) # acr 2018-01-25 [37] ## TxLinks_param; default 2 links nel GUI di Torino; dovrebbe corrispondeere ad un codice 1 per 2 links
 
 
         self.field_array[0]['text']=  ((L_array[1] >> 24) & 0x3)
@@ -627,43 +678,6 @@ class menu():
             self.input_array[line].delete(0, END)
             self.input_array[line].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].c_inst.Channel_cfg_list[int(self.showing_TIGER.get())][int(self.Channel_IN.get())][line])
 
-        # self.input_array[0].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["BufferBias"] & 0x3) ## BufferBias_param; default 0
-        # self.input_array[1].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TDCVcasN"]& 0xF)  # acr 2018-01-25 ## TDCVcasN_param; default 0
-        # self.input_array[2].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TDCVcasP"]& 0x1F)  # acr 2018-01-25 ## TDCVcasP_param; default 0
-        # self.input_array[3].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TDCVcasPHyst"] & 0x3F)  # acr 2018-01-25 ## TDCVcasPHyst_param; default 55
-        # self.input_array[4].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["DiscFE_Ibias"] & 0x3F)  # acr 2018-01-25 ## DiscFE_Ibias_param; default 50
-        # self.input_array[5].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["BiasFE_PpreN"] & 0x3F)  ## BiasFE_PpreN_param; default 10
-        # self.input_array[6].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["AVcasp_global"] & 0x1F)  # acr 2018-01-25 ## AVcasp_global_param; default 20
-        # self.input_array[7].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TDCcompVcas"] & 0xF)  # acr 2018-01-25 ## TDCcompVcas_param; default 0
-        # self.input_array[8].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TDCIref_cs"] & 0x1f)  # acr 2018-01-25 ## TDCIref_cs_param; default 20
-        # self.input_array[9].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["DiscVcasN"] & 0xF)  # acr 2018-01-25 elf.parameter_array [9] ## DiscVcasN_param; default 7
-        # self.input_array[10].insert(END,self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["IntegVb1"] & 0x3F ) # acr 2018-01-25 ## IntegVb1_param; default 27
-        # self.input_array[11].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["BiasFE_A1"] & 0xF)  ## BiasFE_A1_param; default 8
-        # self.input_array[12].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["Vcasp_Vth"] & 0x3F)  # acr 2018-01-25 ## Vcasp_Vth_param; default 55
-        # self.input_array[13].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TAC_I_LSB"] & 0x1F ) ## TAC_I_LSB_param; default 0
-        # self.input_array[14].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TAC_I_LSB"] & 0x1F)  ## TDCcompVbias_param; default 0
-        # self.input_array[15].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["Vref_Integ"] & 0x3F)  # acr 2018-01-25 ## Vref_Integ_param; default 55
-        # self.input_array[16].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["IBiasTPcal"] & 0x1f)  # acr 2018-01-25 ## IBiasTPcal_param; default 29
-        # self.input_array[17].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TP_Vcal"] & 0x1F)  # acr 2018-01-25 ## TP_Vcal_param; default 8
-        # self.input_array[18].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["ShaperIbias"] & 0xF)  ## ShaperIbias_param; default 0
-        # self.input_array[19].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["IPostamp"] & 0x1F)  # acr 2018-01-25 ## IPostamp_param; default 26
-        # self.input_array[20].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TP_Vcal_ref"] & 0x1F ) # acr 2018-01-25 ## TP_Vcal_ref_param; default 23
-        # self.input_array[21].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["Vref_integ_diff"] & 0x3F ) # acr 2018-01-25 ## Vref_integ_diff_param; default 39
-        # self.input_array[22].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["Sig_pol"] & 0x1 ) ## Sig_pol_param; default p-type (1?)
-        # self.input_array[23].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["FE_TPEnable"] & 0x1 ) ## FE_TPEnable_param; default X (1?)
-        # self.input_array[24].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["DataClkDiv"] & 0x3 ) # acr 2018-01-25 [25] ## DataClkDiv_param; default 0
-        # self.input_array[25].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TACrefreshPeriod"] & 0xF ) # acr 2018-01-25 [26] ## TACrefreshPeriod_param; default 9
-        # self.input_array[26].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TACrefreshEnable"] & 0x1 ) # acr 2018-01-25 [27] ## TACrefreshEnable_param; default X (1?)
-        # self.input_array[27].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["CounterPeriod"] & 0x7)  # acr 2018-01-25 [28] ## CounterPeriod_param; default 6
-        # self.input_array[28].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["CounterEnable"] & 0x1 ) # acr 2018-01-25 [29] ## CounterEnable_param; default EMPTYBOX (0?)
-        # self.input_array[29].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["StopRampEnable"] & 0x3)  # acr 2018-01-25 [30] ## StopRampEnable_param; default 0
-        # self.input_array[30].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["RClkEnable"] & 0x1F ) # acr 2018-01-25 [31] ## RClkEnable_param; default 7
-        # self.input_array[31].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TDCClkdiv"] & 0x1)  # acr 2018-01-25 [32] ## TDCClkdiv_param; default EMPTYBOX (0?)
-        # self.input_array[32].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["VetoMode"] & 0x3F)  # acr 2018-01-25 [33] ## VetoMode_param; default 0
-        # self.input_array[33].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["Ch_DebugMode"] & 0x1  )# acr 2018-01-25 [34] ## Ch_DebugMode_param; default EMPTYBOX (0?)
-        # self.input_array[34].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TxMode"] & 0x3)  # acr 2018-01-25 [35] ## TxMode_param; default 2
-        # self.input_array[35].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TxDDR"] & 0x1 ) # =cr 2018-01-25 [36] ## TxDDR_param; default X (1?)
-        # self.input_array[36].insert(END, self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst.Global_cfg_list[int(self.showing_TIGER.get())]["TxLinks"] & 0x3 ) # acr 2018-01-25 [37] ## TxLinks_param; default 2 links nel GUI di Torino; dovrebbe corrispondeere ad un codice 1 per 2 links
 
         self.field_array[0]['text'] =       ((L_array[1] >> 24) & 0x1)
         self.field_array[1]['text'] =       ((L_array[1] >> 16) & 0x7)
@@ -713,7 +727,10 @@ class menu():
             i+=1
         write=self.GEMROC_reading_dict['{}'.format(GEMROC)].GEM_COM.Set_param_dict_global(self.GEMROC_reading_dict[GEMROC].g_inst, "TxDDR", TIGER, 0)
         read=self.GEMROC_reading_dict['{}'.format(GEMROC)].GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(self.GEMROC_reading_dict[GEMROC].g_inst, TIGER)
-        self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.global_set_check(write, read)
+        try:
+            self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.global_set_check(write, read)
+        except:
+            self.error_led_update()
 
     def write_TIGER_GLOBAL_allGEM(self):
         for TIGER in range (0,8):
@@ -726,8 +743,7 @@ class menu():
             try:
                 self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.global_set_check(write, read)
             except:
-                0
-
+                self.error_led_update()
 
     def write_TIGER_GLOBAL_allsystem(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():
@@ -740,7 +756,10 @@ class menu():
                     i+=1
                 write=GEMROC.GEM_COM.Set_param_dict_global(GEMROC.g_inst, "TxDDR", int(TIGER), 0)
                 read=GEMROC.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(GEMROC.g_inst,int(TIGER))
-                GEMROC.GEM_COM.global_set_check(write,read)
+                try:
+                    GEMROC.GEM_COM.global_set_check(write,read)
+                except:
+                    self.error_led_update()
     def write_CHANNEL_Handling(self):
         if self.all_channels.get()=="All Channels":
             CHANNEL=64
@@ -777,6 +796,7 @@ class menu():
             try:
                 GEMROC.GEM_COM.channel_set_check_GUI(write,read)
             except:
+                self.error_led_update()
                 print "!!! ERROR IN CONFIGURATION  GEMROC {},TIGER {},CHANNEL {}!!!".format(GEMROC.GEM_COM.GEMROC_ID, TIGER, CHANNEL)
         else:
             for CH in range(0, 64):
@@ -785,7 +805,19 @@ class menu():
                 try:
                     GEMROC.GEM_COM.channel_set_check_GUI(write,read)
                 except:
-                    print "!!! ERROR IN CONFIGURATION  GEMROC {},TIGER {},CHANNEL {}!!!".format(GEMROC.GEM_COM.GEMROC_ID, TIGER, CHANNEL)
+                    self.error_led_update()
+                    print "!!! ERROR IN CONFIGURATION  GEMROC {},TIGER {},CHANNEL {}!!!".format(GEMROC.GEM_COM.GEMROC_ID, TIGER, CH)
+    def load_default_config(self):
+        for number, GEMROC in self.GEMROC_reading_dict.items():
+            for TIGER in range (0,8):
+                write=GEMROC.GEM_COM.Set_param_dict_global(GEMROC.g_inst, "TxDDR", int(TIGER), 0)
+                read=GEMROC.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(GEMROC.g_inst,int(TIGER))
+                try:
+                    GEMROC.GEM_COM.global_set_check(write,read)
+                except:
+                    self.error_led_update()
+                self.write_CHANNEL(GEMROC, TIGER, 64, False)
+
     def Synch_reset(self,to_all=1):
         if to_all==1:
             for number, GEMROC in self.GEMROC_reading_dict.items():
@@ -797,6 +829,12 @@ class menu():
             self.GEMROC_reading_dict[GEMROC].GEM_COM.SynchReset_to_TgtFEB()
             self.GEMROC_reading_dict[GEMROC].GEM_COM.SynchReset_to_TgtTCAM()
             print "{} reset".format(self.showing_GEMROC.get())
+    def error_led_update(self,update=1):
+        self.ERROR_LED["image"]=self.icon_bad
+        if update==1:
+            self.main_window.after(5000,lambda: self.error_led_update(2))
+        if update==2:
+            self.ERROR_LED["image"] = self.icon_off
 
 
 def character_limit(entry_text):

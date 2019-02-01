@@ -43,7 +43,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         IVT_log_fname = "."+sep+"log_folder"+sep+"GEMROC{}_IVT_log_{}.txt".format(self.GEMROC_ID,datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         self.IVT_log_file = open(IVT_log_fname, 'w')
 
-        local_test=True
+        local_test=False
 
         if local_test==True:
             # HOST_DYNAMIC_IP_ADDRESS = "192.168.1.%d" %(GEMROC_ID)
@@ -76,8 +76,8 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.receiveSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 106496 )
-        self.receiveSock.settimeout(10)
-
+        self.receiveSock.settimeout(8)
+        #self.receiveSock.setblocking(False)
         self.receiveSock.bind((self.HOST_IP, self.HOST_PORT_RECEIVE))
         self.remote_IP_Address = '192.168.1.%d' % (self.GEMROC_ID + 16)
         ##receiveSock.connect( (remote_IP_Address, 54817,) )
@@ -1123,7 +1123,12 @@ class communication: ##The directory are declared here to avoid multiple declara
         # acr 2018-04-023 command_echo = send_GEMROC_DAQ_CMD(self.GEMROC_ID, gemroc_DAQ_inst, COMMAND_STRING)
         command_echo = self.send_GEMROC_DAQ_CMD_num_rep(gemroc_DAQ_inst, COMMAND_STRING, number_of_repetitions)
         return command_echo
-
+    def change_acq_mode(self,TL_nTM_ACQ):
+        gemroc_DAQ_inst=self.gemroc_DAQ_XX
+        gemroc_DAQ_inst.set_TL_nTM_ACQ(TL_nTM_ACQ)
+        COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
+        command_echo = self.send_GEMROC_DAQ_CMD_num_rep(gemroc_DAQ_inst, COMMAND_STRING,1)
+        return command_echo
     def DAQ_TIGER_SET(self, gemroc_DAQ_inst, TCAM_Enable_pattern_param, Per_FEB_TP_Enable_pattern_param=0,
                       TP_repeat_burst_param=0, TP_Num_in_burst_param=0, TL_nTM_ACQ_param=1, Periodic_L1_Enable_param=0):
         gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
