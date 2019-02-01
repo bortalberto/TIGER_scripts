@@ -76,11 +76,13 @@ class menu():
         self.time_in = Entry(self.start_frame,width = 3)
         self.time_in.insert(END, '1')
         self.time_in.grid(row=0, column=1, sticky=NW, pady=4)
-        self.but6 = Button(self.start_frame, text='Start acquisition', command=self.start_acq)
+        a_frame=Frame(self.master_window)
+        a_frame.pack()
+        self.but6 = Button(a_frame, text='Start acquisition', command=self.start_acq)
         self.but6.grid(row=1, column=2, sticky=NW, pady=4)
-        self.but7 = Button(self.start_frame, text='Trigger less acquisition', command=self.switch_mode,background='#ccffff',activebackground='#ccffff',height = 1, width = 18)
+        self.but7 = Button(a_frame, text='Trigger less acquisition', command=self.switch_mode,background='#ccffff',activebackground='#ccffff',height = 1, width = 18)
         self.but7.grid(row=1, column=3, sticky=NW, pady=4)
-        self.but8 = Button(self.start_frame, text='Stop acquisition', command=self.stop_acq,state='normal'   )
+        self.but8 = Button(a_frame, text='Stop acquisition', command=self.stop_acq,state='normal'   )
         #Button(self.master,text='Exit', command='close').place(relx=0.9, rely=0.9, anchor=NW)
 
         self.but8.grid(row=1, column=4, sticky=NW, pady=4)
@@ -154,6 +156,7 @@ class menu():
         self.canvas.flush_events()
         self.toolbar = NavigationToolbar2Tk( self.canvas, self.corn1 )
         self.toolbar.draw()
+
 
     def plotta(self):
         if self.GEM_to_read_last[self.plotting_gemroc]==1:
