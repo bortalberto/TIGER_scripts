@@ -46,7 +46,7 @@ class Thread_handler(Thread):
                 print "Running (GEM {})".format(self.reader.GEMROC_ID)
                 x = self.reader.fast_acquisition(data_list)  # self.reader.fast_acquisition(data_list)
             except:
-
+                Exception ("GEMROC {} TIMED_OUT".format(self.reader.GEMROC_ID))
                 print ("\n---TIMED_OUT!!!...\n")
                 self.reader.dataSock.close()
                 self.running = False
@@ -65,6 +65,7 @@ class Thread_handler(Thread):
                 print ("\n----SOMETHING WRONG---FILE MISSING\n")
                 return 0
         self.reader.datapath = datapath
+        print "Done acquiring"
 
 
 class Thread_handler_TM(Thread):  # In order to scan during configuration is mandatory to use multithreading
@@ -76,7 +77,8 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
         self.isTM = True
 
     def run(self):
-        Total_data_MAX_size = 2 ** 26  # save on disk every 8 MB
+        Total_data_MAX_size = 2 ** 20
+        Total_MAX_packets=100
 
         datapath = "." + sep + "data_folder" + sep + "Spill_{}_GEMROC_{}_TM.dat".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"), self.reader.GEMROC_ID)
         # with open(self.reader.log_path, 'a') as log_file:
@@ -87,13 +89,19 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
         data_list = []
         while True:
             Total_Data = 0
+            Total_packets =0
             self.reader.start_socket()
-            while (Total_Data < Total_data_MAX_size) and self.running:
+            while (Total_Data < Total_data_MAX_size) and (Total_packets<Total_MAX_packets) and self.running:
                 try:
                     x = self.reader.fast_acquisition(data_list)  # self.reader.fast_acquisition(data_list)
                     Total_Data += x
+                    Total_packets+=1
                     print ("Acquiring")
                 except:
+                    Exception("GEMROC {} TIMED_OUT".format(self.reader.GEMROC_ID))
+                    with open(self.reader.log_path, 'a') as f:
+                        f.write("{} -- GEMROC {} TIMED_OUT\n".format(time.ctime(), self.reader.GEMROC_ID))
+
                     print ("\n---TIMED_OUT!!!...\n")
                     self.reader.TIMED_out = True
 
@@ -102,7 +110,6 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
                     return 0
             self.reader.dataSock.close()
             self.reader.data_list = list(data_list)
-            print len(self.reader.data_list)
 
             # with open(self.reader.log_path, 'a') as log_file:
             #     log_file.write("{} -- Closing acquisition on GEMROC {}\n".format(time.ctime(),self.reader.GEMROC_ID))
@@ -125,7 +132,7 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
 
 
 class reader:
-    def __init__(self, GEMROC_ID):
+    def __init__(self, GEMROC_ID,logfile="ACQ_log"):
         self.GEMROC_ID = GEMROC_ID
         # self.log_path = "Acq_log_{}.txt".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         self.HOST_IP = "192.168.1.200"
@@ -140,15 +147,18 @@ class reader:
         self.last_framew = np.zeros(8)
         self.datapath = ""
         self.datalist = []
-
+        self.log_path=logfile
     def start_socket(self):
         self.TIMED_out=False
 
         try:
             self.dataSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            self.dataSock.settimeout(10)
+            self.dataSock.settimeout(2)
             self.dataSock.bind((self.HOST_IP, self.HOST_PORT))
         except:
+            Exception("TIMED_OUT")
+            with open(self.log_path, 'a') as f:
+                f.write("{} -- GEMROC {} TIMED_OUT\n".format(time.ctime(), self.GEMROC_ID))
             self.TIMED_out=True
             print "Can't bind the socket"
 
@@ -273,6 +283,8 @@ class reader:
     def dump_list(self, savefile, data_list_tmp):
         for item in data_list_tmp:
             savefile.write('%s' % item)
+        with open(self.log_path, 'a') as f:
+            f.write("{} -- Dumping Data for GEMROC {} in file {}\n".format(time.ctime(), self.GEMROC_ID,savefile))
 
     def read_bin(self, path):
         self.thr_scan_matrix = np.zeros((8, 64))  # Tiger,Channel

@@ -4,6 +4,7 @@ from lib import GEM_ACQ_classes as GEM_ACQ
 import datetime
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
+import communication_error_GUI as error_GUI
 import time
 import os
 
@@ -21,7 +22,6 @@ class menu():
     def __init__(self):
         self.GEM_to_read=np.zeros((20))
         self.GEM_to_read_last=np.zeros((20))
-        self.first_an=True
         self.errors_counters_810=np.zeros((20))
         # for i in range (0,20):
         #     self.errors_counters_810[i]=i*20
@@ -32,12 +32,12 @@ class menu():
         self.LED_UDP=[]
         self.plotting_gemroc=0
         self.plotting_TIGER=0
-
         self.time=2
         self.GEM=[]
         self.thread=[]
         self.master_window = Tk()
         self.master_window.title("GEMROC acquisition")
+        self.simple_analysis = IntVar(self.master_window)
 
         Label(self.master_window,text='Acquisition setting',font=("Courier", 25)).pack()
 
@@ -76,6 +76,10 @@ class menu():
         self.time_in = Entry(self.start_frame,width = 3)
         self.time_in.insert(END, '1')
         self.time_in.grid(row=0, column=1, sticky=NW, pady=4)
+        Checkbutton(self.start_frame, text="Fast analysis", variable=self.simple_analysis).grid(row=0, column=2, sticky=NW, pady=4)
+
+
+
         a_frame=Frame(self.master_window)
         a_frame.pack()
         self.but6 = Button(a_frame, text='Start acquisition', command=self.start_acq)
@@ -83,7 +87,13 @@ class menu():
         self.but7 = Button(a_frame, text='Trigger less acquisition', command=self.switch_mode,background='#ccffff',activebackground='#ccffff',height = 1, width = 18)
         self.but7.grid(row=1, column=3, sticky=NW, pady=4)
         self.but8 = Button(a_frame, text='Stop acquisition', command=self.stop_acq,state='normal'   )
+        b_frame=Frame(self.master_window)
+        b_frame.pack()
+        # Label(b_frame,text='Message ').grid(row=0, column=1, sticky=NW, pady=4)
+        # self.Launch_error_check=Label(b_frame, text='-', background='white')
+        # self.Launch_error_check.grid(row=0, column=2, sticky=NW, pady=4)
         #Button(self.master,text='Exit', command='close').place(relx=0.9, rely=0.9, anchor=NW)
+        #Button(a_frame, text='Communication errorinterfacee',command=error_GUI)
 
         self.but8.grid(row=1, column=4, sticky=NW, pady=4)
         for i in range (0,len(self.GEM_to_read)):
@@ -184,7 +194,6 @@ class menu():
             self.GEM_to_read[i]=1
         else:
             self.GEM_to_read[i]=0
-        print self.GEM_to_read
         self.convert0()
 
     def change_G_or_T(self,i,G_or_T):
@@ -241,14 +250,17 @@ class menu():
         self.TL_errors=[]
         self.errors_counters_810=np.zeros((20))
         self.time=self.time_in.get()
-
+        lista=[]
         for i in range (0,len(self.GEM_to_read)):
             if self.GEM_to_read[i]==1:
-                self.GEM.append( GEM_ACQ.reader(i))
+                lista.append(i)
+                self.GEM.append( GEM_ACQ.reader(i,self.logfile))
                 with open(self.logfile, 'a') as f:
-                    f.write("Acquiring from GEMROC {} in {} mode".format(i,self.mode))
+                    f.write("{} -- Acquiring from GEMROC {} in {} mode\n".format(time.ctime(),i,self.mode))
+                print ("Acquiring from GEMROC {} in {} mode".format(i,self.mode))
+        # self.Launch_error_check['text']="Acquiring from GEMROCs: {} in {} mode\n".format(lista,self.mode)
 
-        for i in range(0, len(self.GEM)): #TODO pallino rosso se timed_out
+        for i in range(0, len(self.GEM)):
             if self.mode=='TL':
                 self.thread.append(GEM_ACQ.Thread_handler("GEM ".format(i),float(self.time) , self.GEM[i]))
 
@@ -297,7 +309,10 @@ class menu():
         self.FIELD_810['text']='{}'.format(int(self.errors_counters_810[self.plotting_gemroc]))
 
     def stop_acq(self):
-        print "Stopping"
+        if self.simple_analysis.get():
+            print "Stopping analizing"
+        else:
+            print "Stopping"
         self.but6.config(state='normal')
 
         for i in range (0,len(self.GEM)):
@@ -309,7 +324,7 @@ class menu():
         for i in self.GEM:
             if i.TIMED_out==True:
                 self.LED[int(i.GEMROC_ID)]['image']=self.icon_bad
-        if self.first_an==True:
+        if self.simple_analysis.get():
             for i in range(0, len(self.GEM)):
                 if self.mode=='TL':
                     self.TL_errors.append(self.GEM[i].check_TL_Frame_TIGERS("./data_folder/Spill_2018_12_11_11_02_03_GEMROC_3.dat"))

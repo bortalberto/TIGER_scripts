@@ -975,10 +975,12 @@ def Menu_and_prompt():
                             GEM_COM1.set_FEB_timing_delays(int(safe_delays[3]), int(safe_delays[2]), int(safe_delays[1]),int(safe_delays[0]))
                             print "TD set\n"
                             time.sleep(0.5)
-                        # ans2 = str(input("Do you want to save them as default? (y or n)\n"))
-                        # if ans2.lower() == "y":  # TODO sistemarlo
-                        #     with open("path", 'a') as f:
-                        #         f.write("TD")
+                        print ("Do you want to save them? (y or n)\n")
+                        input_array = (input_queue.get()).split()
+                        ans2=input_array[0]
+                        if ans2.lower() == "y":
+                            GEM_COM1.save_TD_delay(safe_delays)
+
                         clear_term()
                         sys.stdout.write(menu_string)
                     else:

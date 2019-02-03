@@ -671,8 +671,8 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
                 #acr 2018-01-22 TCAM_ID_param = 1,
                 number_of_repetitions_param = 1,
                 #acr 2018-01-22 to_ALL_TCAM_enable_param = 0
-                cfg_filename_param = 'GEMROC_X_def_cfg_LV_2018.txt'# acr 2018-02-19
-                ):
+                cfg_filename_param = 'GEMROC_X_def_cfg_LV_2018.txt',# acr 2018-02-19
+                delay_save="time_delay_save"):
       self.TARGET_GEMROC_ID = TARGET_GEMROC_ID_param # acr 2017-09-22
       # acr 2017-09-22 self.cfg_filename = 'GEMROC_%d_def_cfg_LV_2018.txt'% self.TARGET_GEMROC_ID
       self.cfg_filename = cfg_filename_param # acr 2017-09-22
@@ -680,12 +680,22 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
       self.parameter_array = [0 for i in range(GEMROC_CMD_LV_Num_of_params-1)] # acr 2018-01-15
       with open(self.cfg_filename, "r") as f:
          self.parameter_array = map(int, f)
+
       # acr 2018-01-15 NOTE: position of parameters in parameter file and index in parameter array redefined on the basis of GEMROC_CMD_LV_Num_of_params
       # setting of delay of timing signals to TIGER FEB0 in xns units (relative to TIGER_CLK_LVDS)
-      self.TIMING_DLY_FEB0 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-1] # acr 2018-01-15 last parameter written in default configuration file
-      self.TIMING_DLY_FEB1 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-2]
-      self.TIMING_DLY_FEB2 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-3]
-      self.TIMING_DLY_FEB3 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-4]
+      try:
+          with open(delay_save, "r") as f:
+              while True:
+                  line = f.readline()
+                  if (line.split())[0] == "GEMROC" and int(line.split()[1]) == TARGET_GEMROC_ID_param:
+                      timing_array = f.readline().split()
+                      break
+          self.TIMING_DLY_FEB0 = int(timing_array[0]) # acr 2018-01-15 last parameter written in default configuration file
+          self.TIMING_DLY_FEB1 = int(timing_array[1])
+          self.TIMING_DLY_FEB2 = int(timing_array[2])
+          self.TIMING_DLY_FEB3 = int(timing_array[3])
+      except:
+            raise Exception ('Problems with the time delay settings file')
       self.FEB_PWR_EN_pattern = self.parameter_array [GEMROC_CMD_LV_Num_of_params-5]
       self.FEB_OVC_EN_pattern = self.parameter_array [GEMROC_CMD_LV_Num_of_params-6]
       self.FEB_OVV_EN_pattern = self.parameter_array [GEMROC_CMD_LV_Num_of_params-7]
@@ -869,6 +879,7 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
 
 
 # acr 2018-01-13 split the handling of the GEMROC LV and DAQ configuration parameters
+# ab 2018-02-02 changing the import in order to have only 1 default config file
 class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configuration Register Settings in an array format which can be sent over Ethernet or optical link
    def __init__(self,
                 TARGET_GEMROC_ID_param = 0, # acr 2017-09-22
@@ -900,7 +911,7 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
       self.Dbg_functions_ctrl_bits_HiNibble = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-15] # Enable simulated L1 (periodic) Trigger Generation for TCAM[3..0]
       ## ACR 2018-03-15 AT IHEP: ADDED UDP_DATA_DESTINATION_IPADDR AND UDP_DATA_DESTINATION_IPPORT; GEMROC_CMD_DAQ_Num_of_params = 13 # acr 2018-01-15
       self.UDP_DATA_DESTINATION_IPADDR = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-14] # latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
-      self.UDP_DATA_DESTINATION_IPPORT = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-13] # latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
+      self.UDP_DATA_DESTINATION_IPPORT = int(TARGET_GEMROC_ID_param) # latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
       self.L1_latency_OBSOLETE = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-12] # acr 2018-07-11 IT IS OBSOLETE!!! latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
       self.L1_period = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-11] # period (in units of BES-III clk cycles) of periodic simulated L1 triggers; range: 0..1023
       self.TP_width = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-10] # acr 2017-09-28 width (in units of BES-III clk cycles) of periodic Test Pulses; range: 0..15

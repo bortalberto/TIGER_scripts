@@ -6,12 +6,15 @@ import numpy as np
 import time
 import sys
 import os
+import matplotlib
+matplotlib.use('pdf',warn=False, force=True)
 import matplotlib.pyplot as plt
 import pylab
 from scipy.optimize import curve_fit
 from scipy import special
 from threading import Thread
 import datetime
+import multiprocessing
 import random
 import array
 import fileinput
@@ -617,7 +620,7 @@ class analisys_conf: #Analysis class used for configurations10
         delay_vector = np.zeros((64))
         safe_delays =np.zeros((4)) #Best dealy for each FEB
 
-        for TD in range (0,64):
+        for TD in range (0,1):
             print ("Setting delay {}".format(TD))
             self.GEM_COM.set_FEB_timing_delays(TD, TD, TD, TD)
             self.GEM_COM.DAQ_set(0, 0xff, 1, 256, 1, 1, False)
@@ -667,7 +670,7 @@ class analisys_conf: #Analysis class used for configurations10
             safe_delays[Ts]=(second_zero+first_zero)/2
             if safe_delays[Ts]>63:
                 safe_delays[Ts]=safe_delays[Ts]-64
-
+        # if not direct_plot:
         for Ts in range (0,4):
             plt.plot(delay_vector[:],error_matrix[Ts*2,:], 'b-', label='TIGER {}'.format(Ts*2))
             plt.plot(delay_vector[:],error_matrix[Ts*2 + 1,:], 'g-',label='TIGER {}'.format(Ts*2+1))
@@ -678,6 +681,9 @@ class analisys_conf: #Analysis class used for configurations10
             plt.title('Delay scan, GEMROC {} FEB {}'.format(self.GEM_COM.GEMROC_ID, Ts))
             plt.savefig(self.GEM_COM.conf_folder+sep+"TD_scan_results"+sep+"GEMROC_{}_TD_scan_FEB_{}.png".format(self.GEM_COM.GEMROC_ID,Ts))
             plt.clf()
+        # else:
+        #     return safe_delays
+        #     self.plot_with_pooling(delay_vector,error_matrix,safe_delays)
         for i in range(0, 4):
             safe_delays[i]=int(safe_delays[i]//1)
 
@@ -688,9 +694,33 @@ class analisys_conf: #Analysis class used for configurations10
                 self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode",T,ch,3)
         return safe_delays
 
+    def plot_with_pooling(self,delay_vector,error_matrix,safe_delays):
+        pool = multiprocessing.Pool()
+        error_matrix_list=[]
+        delay_vector_list=[]
+        safe_delays_list=[]
+        for i in range (0,4):
+            error_matrix_list.append(error_matrix)
+            delay_vector_list.append(delay_vector)
+            safe_delays_list.append(safe_delays)
+        input = zip( [0,1,2,3],error_matrix_list,delay_vector_list,safe_delays_list)
+        pool.map(self.plot_for_multiproc, input)
+
+    def plot_for_multiproc(self,args):
+        Ts, delay_vector,error_matrix,safe_delays = args
+        fig = plt.figure()
+        plt.plot(delay_vector[:], error_matrix[Ts * 2, :], 'b-', label='TIGER {}'.format(Ts * 2))
+        plt.plot(delay_vector[:], error_matrix[Ts * 2 + 1, :], 'g-', label='TIGER {}'.format(Ts * 2 + 1))
+        plt.axvline(x=safe_delays[Ts] * 88, color='r', label="Time delay set at {}".format(safe_delays[Ts]))
+        plt.legend(loc='best')
+        plt.ylabel('Errors')
+        plt.xlabel('Communication delay [ps] ')
+        plt.title('Delay scan, GEMROC {} FEB {}'.format(self.GEM_COM.GEMROC_ID, Ts))
+        plt.savefig(self.GEM_COM.conf_folder + sep + "TD_scan_results" + sep + "GEMROC_{}_TD_scan_FEB_{}.png".format(self.GEM_COM.GEMROC_ID, Ts))
+        plt.clf()
+
     def __del__(self):
         return 0
-
 class analisys_read:
     def __init__(self, com, c_inst):
         self.c_inst=c_inst
@@ -905,7 +935,7 @@ class analisys_read:
 
     def global_sfit(self,first_TIGER_to_SCAN, last_TIGER_to_scan, retry=False):
         for T in range(first_TIGER_to_SCAN, last_TIGER_to_scan):
-            thr_file_path = self.GEM_COM.conf_folder + sep + "GEMROC{}_Chip{}.thr".format(self.GEMROC_ID, T)
+            thr_file_path = self.GEM_COM.conf_folder + sep +"thr"+sep+"GEMROC{}_Chip{}.thr".format(self.GEMROC_ID, T)
             f = open(thr_file_path, 'w')
             f.close()
             for ch in range(0, 64):

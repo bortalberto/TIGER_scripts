@@ -3,7 +3,7 @@ import Tkinter, Tkconstants, tkFileDialog
 import numpy as np
 from lib import GEM_COM_classes as COM_class
 import binascii
-
+import communication_error_GUI as error_GUI
 from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
 import sys
 import array
@@ -19,10 +19,8 @@ else:
 	print("ERROR: OS {} non compatible".format(OS))
 	sys.exit()
 
-#TODO Aggiungere comandi per default config, cambio modalita e simili dal global
 #TODO: LV settings
-#TODO: Tasto per cambiare da TM a TL
-#TODO: load_VTHR
+#TODO Power on and off
 #TODO: comando singolo per DAQSET
 class menu():
     def __init__(self):
@@ -113,7 +111,15 @@ class menu():
         Tantissime_frame=Frame(self.select_window)
         Tantissime_frame.pack()
         Button(Tantissime_frame,text="Configure all chips with default settings", command=self.load_default_config).pack( side=LEFT)
-        Button(Tantissime_frame,text="Load thresholds", command=lambda : self.change_clock_mode(1,1)).pack(side=LEFT) #TODO finirlo
+        Button(Tantissime_frame,text="Load thresholds to all", command=lambda : self.load_thr(True,source="scan")) .pack(side=LEFT)
+        Button(Tantissime_frame,text="Open communication error interface", command=self.open_communicaton_GUI).pack(side=LEFT)
+        Frame(self.select_window,height=20).pack()
+
+        TROPPE_frame=LabelFrame(self.select_window, padx=5, pady=5)
+        TROPPE_frame.pack(side=LEFT)
+        Button(TROPPE_frame,text="FEB power ON",command=self.power_on_FEBS,fg="green").pack(side=LEFT)
+
+        Button(TROPPE_frame,text="FEB power OFF",command=self.power_off_FEBS(),fg="red").pack(side=LEFT)
 
         self.LED=[]
         for i in range (0,len(self.GEM_to_config)):
@@ -125,7 +131,8 @@ class menu():
             colonna=((i)%10)*2+1
             self.LED.append( Label(self.grid_frame, image=self.icon_off))
             self.LED[i].grid(row=riga, column=colonna)
-
+    def open_communicaton_GUI(self):
+        self.conf_wind=error_GUI.menu(self.main_window,self.GEMROC_reading_dict)
 
     def runna(self):
         mainloop()
@@ -203,6 +210,16 @@ class menu():
             self.Channel_IN.grid(row=1, column=2, sticky=W, pady=4)
             self.Go = Button(self.second_row_frame, text='Go', command=self.TIGER_CHANNEL_configurator)
             self.Go.grid(row=1, column=5, sticky=NW, pady=4)
+    def power_on_FEBS(self):
+        for number, GEMROC in self.GEMROC_reading_dict.items():
+            GEMROC.GEM_COM.FEBPwrEnPattern_set(255)
+
+    def power_off_FEBS(self):
+        for number, GEMROC in self.GEMROC_reading_dict.items():
+            GEMROC.GEM_COM.FEBPwrEnPattern_set(0)
+    def thr_Scan(self,GEMROC_num,TIGER_num): #if GEMROC num=-1--> To all GEMROC, if TIGER_num=-1 --> To all TIGERs
+
+
     def TIGER_CHANNEL_configurator(self):
         self.dict_pram_list=self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].c_inst.Channel_cfg_list[int(self.showing_TIGER.get())][int(self.Channel_IN.get())].keys()
         self.third_row_frame.destroy()
@@ -254,12 +271,23 @@ class menu():
                     self.field_array[i].grid(row=i + 2 - lenght / 2, column=4, sticky=W, pady=0)
 
                 i += 1
+            thr_target=StringVar(self.third_row_frame)
+            thr_target.set("This TIGER")
             saveframe = Frame(self.third_row_frame)
             saveframe.grid(row=4, column=0, sticky=W, pady=2)
             Button(saveframe, text="Save", command=self.SAVE).pack(side=LEFT)
             Button(saveframe, text="Load", command=self.LOAD).pack(side=LEFT)
-            self.LOAD_ON=Button(saveframe, text= "Load on TIGER",command= self.LOAD_on_TIGER,state='disable')
+            self.LOAD_ON=Button(saveframe, text= "Load on TIGERs (loaded file)",command= self.LOAD_on_TIGER,state='disable')
             self.LOAD_ON.pack(side= LEFT)
+            thr_frame=Frame(self.third_row_frame)
+            thr_frame.grid(row=3, column=0, sticky=W, pady=2)
+            Label(thr_frame,text="Sigma").pack(side=LEFT)
+            self.thr_sigma=Entry(thr_frame,width = 2)
+            self.thr_sigma.pack(side=LEFT)
+            OptionMenu(thr_frame, thr_target,*["This TIGER","All TIGERs","All TIGERs in all GEMROCs"]).pack(side=LEFT)
+            Button(thr_frame, text="Load scan threshold", command= lambda: self.load_thr_Handling(thr_target,"scan")).pack(side=LEFT)
+            Button(thr_frame, text="Load auto threshold", command= lambda: self.load_thr_Handling(thr_target,"auto")).pack(side=LEFT)
+
 
     def TIGER_GLOBAL_configurator(self):
         self.third_row_frame.destroy()
@@ -807,6 +835,37 @@ class menu():
                 except:
                     self.error_led_update()
                     print "!!! ERROR IN CONFIGURATION  GEMROC {},TIGER {},CHANNEL {}!!!".format(GEMROC.GEM_COM.GEMROC_ID, TIGER, CH)
+
+    def load_thr_Handling(self,thr_target_entry,mode):
+        thr_target=thr_target_entry.get()
+        if thr_target== "This TIGER":
+            TIGER=int(self.showing_TIGER.get())
+            self.load_thr(source=mode,sigma=int(self.thr_sigma.get()),first=TIGER,last=TIGER+1)
+        if thr_target =="All TIGERs":
+            self.load_thr(source=mode, sigma=int(self.thr_sigma.get()))
+        if thr_target =="All TIGERs in all GEMROCs":
+            self.load_thr(source=mode,sigma=int(self.thr_sigma.get()),to_all=True)
+
+
+    def load_thr(self,to_all=False,source="auto",sigma=3,offset=0,first=0,last=8):
+        if not to_all:
+            GEMROC=self.GEMROC_reading_dict[self.showing_GEMROC.get()]
+            print GEMROC
+            for T in range (first,last):
+                if source=="auto":
+                    GEMROC.GEM_COM.Load_VTH_fromfile_autotuned(GEMROC.c_inst,T)
+                if source=="scan":
+                    GEMROC.GEM_COM.Load_VTH_fromfile(GEMROC.c_inst,T,sigma,offset)
+                self.write_CHANNEL(GEMROC, T, 64, False)
+        else:
+            for number, GEMROC in self.GEMROC_reading_dict.items():
+                for T in range(first, last):
+                    if source == "auto":
+                        GEMROC.GEM_COM.Load_VTH_fromfile_autotuned(GEMROC.c_inst, T)
+                    if source == "scan":
+                        GEMROC.GEM_COM.Load_VTH_fromfile(GEMROC.c_inst, T, sigma, offset)
+                    self.write_CHANNEL(GEMROC, T, 64, False)
+
     def load_default_config(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():
             for TIGER in range (0,8):
@@ -859,6 +918,12 @@ class GEMROC_HANDLER:
         self.c_inst = GEM_CONF.ch_reg_settings(GEMROC_ID, default_ch_inst_settigs_filename)
     def __del__(self):
         self.GEM_COM.__del__()
+import matplotlib.pyplot as plt
+import numpy as np
+
+import multiprocessing
+#multiprocessing.freeze_support() # <- may be required on windows
+
 
 Main_menu=menu()
 Main_menu.runna()

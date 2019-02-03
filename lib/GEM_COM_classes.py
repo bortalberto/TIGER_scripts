@@ -38,12 +38,12 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.keep_cfg_log=keep_cfg_log
         self.keep_IVT_log=keep_IVT_log
 
-        log_fname = "."+sep+"log_folder"+sep+"GEMROC{}_interactive_cfg_log_{}.txt".format(self.GEMROC_ID,datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
-        self.log_file = open(log_fname, 'w')
-        IVT_log_fname = "."+sep+"log_folder"+sep+"GEMROC{}_IVT_log_{}.txt".format(self.GEMROC_ID,datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
-        self.IVT_log_file = open(IVT_log_fname, 'w')
+        self.log_fname = "."+sep+"log_folder"+sep+"GEMROC{}_interactive_cfg_log_{}.txt".format(self.GEMROC_ID,datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
+        self.log_file = open(self.log_fname, 'w')
+        self.IVT_log_fname = "."+sep+"log_folder"+sep+"GEMROC{}_IVT_log_{}.txt".format(self.GEMROC_ID,datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
+        self.IVT_log_file = open(self.IVT_log_fname, 'w')
 
-        local_test=False
+        local_test=True
 
         if local_test==True:
             # HOST_DYNAMIC_IP_ADDRESS = "192.168.1.%d" %(GEMROC_ID)
@@ -88,8 +88,11 @@ class communication: ##The directory are declared here to avoid multiple declara
         ##  TARGET_GEMROC_ID_param = 0, # acr 2017-09-22
         ##  command_string_param = 'NONE',
         ##  number_of_repetitions_param = 1,
-        cfg_filename =self.conf_folder+sep+ 'GEMROC_%d_def_cfg_LV_2018.txt' % self.GEMROC_ID
-        self.gemroc_LV_XX = GEM_CONF_classes.gemroc_cmd_LV_settings(self.GEMROC_ID, 'NONE', 1, cfg_filename)
+        #cfg_filename =self.conf_folder+sep+ 'GEMROC_ALL_def_cfg_LV_2018_v2.txt' % self.GEMROC_ID
+
+        cfg_filename =self.conf_folder+sep+ 'GEMROC_ALL_def_cfg_LV_2018_v2.txt'
+        self.time_delay_path= self.conf_folder+sep+ 'time_delay_save'
+        self.gemroc_LV_XX = GEM_CONF_classes.gemroc_cmd_LV_settings(self.GEMROC_ID, 'NONE', 1, cfg_filename,self.time_delay_path)
         self.gemroc_LV_XX.set_FEB_PWR_EN_pattern(self.FEB_PWR_EN_pattern)
 
         self.test_GEMROC_communication()
@@ -114,7 +117,8 @@ class communication: ##The directory are declared here to avoid multiple declara
         ##  number_of_repetitions_param = 1,
         ##  to_ALL_TCAM_enable_param = 0,
 
-        cfg_filename =self.conf_folder+sep+ 'GEMROC_%d_def_cfg_DAQ_2018v5.txt' % self.GEMROC_ID
+        #cfg_filename =self.conf_folder+sep+ 'GEMROC_%d_def_cfg_DAQ_2018v5.txt' % self.GEMROC_ID
+        cfg_filename = self.conf_folder + sep + 'GEMROC_ALL_def_cfg_DAQ_2018_v6.txt'
         self.gemroc_DAQ_XX = GEM_CONF_classes.gemroc_cmd_DAQ_settings(self.GEMROC_ID, 'NONE', 0, 1, 0, cfg_filename)
 
 
@@ -122,9 +126,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         ##acr 2018-03-16 added yesterday while debugging DAQ_CFG readback, removed today: gemroc_DAQ_XX.extract_parameters_from_UDP_packet()
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
         command_echo = self.send_GEMROC_DAQ_CMD(self.gemroc_DAQ_XX, COMMAND_STRING)
-        self.enable_pattern_array = array.array('I', [0x0, 0x1, 0x3, 0x7, 0xf, 0x1f, 0x3f, 0x7f, 0xff])  # acr 2018-08-08
         # self.enable_pattern_array_test = array.array('I',[0x0, 0x3, 0x9, 0xA, 0x41, 0x42, 0x81, 0x82,  0xC0]) #Test 2 Tigers
-        self.enable_pattern_array_test = array.array('I', [0x0, 0xc8, 0x4a, 0x0b,  0xca, 0xc3, 0x4b, 0xcb])  # Test 3,4,5 Tigers
         COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
         command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
         COMMAND_STRING = 'CMD_GEMROC_TIMING_DELAYS_UPDATE'
@@ -142,6 +144,9 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.receiveSock.close()
         self.log_file.close()
         self.IVT_log_file.close()
+        os.remove(self.log_fname )
+        os.remove(self.IVT_log_fname)
+
     def flush_socket(self):
         self.receiveSock.close()
         self.receiveSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -218,7 +223,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         print ('\nTIMING_DLY_FEB0 : %d' % ((L_array[10] >> 0) & 0x3F))
 
         print "\n GEMROC firmware version = {}".format(VERSION)
-
+        return Counter_value
     def display_and_log_IVT(self,command_echo_param, display_enable_param, log_enable_param,
                             log_filename_param):  ## acr 2018-02-23
         L_array = array.array('I')  # L is an array of unsigned long, I for some systems, L for others
@@ -727,7 +732,18 @@ class communication: ##The directory are declared here to avoid multiple declara
         COMMAND_STRING = 'CMD_GEMROC_TIMING_DELAYS_UPDATE'
         command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
         return command_echo
-
+    def save_TD_delay(self,safe_delays):
+        path = self.time_delay_path
+        with open(path, 'r') as f:
+            lines = f.readlines()
+        for l in range(0, len(lines)):
+            line = lines[l]
+            if (line.split())[0] == "GEMROC" and int(line.split()[1]) == self.GEMROC_ID:
+                lines[l + 1] = "{}  {}  {}  {}\n".format(int(safe_delays[0]), int(safe_delays[1]), int(safe_delays[2]), int(safe_delays[3]))
+                break
+        with open(path, 'w') as f:
+            for line in lines:
+                f.write(str(line))
 
     def set_counter(self, TIGER_for_counter, ERROR_counter_enable, CHANNEL_for_counter):
         self.gemroc_LV_XX.TIGER_for_counter=int(TIGER_for_counter)
@@ -1577,7 +1593,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         return command_echo
 
     def Load_VTH_fromfile(self, ChCFGReg_setting_inst, TIGER_ID_param, number_sigma, offset, save_on_LOG=False):
-        file_p=self.conf_folder+sep+"GEMROC{}_Chip{}.thr".format(self.GEMROC_ID,TIGER_ID_param)
+        file_p=self.conf_folder+sep+"thr"+ sep+"GEMROC{}_Chip{}.thr".format(self.GEMROC_ID,TIGER_ID_param)
         self.log_file.write("\n Setting VTH from file in  TIGER {}\n".format(TIGER_ID_param))
 
 
@@ -1603,7 +1619,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         return 0
 
     def Load_VTH_fromfile_autotuned(self, ChCFGReg_setting_inst, TIGER_ID_param):
-        file_p=self.conf_folder+sep+"GEMROC{}_TIGER_{}_autotuned.thr".format(self.GEMROC_ID,TIGER_ID_param)
+        file_p=self.conf_folder+sep +"thr"+ sep+"GEMROC{}_TIGER_{}_autotuned.thr".format(self.GEMROC_ID,TIGER_ID_param)
         self.log_file.write("\n Setting VTH from file autotuned in  TIGER {}\n".format(TIGER_ID_param))
 
 
