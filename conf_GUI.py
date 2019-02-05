@@ -1,9 +1,11 @@
 from Tkinter import *
+from ttk import Progressbar
 import Tkinter, Tkconstants, tkFileDialog
 import numpy as np
 from lib import GEM_COM_classes as COM_class
 import binascii
 import communication_error_GUI as error_GUI
+from multiprocessing import Process,Pipe
 from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
 import sys
 import array
@@ -18,9 +20,12 @@ elif OS == 'linux2':
 else:
 	print("ERROR: OS {} non compatible".format(OS))
 	sys.exit()
-
+#TODO: bugs:
+#FIX poweroff
+#THR su singolo TIGER
+#Print Errors for each TIGER
+#Risolvere print probelm
 #TODO: LV settings
-#TODO Power on and off
 #TODO: comando singolo per DAQSET
 class menu():
     def __init__(self):
@@ -113,13 +118,15 @@ class menu():
         Button(Tantissime_frame,text="Configure all chips with default settings", command=self.load_default_config).pack( side=LEFT)
         Button(Tantissime_frame,text="Load thresholds to all", command=lambda : self.load_thr(True,source="scan")) .pack(side=LEFT)
         Button(Tantissime_frame,text="Open communication error interface", command=self.open_communicaton_GUI).pack(side=LEFT)
+        Button(Tantissime_frame,text="THR scan on all GEMROCs", command=lambda: self.thr_Scan(-1,-1)).pack(side=LEFT)
+
         Frame(self.select_window,height=20).pack()
 
         TROPPE_frame=LabelFrame(self.select_window, padx=5, pady=5)
         TROPPE_frame.pack(side=LEFT)
-        Button(TROPPE_frame,text="FEB power ON",command=self.power_on_FEBS,fg="green").pack(side=LEFT)
+        Button(TROPPE_frame,text="FEB power ON",command=self.power_on_FEBS, activeforeground ="green").pack(side=LEFT)
 
-        Button(TROPPE_frame,text="FEB power OFF",command=self.power_off_FEBS(),fg="red").pack(side=LEFT)
+        Button(TROPPE_frame,text="FEB power OFF",command=self.power_off_FEBS, activeforeground ="red").pack(side=LEFT)
 
         self.LED=[]
         for i in range (0,len(self.GEM_to_config)):
@@ -132,6 +139,7 @@ class menu():
             self.LED.append( Label(self.grid_frame, image=self.icon_off))
             self.LED[i].grid(row=riga, column=colonna)
     def open_communicaton_GUI(self):
+        print self.GEMROC_reading_dict
         self.conf_wind=error_GUI.menu(self.main_window,self.GEMROC_reading_dict)
 
     def runna(self):
@@ -217,9 +225,98 @@ class menu():
     def power_off_FEBS(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():
             GEMROC.GEM_COM.FEBPwrEnPattern_set(0)
+
+
+
     def thr_Scan(self,GEMROC_num,TIGER_num): #if GEMROC num=-1--> To all GEMROC, if TIGER_num=-1 --> To all TIGERs
+        self.bar_win = Toplevel(self.main_window)
+        self.bar_win.focus_set()  # set focus on the ProgressWindow
+        self.bar_win.grab_set()
+        progress_bars = []
+        progress_list = []
 
+        Label(self.bar_win, text="Threshold Scan completition").pack()
+        if GEMROC_num == -1:
+            dict = self.GEMROC_reading_dict.copy()
+        else:
+            dict["GEMROC ".format(GEMROC_num)] = self.GEMROC_reading_dict[GEMROC_num]
+        i = 0
+        for number, GEMROC_number in dict.items():
+            Label(self.bar_win, text='{}'.format(number)).pack()
+            progress_list.append(IntVar())
+            progress_bars.append(Progressbar(self.bar_win, maximum=32768, orient=HORIZONTAL, variable=progress_list[i], length=200, mode='determinate'))
+            progress_bars[i].pack()
 
+            i += 1
+
+        dict={}
+        if GEMROC_num==-1:
+            dict=self.GEMROC_reading_dict.copy()
+        else:
+            dict["GEMROC ".format(GEMROC_num)]=self.GEMROC_reading_dict[GEMROC_num]
+        process_list = []
+        pipe_list = []
+        i=0
+        for number, GEMROC_num in dict.items():
+                pipe_in,pipe_out=Pipe()
+                p=Process(target=self.THR_scan_process,args=(number,TIGER_num,pipe_out))
+                #pipe_in.send(progress_bars[i])
+                process_list.append(p)
+                pipe_list.append(pipe_in)
+                p.start()
+                i+=1
+        while True:
+            alive_list=[]
+            for process in process_list:
+                alive_list.append(process.is_alive())
+            if all(v == 0 for v in alive_list):
+                break
+            else:
+                for progress,pipe in zip(progress_list,pipe_list):
+                    progress.set( pipe.recv())
+
+                    self.bar_win.update()
+                    #print progress.get()
+
+        for process,pipe_out in zip(process_list,pipe_list):
+            process.join()
+            process.terminate()
+
+        # else:
+        #     GEMROC = self.GEMROC_reading_dict["GEMROC {}".format(GEMROC_num)]
+        #     GEM_COM = GEMROC.GEM_COM
+        #     c_inst = GEMROC.c_inst
+        #     g_inst = GEMROC.g_inst
+        #     test_r = (AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst))
+
+    def THR_scan_process(self,number,TIGER,pipe_out):
+        GEMROC=self.GEMROC_reading_dict[number]
+        GEM_COM = GEMROC.GEM_COM
+        c_inst = GEMROC.c_inst
+        g_inst = GEMROC.g_inst
+        test_c = AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst)
+        test_r = AN_CLASS.analisys_read(GEM_COM, c_inst)
+        test_c.thr_preconf()
+        if TIGER==-1:
+            first=0
+            last=8
+        else:
+            first=TIGER
+            last=TIGER+1
+        GEMROC_ID=GEM_COM.GEMROC_ID
+        test_r.thr_scan_matrix = test_c.thr_conf_using_GEMROC_COUNTERS_progress_bar(test_r,first, last,pipe_out,False)
+
+        test_r.make_rate()
+        test_r.normalize_rate(first,last)
+        test_r.save_scan_on_file()
+        test_r.colorPlot(GEM_COM.Tscan_folder + sep + "GEMROC{}".format(GEMROC_ID) + sep + "GEMROC {}".format(GEMROC_ID) + "rate", first,last, True)
+        test_r.colorPlot(GEM_COM.Tscan_folder + sep + "GEMROC{}".format(GEMROC_ID) + sep + "GEMROC {}".format(GEMROC_ID) + "conteggi", first,last)
+
+        # test_r.normalize_rate( first,int(input_array[2]))
+        test_r.global_sfit(first,last)
+        test_r.__del__()
+        test_c.__del__()
+        return
     def TIGER_CHANNEL_configurator(self):
         self.dict_pram_list=self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].c_inst.Channel_cfg_list[int(self.showing_TIGER.get())][int(self.Channel_IN.get())].keys()
         self.third_row_frame.destroy()
@@ -686,11 +783,9 @@ class menu():
         self.field_array[34]['text']= ((L_array[9] >> 0) & 0x3)
         self.field_array[35]['text']= ((L_array[10] >> 24) & 0x1)
         self.field_array[36]['text']= ((L_array[10] >> 16) & 0x3)
-        i=0
-        for input in self.input_array:
-            if int(input.get())!=int(self.field_array[i]['text']):
+        for input,field in zip(self.input_array,self.field_array):
+            if int(input.get())!=int(field['text']):
                 input.config({"background": "Red"})
-                i+=1
             else:
                 input.config({"background": "White"})
 
@@ -918,11 +1013,7 @@ class GEMROC_HANDLER:
         self.c_inst = GEM_CONF.ch_reg_settings(GEMROC_ID, default_ch_inst_settigs_filename)
     def __del__(self):
         self.GEM_COM.__del__()
-import matplotlib.pyplot as plt
-import numpy as np
 
-import multiprocessing
-#multiprocessing.freeze_support() # <- may be required on windows
 
 
 Main_menu=menu()

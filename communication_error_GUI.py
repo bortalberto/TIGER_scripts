@@ -78,6 +78,7 @@ class menu():
                 Label(frame_counters,text="TIGER {}".format(T)).grid(row=1,column=(T-4)*2,sticky=NW,pady=10)
                 self.TIGER_error_counters_display["GEMROC {} TIGER {}".format(GEMROC_number, T)] = Label(frame_counters, text="-----".format(T), background='white')
                 self.TIGER_error_counters_display["GEMROC {} TIGER {}".format(GEMROC_number, T)].grid(row=1, column=(T - 4) * 2 + 1, sticky=NW, pady=10)
+                #self.TIGER_error_counters_display["GEMROC {} TIGER {}".format(GEMROC_number, T)]['text']=self.TIGER_error_counters["GEMROC {} TIGER {}".format(GEMROC_number,T)]
         Button(sync_winz, text ='Launch TD scan on this GEMROC', command=lambda: self.TD_scan (GEMROC_number, False)).pack()
 
     def TD_scan(self, GEMROC_num, to_all=False):
@@ -195,5 +196,5 @@ class menu():
         for key,label in self.GEMROC_error_counters_display.items():
             label['text']=self.GEMROC_error_counters[key]
         for key,label in self.TIGER_error_counters_display.items():
-            for a,value in self.TIGER_error_counters.items():
-                label['text']=value
+            print self.TIGER_error_counters
+            label['text']=int(self.TIGER_error_counters[key])
