@@ -40,10 +40,11 @@ class communication: ##The directory are declared here to avoid multiple declara
 
         self.log_fname = "."+sep+"log_folder"+sep+"GEMROC{}_interactive_cfg_log_{}.txt".format(self.GEMROC_ID,datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         self.log_file = open(self.log_fname, 'w')
+        self.log_file.write("Tiger configuration log file")
         self.IVT_log_fname = "."+sep+"log_folder"+sep+"GEMROC{}_IVT_log_{}.txt".format(self.GEMROC_ID,datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         self.IVT_log_file = open(self.IVT_log_fname, 'w')
 
-        local_test=True
+        local_test=False
 
         if local_test==True:
             # HOST_DYNAMIC_IP_ADDRESS = "192.168.1.%d" %(GEMROC_ID)
@@ -144,8 +145,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.receiveSock.close()
         self.log_file.close()
         self.IVT_log_file.close()
-        os.remove(self.log_fname )
-        os.remove(self.IVT_log_fname)
+
 
     def flush_socket(self):
         self.receiveSock.close()

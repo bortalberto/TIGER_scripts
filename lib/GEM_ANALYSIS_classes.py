@@ -165,7 +165,7 @@ class analisys_conf: #Analysis class used for configurations10
             self.GEM_COM.Set_param_dict_global(self.g_inst, "CounterEnable", T, 0)
 
         return
-    def thr_conf_using_GEMROC_COUNTERS(self,test_r, first_TIGER_to_SCAN, last_TIGER_to_SCAN):
+    def thr_conf_using_GEMROC_COUNTERS(self,test_r, first_TIGER_to_SCAN, last_TIGER_to_SCAN,print_to_screen=True):
         with open(self.log_path, 'a') as log_file:
             log_file.write("{} -- Starting thr scan\n".format(time.ctime()))
         thr_scan_matrix=np.zeros((8,64,64))
@@ -187,9 +187,44 @@ class analisys_conf: #Analysis class used for configurations10
                         time.sleep(0.03)
                         thr_scan_matrix[T, j, i] = self.GEM_COM.GEMROC_counter_get()
                         # print ("Events: {}".format(thr_scan_matrix[T, j, i]))
-                        os.system('clear')
-                        string="SCANNING [TIGER={}, VTh={}, CH={}]\n".format(T,i,j)
-                        sys.stdout.write(string)
+                        if print_to_screen:
+                            os.system('clear')
+                            string="SCANNING [TIGER={}, VTh={}, CH={}]\n".format(T,i,j)
+                            sys.stdout.write(string)
+
+                self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 3)
+
+        return thr_scan_matrix
+
+    def thr_conf_using_GEMROC_COUNTERS_progress_bar(self,test_r, first_TIGER_to_SCAN, last_TIGER_to_SCAN,pipe_out,print_to_screen=True):
+
+        with open(self.log_path, 'a') as log_file:
+            log_file.write("{} -- Starting thr scan\n".format(time.ctime()))
+        thr_scan_matrix=np.zeros((8,64,64))
+        for T in range(first_TIGER_to_SCAN, last_TIGER_to_SCAN):
+            self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, 64, 1, 3)
+            self.GEM_COM.DAQ_set(0, 0, 0, 0, 1, 1)
+
+            for j in range (0,64):  #Channel cycle
+                self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 0, 0)
+                for i in range(0,64):#VTH Cycle, i)**
+                        # with open(self.log_path, 'a') as log_file:
+                        command_sent = self.GEM_COM.Set_Vth_T1(self.c_inst, T, j, i)
+                        # with open(self.log_path, 'a') as log_file:
+                        #     log_file.write("@@@@@@   {} -- Set Vth={} on channel {} \n".format(time.ctime(),i,j))
+                        self.GEM_COM.set_counter(T, 0, j)
+                        self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
+                        self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
+                        self.GEM_COM.reset_counter()
+                        time.sleep(0.03)
+                        thr_scan_matrix[T, j, i] = self.GEM_COM.GEMROC_counter_get()
+                        # print ("Events: {}".format(thr_scan_matrix[T, j, i]))
+                        position=(T+1)*(j+1)*(i+1)
+                        pipe_out.send(position)
+                        if print_to_screen:
+                            os.system('clear')
+                            string="SCANNING [TIGER={}, VTh={}, CH={}]\n".format(T,i,j)
+                            sys.stdout.write(string)
 
                 self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 3)
 
@@ -620,7 +655,7 @@ class analisys_conf: #Analysis class used for configurations10
         delay_vector = np.zeros((64))
         safe_delays =np.zeros((4)) #Best dealy for each FEB
 
-        for TD in range (0,1):
+        for TD in range (0,64):
             print ("Setting delay {}".format(TD))
             self.GEM_COM.set_FEB_timing_delays(TD, TD, TD, TD)
             self.GEM_COM.DAQ_set(0, 0xff, 1, 256, 1, 1, False)
@@ -1039,7 +1074,7 @@ class analisys_read:
             plt.ylim(0, 1.05)
             plt.legend(loc='best')
             plt.title("TIGER_{}_channel {}".format(Tiger,Channel))
-            plt.savefig(self.GEM_COM.Tscan_folder+sep+"GEMROC{}".format(self.GEMROC_ID)+sep+"channel_fits"+sep+"TIGER_{}_channel {}".format(Tiger,Channel))
+            plt.savefig(self.GEM_COM.Tscan_folder+sep+"GEMROC{}".format(self.GEMROC_ID)+sep+"channel_fits"+sep+"TIGER_{}_channel {}.png".format(Tiger,Channel))
             plt.clf()
 
         return (popt)
