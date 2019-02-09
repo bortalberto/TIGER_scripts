@@ -78,7 +78,7 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
 
     def run(self):
         Total_data_MAX_size = 2 ** 20
-        Total_MAX_packets=100
+        Total_MAX_packets=50
 
         datapath = "." + sep + "data_folder" + sep + "Spill_{}_GEMROC_{}_TM.dat".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"), self.reader.GEMROC_ID)
         # with open(self.reader.log_path, 'a') as log_file:
@@ -96,7 +96,7 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
                     x = self.reader.fast_acquisition(data_list)  # self.reader.fast_acquisition(data_list)
                     Total_Data += x
                     Total_packets+=1
-                    print ("Acquiring")
+                    print ("Packet from GEMROC {}".format(self.reader.GEMROC_ID))
                 except:
                     Exception("GEMROC {} TIMED_OUT".format(self.reader.GEMROC_ID))
                     with open(self.reader.log_path, 'a') as f:
@@ -153,7 +153,7 @@ class reader:
 
         try:
             self.dataSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            self.dataSock.settimeout(2)
+            self.dataSock.settimeout(30)
             self.dataSock.bind((self.HOST_IP, self.HOST_PORT))
         except:
             Exception("TIMED_OUT")

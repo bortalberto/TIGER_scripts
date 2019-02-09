@@ -62,6 +62,10 @@ class menu():
         self.second_row_frame.pack()
         Button(self.second_row_frame, text ='Acquire errors on all GEMROCs', command=lambda: self.error_acquisition (0, 0, True, True)).pack(side=LEFT)
         Button(self.second_row_frame, text ='Launch TD scan on all GEMROCs', command=lambda: self.TD_scan (0, True)).pack(side=LEFT)
+        Button(self.second_row_frame, text ='Load TD from TD delay file', command=lambda: self.load_TD_from_file()).pack(side=LEFT)
+        self.third_row_frame=Frame(self.error_window)
+        self.third_row_frame.pack()
+        Button(self.third_row_frame, text ='Acquire errors since last reset', command=lambda: self.error_acquisition (0, 0, True, True,False)).pack(side=LEFT)
 
 
     def toggle(self, GEMROC_number):
@@ -80,7 +84,22 @@ class menu():
                 self.TIGER_error_counters_display["GEMROC {} TIGER {}".format(GEMROC_number, T)].grid(row=1, column=(T - 4) * 2 + 1, sticky=NW, pady=10)
                 #self.TIGER_error_counters_display["GEMROC {} TIGER {}".format(GEMROC_number, T)]['text']=self.TIGER_error_counters["GEMROC {} TIGER {}".format(GEMROC_number,T)]
         Button(sync_winz, text ='Launch TD scan on this GEMROC', command=lambda: self.TD_scan (GEMROC_number, False)).pack()
+        Label(sync_winz,text='Manual TD setting').pack()
+        manual_td=Frame(sync_winz)
+        manual_td.pack()
+        timing_array=[]
 
+        for FEB in range(0,4):
+            Label(manual_td,text="FEB {}".format(FEB)).pack(side=LEFT)
+            timing_array.append(Entry(manual_td,width=3))
+            timing_array[FEB].pack(side=LEFT)
+        Button(manual_td,text="Set values",command=lambda : self.set_TD(GEMROC_number,timing_array)).pack()
+    def set_TD(self,num,timing_array):
+        GEMROC=self.GEMROC_reading_dict["GEMROC {}".format(num)]
+        GEMROC.GEM_COM.set_FEB_timing_delays( int(timing_array[3].get()), int(timing_array[2].get()), int(timing_array[1].get()), int(timing_array[0].get()))
+    def load_TD_from_file(self):
+        for number, GEMROC in self.GEMROC_reading_dict.items():
+            GEMROC.GEM_COM.reload_default_td()
     def TD_scan(self, GEMROC_num, to_all=False):
         if to_all:
             process_list = []
@@ -133,10 +152,11 @@ class menu():
             GEMROC=self.GEMROC_reading_dict["GEMROC {}".format(GEMROC_num)]
             GEMROC.GEM_COM.save_TD_delay(safe_dealy)
 
-        for number, GEMROC in self.GEMROC_reading_dict.items():
-            safe_dealy=self.TD_scan_result[number]
-            GEMROC.GEM_COM.save_TD_delay(safe_dealy)
-            winz.destroy()
+        else:
+            for number, GEMROC in self.GEMROC_reading_dict.items():
+                safe_dealy=self.TD_scan_result[number]
+                GEMROC.GEM_COM.save_TD_delay(safe_dealy)
+                winz.destroy()
 
     def TD_scan_process(self,number,pipe_in):
         GEMROC=self.GEMROC_reading_dict[number]
@@ -151,7 +171,7 @@ class menu():
 
 
 
-    def error_acquisition(self, GEMROC, TIGER, to_all_GEMROC, to_all_TIGERS):
+    def error_acquisition(self, GEMROC, TIGER, to_all_GEMROC, to_all_TIGERS,reset=True):
         process_list=[]
         pipe_list=[]
         if to_all_TIGERS:
@@ -163,7 +183,7 @@ class menu():
                 for number, GEMROC in self.GEMROC_reading_dict.items():
                         GEMROC.GEM_COM.set_counter(int(T), 1, 0)
                         pipe_in,pipe_out=Pipe()
-                        p=Process(target=self.acquire_errors,args=(number,T,pipe_in))
+                        p=Process(target=self.acquire_errors,args=(number,T,pipe_in,reset))
                         process_list.append(p)
                         pipe_list.append(pipe_out)
                         p.start()
@@ -177,14 +197,17 @@ class menu():
 
         self.refresh_counters()
 
-    def acquire_errors(self,GEMROC_num,TIGER,pipe_in):
+    def acquire_errors(self,GEMROC_num,TIGER,pipe_in,reset):
         GEMROC=self.GEMROC_reading_dict[GEMROC_num]
-        GEMROC.GEM_COM.reset_counter()
-        time.sleep(0.2)
+        if reset:
+            GEMROC.GEM_COM.reset_counter()
+            time.sleep(1)
         counter_value=GEMROC.GEM_COM.GEMROC_counter_get()
         tiger_string="{} TIGER {}".format(GEMROC_num,TIGER)
         pipe_in.send((tiger_string,counter_value))
         pipe_in.close()
+
+
     def refresh_counters(self):
         for number,GEMROC in self.GEMROC_reading_dict.items():
             self.GEMROC_error_counters[number]=0
@@ -196,5 +219,5 @@ class menu():
         for key,label in self.GEMROC_error_counters_display.items():
             label['text']=self.GEMROC_error_counters[key]
         for key,label in self.TIGER_error_counters_display.items():
-            print self.TIGER_error_counters
+            #print self.TIGER_error_counters
             label['text']=int(self.TIGER_error_counters[key])

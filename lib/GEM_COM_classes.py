@@ -77,7 +77,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.receiveSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 106496 )
-        self.receiveSock.settimeout(8)
+        self.receiveSock.settimeout(12)
         #self.receiveSock.setblocking(False)
         self.receiveSock.bind((self.HOST_IP, self.HOST_PORT_RECEIVE))
         self.remote_IP_Address = '192.168.1.%d' % (self.GEMROC_ID + 16)
@@ -180,7 +180,22 @@ class communication: ##The directory are declared here to avoid multiple declara
         cmd_message = "\nTarget GEMROC: %d; CMD sent (%s): \n" % (self.GEMROC_ID, COMMAND_STRING_PARAM)
         self.log_file.write(cmd_message)
         self.log_file.write(binascii.b2a_hex(buffer_to_send))
-        command_echo_f = self.receiveSock.recv(self.BUFSIZE)
+        try:
+            command_echo_f = self.receiveSock.recv(self.BUFSIZE)
+        except:
+            "Can't recive the answer, tring again"
+            try:
+                time.sleep(1)
+                self.SynchReset_to_TgtTCAM()
+                self.SynchReset_to_TgtFEB()
+                self.log_file.write(cmd_message)
+                self.log_file.write(binascii.b2a_hex(buffer_to_send))
+                command_echo_f = self.receiveSock.recv(self.BUFSIZE)
+            except:
+                print ("GEMROC {} communication timed out".format(self.GEMROC_ID))
+
+                raise Exception("GEMROC {} communication timed out".format(self.GEMROC_ID))
+
         ##    (command_echo_f, source_IPADDR) = receiveSock.recvfrom(BUFSIZE) #S.C. 2018-03-08
         ##    cmd_message = "\nTarget GEMROC: %d; Target GEMROC IP_ADDR_LOWER_BYTE: %s; \nCMD echo (%s): \n" %(TARGET_GEMROC_ID_param, source_IPADDR, COMMAND_STRING_PARAM)
         ##    print (cmd_message)
@@ -667,7 +682,19 @@ class communication: ##The directory are declared here to avoid multiple declara
         cmd_message = '\nTIGER% d; TOALL = % d; Channel% s Cfg Reg CMD %s echo\n' % (
         TIGER_ID_param, Target_Ch_ToALL_f, Target_Ch_ID_f, COMMAND_STRING_PARAM)
         self.log_file.write(cmd_message)
-        command_echo_f = self.receiveSock.recv(self.BUFSIZE)
+        try:
+            command_echo_f = self.receiveSock.recv(self.BUFSIZE)
+        except:
+            try:
+                time.sleep(1)
+                self.clientSock.sendto(buffer_to_send, (DEST_IP_ADDRESS_PARAM, DEST_PORT_NO_PARAM))
+                command_echo_f = self.receiveSock.recv(self.BUFSIZE)
+
+
+            except:
+                print "Can't recive answer from GEMROC  {}".format(self.GEMROC_ID)
+                raise Exception( "Can't recive answer from GEMROC  {}".format(self.GEMROC_ID))
+
         self.log_file.write(binascii.b2a_hex(command_echo_f))
         return command_echo_f
 
@@ -711,8 +738,18 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.gemroc_LV_XX.set_gemroc_cmd_code(COMMAND_STRING_PARAM, 1)
         self.gemroc_LV_XX.update_command_words()
         array_to_send = self.gemroc_LV_XX.command_words
-        command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING_PARAM, array_to_send, self.DEST_IP_ADDRESS,
+        try:
+            command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING_PARAM, array_to_send, self.DEST_IP_ADDRESS,
                                                     self.DEST_PORT_NO)
+        except:
+            try:
+                time.sleep(1)
+                array_to_send = self.gemroc_LV_XX.command_words
+                command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING_PARAM, array_to_send, self.DEST_IP_ADDRESS,self.DEST_PORT_NO)
+            except:
+                print ("Can't get LV cmd response from GEMROC {}".format(self.GEMROC_ID))
+                raise Exception ("Can't get LV cmd response from GEMROC {}".format(self.GEMROC_ID))
+
         return command_echo
 
 
@@ -731,7 +768,30 @@ class communication: ##The directory are declared here to avoid multiple declara
         command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
         COMMAND_STRING = 'CMD_GEMROC_TIMING_DELAYS_UPDATE'
         command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
+        print ("TD 0={},TD 1={},TD 2={},TD 3={}".format(FEB0_TDly,FEB1_TDly,FEB2_TDly,FEB3_TDly))
         return command_echo
+    def reload_default_td(self):
+        self.gemroc_LV_XX.set_target_GEMROC(self.GEMROC_ID)
+        try:
+            with open(self.time_delay_path, "r") as f:
+                while True:
+                    line = f.readline()
+                    if (line.split())[0] == "GEMROC" and int(line.split()[1]) == self.GEMROC_ID:
+                        timing_array = f.readline().split()
+                        self.gemroc_LV_XX.set_timing_toFEB_delay(int(timing_array[3]), int(timing_array[2]), int(timing_array[1]), int(timing_array[0]))
+                        COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
+                        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
+                        COMMAND_STRING = 'CMD_GEMROC_TIMING_DELAYS_UPDATE'
+                        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
+                        #print command_echo
+                        print "GEMROC  Set {}".format(self.GEMROC_ID,timing_array)
+                        return command_echo
+
+        except:
+            print "TD file not found"
+
+
+
     def save_TD_delay(self,safe_delays):
         path = self.time_delay_path
         with open(path, 'r') as f:
@@ -766,9 +826,19 @@ class communication: ##The directory are declared here to avoid multiple declara
         gemroc_DAQ_inst_param.set_target_GEMROC(self.GEMROC_ID)
         gemroc_DAQ_inst_param.set_gemroc_cmd_code(COMMAND_STRING_PARAM, 1)
         gemroc_DAQ_inst_param.update_command_words()
+
         array_to_send = gemroc_DAQ_inst_param.command_words
-        command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING_PARAM, array_to_send, self.DEST_IP_ADDRESS,
+        try:
+            command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING_PARAM, array_to_send, self.DEST_IP_ADDRESS,
                                                     self.DEST_PORT_NO)
+        except:
+            try:
+                time.sleep(1)
+                command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING_PARAM, array_to_send, self.DEST_IP_ADDRESS,
+                                                    self.DEST_PORT_NO)
+            except:
+                print ("Can't configure DAQ GEMROC {}".format(self.GEMROC_ID))
+                raise Exception ("CCan't configure DAQ  GEMROC {}".format(self.GEMROC_ID))
         return command_echo
 
     # acr 2018-04-23
@@ -1029,7 +1099,11 @@ class communication: ##The directory are declared here to avoid multiple declara
     #     command_echo = self.send_GEMROC_DAQ_CMD(self.GEMROC_ID, gemroc_DAQ_inst, COMMAND_STRING)
     #     return command_echo
 
-
+    def DAQ_set_register(self):
+        gemroc_DAQ_inst=self.gemroc_DAQ_XX
+        COMMAND_STRING ='CMD_GEMROC_DAQ_CFG_WR'
+        command_echo = self.send_GEMROC_DAQ_CMD(gemroc_DAQ_inst, COMMAND_STRING)
+        return command_echo
 
     def DAQ_set_Pause_Mode(self, DAQ_PauseMode_Enable_param):
         gemroc_DAQ_inst=self.gemroc_DAQ_XX
@@ -1089,7 +1163,8 @@ class communication: ##The directory are declared here to avoid multiple declara
         command_echo = self.send_GEMROC_DAQ_CMD(gemroc_DAQ_inst, COMMAND_STRING)
         return command_echo
 
-    def MENU_set_L1_Lat_TM_Win_in_B3Ck_cycles(self, gemroc_DAQ_inst, L1_lat_B3clk_param, TM_window_in_B3clk_param):  # acr 2018-07-23
+    def MENU_set_L1_Lat_TM_Win_in_B3Ck_cycles(self, L1_lat_B3clk_param, TM_window_in_B3clk_param):  # acr 2018-07-23
+        gemroc_DAQ_inst=self.gemroc_DAQ_XX
         gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
         gemroc_DAQ_inst.set_L1_Lat_TM_Win_in_B3Ck_cycles(L1_lat_B3clk_param, TM_window_in_B3clk_param)
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
@@ -1595,6 +1670,7 @@ class communication: ##The directory are declared here to avoid multiple declara
     def Load_VTH_fromfile(self, ChCFGReg_setting_inst, TIGER_ID_param, number_sigma, offset, save_on_LOG=False):
         file_p=self.conf_folder+sep+"thr"+ sep+"GEMROC{}_Chip{}.thr".format(self.GEMROC_ID,TIGER_ID_param)
         self.log_file.write("\n Setting VTH from file in  TIGER {}\n".format(TIGER_ID_param))
+        print "Setting VTH from file in  TIGER {}, {} sigmas\n".format(TIGER_ID_param,number_sigma)
 
 
         thr0=np.loadtxt(file_p,)
@@ -1621,6 +1697,8 @@ class communication: ##The directory are declared here to avoid multiple declara
     def Load_VTH_fromfile_autotuned(self, ChCFGReg_setting_inst, TIGER_ID_param):
         file_p=self.conf_folder+sep +"thr"+ sep+"GEMROC{}_TIGER_{}_autotuned.thr".format(self.GEMROC_ID,TIGER_ID_param)
         self.log_file.write("\n Setting VTH from file autotuned in  TIGER {}\n".format(TIGER_ID_param))
+        print "Setting VTH from file in  TIGER {}, autotuned\n".format(TIGER_ID_param)
+
 
 
         thr=np.loadtxt(file_p,)
@@ -1753,6 +1831,7 @@ class communication: ##The directory are declared here to avoid multiple declara
             print "\n TRIGGER mode WRONG"
             with open(log, 'a') as log_file:
                 log_file.write("TRIGGER mode WRONG, {} instead of {}\n ".format(((L_array2[8] >> 16) & 0x3),((L_array[8] >> 16) & 0x3)))
+
        #
         # print('\n DisableHyst: %d' % ((L_array[1] >> 24) & 0x1))
         # print('\n T2Hyst: %d' % ((L_array[1] >> 16) & 0x7))
