@@ -103,8 +103,8 @@ class menu():
         b_frame = LabelFrame(a_frame)
         b_frame.grid(row=1, column=8, sticky=NW, pady=4,padx=40)
         if self.PMT:
-            Button(b_frame, text='Turn ON PMT', command=self.PMT_on,   width=10,activeforeground="green").pack(side=LEFT)
-            Button(b_frame, text='Turn OFF PMT', command=self.PMT_OFF,  width=10,activeforeground="red").pack(side=LEFT)
+            Button(b_frame, text='Turn ON PMTs', command=self.PMT_on,   width=10,activeforeground="green").pack(side=LEFT)
+            Button(b_frame, text='Turn OFF PMTs', command=self.PMT_OFF,  width=10,activeforeground="red").pack(side=LEFT)
 
         # Label(b_frame,text='Message ').grid(row=0, column=1, sticky=NW, pady=4)
         # self.Launch_error_check=Label(b_frame, text='-', background='white')
