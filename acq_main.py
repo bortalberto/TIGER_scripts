@@ -7,10 +7,14 @@ from lib import GEM_ACQ_classes as GEM_ACQ
 # spill=int(sys.argv[2])
 
 
-GEM1=GEM_ACQ.reader(0)
+GEM1=GEM_ACQ.reader(3)
+# GEM2=GEM_ACQ.reader(3)
+
 #GEM0=GEM_ACQ.reader(0)
 
 fig1,axarray1=GEM1.create_rate_plot()
+# fig2,axarray2=GEM2.create_rate_plot()
+
 #fig0,axarray0=GEM0.create_rate_plot()
 
 while True:
@@ -18,20 +22,23 @@ while True:
     if inp=="q":
         break
     else:
-            thread_1 = GEM_ACQ.Thread_handler("GEM1",2 , GEM1)
-            #thread_0 = GEM_ACQ.Thread_handler("GEM0", 2, GEM0)
+            thread_1 = GEM_ACQ.Thread_handler("GEM2",0.2 , GEM1)
+            # thread_2 = GEM_ACQ.Thread_handler("GEM3",2 , GEM2)
+
             thread_1.start()
-            #thread_0.start()
+            # thread_2.start()
+
             print("-Acquiring_data-")
             thread_1.join()
-            #thread_0.join()
+            # thread_2.join()
+
             GEM1.build_hist_and_miss()
             GEM1.refresh_rate_plot(fig1,axarray1)
-            #GEM0.build_hist_and_miss()
-            #GEM0.refresh_rate_plot(fig0, axarray0)
-
+            # GEM2.build_hist_and_miss()
+            # GEM2.refresh_rate_plot(fig2,axarray2)
             fig1.canvas.draw()
-            #fig0.canvas.draw()
+
+            # fig2.canvas.draw()
 
 print "END"
 

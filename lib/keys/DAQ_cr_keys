@@ -1,0 +1,19 @@
+GEMROC
+UDP_DATA_DESTINATION_IPADDR
+UDP_DATA_DESTINATION_IPPORT
+Simulated L1_latency
+TP_width
+L1_period
+Debug_Fun_Ctl_Lo4bit[3] = Enable_DAQPause_Until_First_Trigger
+Debug_Fun_Ctl_Lo4bit[2] = DAQPause_Set                       
+Debug_Fun_Ctl_Lo4bit[1] = Tpulse_gen_w_ext_trigger_enable    
+Debug_Fun_Ctl_Lo4bit[0] = EXT_nINT_B3clk                     
+TP_period
+Periodic_TP_EN_pattern
+TL_nTM_ACQ
+AUTO_L1_EN
+AUTO_TP_EN
+TP_Pos_nNeg
+EN_TM_TCAM_pattern
+number_of_repetitions
+target_TCAM_ID

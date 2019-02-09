@@ -67,7 +67,6 @@ class reader:
 
                     # with open ("out.txt", 'a') as ff:
                     # ff.write("{}\n".format(raw))
-
     def write_txt(self, path):
         statinfo = os.stat(path)
         f = open("out.txt", 'w')
@@ -87,7 +86,7 @@ class reader:
 
                     hex_to_int = (int(hexdata[x], 16)) * 16 + int(hexdata[x + 1], 16)  # acr 2017-11-17 this should fix the problem
                     int_x = (int_x + hex_to_int)
-                    raw = "{}".format(hex(int_x))
+                    raw = "{}".format(bin(int_x))
 
 
                     if (((int_x & 0xFF00000000000000) >> 59) == 0x04):  # It's a frameword
@@ -107,6 +106,76 @@ class reader:
 
                     with open("out.txt", 'a') as ff:
                         ff.write("{}     {}".format(raw,s))
+    def write_txt_TM(self, path):
+        LOCAL_L1_COUNT_31_6 = 0
+        LOCAL_L1_COUNT_5_0 = 0
+        LOCAL_L1_COUNT = 0
+        LOCAL_L1_TIMESTAMP = 0
+        HITCOUNT = 0
+        BUFSIZE = 4096
+        FEB_index = 0
+        statinfo = os.stat(path)
+        f = open("out.txt", 'w')
+        f.close()
+        previous_L1_TS = 0
+        L1_TS_abs_diff = 0
+        with open(path, 'r') as f, open("out.txt", 'w') as out_file:
+            for i in range(0, statinfo.st_size / 8):
+                data = f.read(8)
+                hexdata = binascii.hexlify(data)
+                for x in range(0, len(hexdata) - 1, 16):
+                    int_x = 0
+                    for b in range(7, 0, -1):
+                        hex_to_int = (int(hexdata[x + b * 2], 16)) * 16 + int(hexdata[x + b * 2 + 1], 16)
+                        int_x = (int_x + hex_to_int) << 8
+                    hex_to_int = (int(hexdata[x], 16)) * 16 + int(hexdata[x + 1], 16)  # acr 2017-11-17 this should fix the problem
+                    int_x = (int_x + hex_to_int)
+                    s = '%016X \n' % int_x
+                    # acr 2018-06-25 out_file.write(s)
+
+                    ## comment this block to avoid parsing
+                    ##acr 2017-11-16        if (((int_x & 0xFF00000000000000)>>56) == 0x20):
+                    if (((int_x & 0xE000000000000000) >> 61) == 0x6):
+                        LOCAL_L1_COUNT_31_6 = int_x >> 32 & 0x3FFFFFF
+                        LOCAL_L1_COUNT_5_0 = int_x >> 24 & 0x3F
+                        LOCAL_L1_COUNT = (LOCAL_L1_COUNT_31_6 << 6) + LOCAL_L1_COUNT_5_0
+                        LOCAL_L1_TIMESTAMP = int_x & 0xFFFF
+                        HITCOUNT = (int_x >> 16) & 0xFF
+                        if (((int_x & 0xFFFF) - previous_L1_TS) > 0):
+                            L1_TS_abs_diff = ((int_x & 0xFFFF) - previous_L1_TS)
+                        else:
+                            # THIS PRODUCES WRONG RESULTS (INCONSISTENT PERIOD) FOR PERIODS L1_TS_abs_diff = 65536 +((int_x & 0xFFFF) - previous_L1_TS)
+                            # THIS ALSO PRODUCES WRONG RESULTS (INCONSISTENT PERIOD) FOR PERIODS L1_TS_abs_diff = 32768 - ((int_x & 0xFFFF) - previous_L1_TS)
+                            L1_TS_abs_diff = 65536 + ((int_x & 0xFFFF) - previous_L1_TS)
+                        s = 'HEADER :  ' + 'STATUS BIT[2:0]: %01X: ' % ((int_x >> 58) & 0x7) + 'LOCAL L1 COUNT: %08X ' % (LOCAL_L1_COUNT) + 'HitCount: %02X ' % ((int_x >> 16) & 0xFF) + 'LOCAL L1 TIMESTAMP: %04X; ' % (int_x & 0xFFFF) + 'Diff w.r.t. previous L1_TS: %04f us\n' % (
+                                    L1_TS_abs_diff * 6 / 1000)
+                        previous_L1_TS = (int_x & 0xFFFF)
+                        # s = 'HEADER :  ' + 'STATUS BIT[2:0]: %01X: '%((int_x >> 58)& 0x7) + 'LOCAL L1 COUNT: %08X '%( LOCAL_L1_COUNT ) + 'HitCount: %02X '%((int_x >> 16) & 0xFF) + 'LOCAL L1 TIMESTAMP: %04X\n'%(int_x & 0xFFFF)
+                    if (((int_x & 0xE000000000000000) >> 61) == 0x7):
+                        s = 'TRAILER: ' + 'LOCAL L1  FRAMENUM [23:0]: %06X: ' % ((int_x >> 37) & 0xFFFFFF) + 'GEMROC_ID: %02X ' % ((int_x >> 32) & 0x1F) + 'TIGER_ID: %01X ' % ((int_x >> 27) & 0x7) + 'LOCAL L1 COUNT[2:0]: %01X ' % (
+                                    (int_x >> 24) & 0x7) + 'LAST COUNT WORD FROM TIGER:CH_ID[5:0]: %02X ' % ((int_x >> 18) & 0x3F) + 'LAST COUNT WORD FROM TIGER: DATA[17:0]: %05X \n' % (int_x & 0x3FFFF)
+                    if (((int_x & 0xC000000000000000) >> 62) == 0x0):
+                        LOCAL_L1_TS_minus_TIGER_COARSE_TS = LOCAL_L1_TIMESTAMP - ((int_x >> 32) & 0xFFFF)
+                        s = 'DATA   : TIGER: %01X ' % ((int_x >> 59) & 0x7) + 'L1_TS - TIGERCOARSE_TS: %d ' % (LOCAL_L1_TS_minus_TIGER_COARSE_TS) + 'LAST TIGER FRAME NUM[2:0]: %01X ' % ((int_x >> 56) & 0x7) + 'TIGER DATA: ChID: %02X ' % ((int_x >> 50) & 0x3F) + 'tacID: %01X ' % (
+                                    (int_x >> 48) & 0x3) + 'Tcoarse: %04X ' % ((int_x >> 32) & 0xFFFF) + 'Ecoarse: %03X ' % ((int_x >> 20) & 0x3FF) + 'Tfine: %03X ' % ((int_x >> 10) & 0x3FF) + 'Efine: %03X \n' % (int_x & 0x3FF)
+                    ##-- field size in bits (56 total):   2      6        2       16         10       10     10
+                    ##-- received_tdata                 "10" & ch_ID & tac_ID & tcoarse & ecoarse & tfine & efine
+                    ##-- tcoarse(15) should match bit 0 of framecount in the HB FrameWord
+                    ##-- received_tdata (53 downto 48); -- channel_id: 6 bits
+                    ##-- received_tdata (47 downto 46); -- tac_id: 2 bits
+                    ##-- received_tdata (45 downto 30); -- Tcoarse: 16 bits
+                    ##-- received_tdata (29 downto 20); -- Ecoarse: 10 bits
+                    ##-- received_tdata (19 downto 10); -- Tfine: 10 bits
+                    ##-- received_tdata ( 9 downto  0); -- Efine: 10 bits
+                    ##acr 2017-11-16        if (((int_x & 0xFF00000000000000)>>56) == 0x20):
+                    if (((int_x & 0xF000000000000000) >> 60) == 0x4):
+                        s = 'UDP_SEQNO: ' + 'GEMROC_ID: %02X ' % ((int_x >> 52) & 0x1F) + 'UDP_SEQNO_U48: %012X \n\n' % (((int_x >> 32) & 0xFFFFF) + ((int_x >> 0) & 0xFFFFFFF))
+                    if (1):  # (HITCOUNT > 0):
+                        out_file.write(s)
+            ##        out_file.write(s)
+            ## comment this block to avoid parsing
+
+            print 'finished writing file'
 
     def create_rate_plot(self):
         plt.ion()
