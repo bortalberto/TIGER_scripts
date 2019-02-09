@@ -25,7 +25,8 @@ else:
 # Red dot if timedout (per acquizione e config)
 
 class menu():
-    def __init__(self, std_alone=True, main_winz=None, GEMROC_reading_dict=None):
+    def __init__(self, std_alone=True, main_winz=None, GEMROC_reading_dict=None,father=None):
+        self.father=father
         self.restart=True
         self.PMT=True
         self.std_alone = std_alone
@@ -102,8 +103,8 @@ class menu():
         b_frame = LabelFrame(a_frame)
         b_frame.grid(row=1, column=8, sticky=NW, pady=4,padx=40)
         if self.PMT:
-            Button(b_frame, text='Turn ON PMT', command=self.PMT_on(),   width=10,activeforeground="green").pack(side=LEFT)
-            Button(b_frame, text='Turn OFF PMT', command=self.PMT_OFF(),  width=10,activeforeground="red").pack(side=LEFT)
+            Button(b_frame, text='Turn ON PMT', command=self.PMT_on,   width=10,activeforeground="green").pack(side=LEFT)
+            Button(b_frame, text='Turn OFF PMT', command=self.PMT_OFF,  width=10,activeforeground="red").pack(side=LEFT)
 
         # Label(b_frame,text='Message ').grid(row=0, column=1, sticky=NW, pady=4)
         # self.Launch_error_check=Label(b_frame, text='-', background='white')
@@ -252,16 +253,16 @@ class menu():
             if self.PMT:
                 os.system("./HVWrappdemo ttyUSB0 VSet 1500")
 
-            self.main_winz.Synch_reset()
-            self.main_winz.power_off_FEBS()
-            self.main_winz.power_on_FEBS()
-            self.main_winz.Synch_reset()
-            self.main_winz.load_default_config()
-            self.main_winz.load_default_config()
-            self.main_winz.Synch_reset()
+            self.father.Synch_reset()
+            self.father.power_off_FEBS()
+            self.father.power_on_FEBS()
+            self.father.Synch_reset()
+            self.father.load_default_config()
+            self.father.load_default_config()
+            self.father.Synch_reset()
             time.sleep(0.2)
-            self.main_winz.set_pause_mode(to_all=True)
-            self.main_winz.Synch_reset()
+            self.father.set_pause_mode(to_all=True)
+            self.father.Synch_reset()
 
             if self.PMT:
                 os.system("./HVWrappdemo ttyUSB0 VSet 2000")

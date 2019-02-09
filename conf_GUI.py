@@ -147,7 +147,7 @@ class menu():
             self.LED[i].grid(row=riga, column=colonna)
 
     def launch_controller(self):
-        self.acq = acq_GUI.menu(False, self.main_window, self.GEMROC_reading_dict)
+        self.acq = acq_GUI.menu(False, self.main_window, self.GEMROC_reading_dict,self)
 
     def open_communicaton_GUI(self):
         #print self.GEMROC_reading_dict
