@@ -732,8 +732,7 @@ def Menu_and_prompt():
                         if (len(input_array) == 3):  # 5):
                             L1_lat_B3clk_param = int(input_array[1], 0) & 0x3FF
                             TM_window_in_B3clk_param = int(input_array[2], 0) & 0x7F
-                            GEM_COM1.MENU_set_L1_Lat_TM_Win_in_B3Ck_cycles(GEM_COM1.gemroc_DAQ_XX, L1_lat_B3clk_param,
-                                                                           TM_window_in_B3clk_param)
+                            GEM_COM1.MENU_set_L1_Lat_TM_Win_in_B3Ck_cycles(L1_lat_B3clk_param, TM_window_in_B3clk_param)
                             print '\nSet TM latency: %d and TM window: %d parameters on GEMROC %d' % (L1_lat_B3clk_param, TM_window_in_B3clk_param, GEMROC_ID)
                             GEM_COM1.gemroc_DAQ_XX.extract_parameters_from_UDP_packet()  # acr 2018-07-23
                             time.sleep(2)
@@ -855,8 +854,7 @@ def Menu_and_prompt():
                             # TMSET 358 66
                             L1_lat_B3clk_local_param = 358
                             TM_window_in_B3clk_local_param = 66
-                            GEM_COM1.MENU_set_L1_Lat_TM_Win_in_B3Ck_cycles(GEM_COM1.gemroc_DAQ_XX, L1_lat_B3clk_local_param,
-                                                                  TM_window_in_B3clk_local_param)
+                            GEM_COM1.MENU_set_L1_Lat_TM_Win_in_B3Ck_cycles(L1_lat_B3clk_local_param, TM_window_in_B3clk_local_param)
                             print '\nSet TM latency: %d and TM window: %d parameters on GEMROC %d' % (
                                 L1_lat_B3clk_local_param, TM_window_in_B3clk_local_param, GEMROC_ID)
                             GEM_COM1.gemroc_DAQ_XX.extract_parameters_from_UDP_packet()  # acr 2018-07-23

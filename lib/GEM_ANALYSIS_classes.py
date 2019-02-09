@@ -195,7 +195,72 @@ class analisys_conf: #Analysis class used for configurations10
                 self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 3)
 
         return thr_scan_matrix
+    def thr_autotune_wth_counter_progress(self, T, desired_rate, test_r, pipe_out,max_iter=16, tempo=0.2,print_to_screen=True):
+        self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
+        doing_tuning_matrix = np.ones((64))
 
+        for iter in range(0, max_iter):
+            print("\nIteration {}".format(iter))
+            autotune_scan_matrix = np.zeros((8, 64))
+            # for T in range (first_TIGER_to_SCAN,last_TIGER_to_scan):
+            # self.GEM_COM.DAQ_set(self.GEM_COM.gemroc_DAQ_XX, self.GEMROC_ID, 2 ** T, 0x0, 0, 0, 1, 0)
+            self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, 64, 1, 0)
+            self.GEM_COM.Load_VTH_fromMatrix(self.c_inst, T, self.vthr_matrix)
+            self.GEM_COM.DAQ_set(2 ** T, 0x0, 0, 0, 1, 0)
+            self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
+            for j in range (0,64):
+                self.GEM_COM.set_counter(T, 0, j)
+                self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
+                self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
+                self.GEM_COM.reset_counter()
+                time.sleep(tempo)
+                autotune_scan_matrix[T,j]=self.GEM_COM.GEMROC_counter_get()
+
+
+            autotune_scan_matrix = autotune_scan_matrix*(1/tempo)
+
+            for channel in range(0, 64):
+                # if autotune_scan_matrix[T,channel]<(desired_rate-desired_rate/5) or autotune_scan_matrix[T,channel]>(desired_rate+desired_rate/5):
+                #     if autotune_scan_matrix[T,channel]<(desired_rate/1000):
+                #         self.vthr_matrix[T,channel]=self.vthr_matrix[T,channel]+2
+                #     if autotune_scan_matrix[T,channel]>(desired_rate*1000):
+                #         self.vthr_matrix[T,channel]=self.vthr_matrix[T,channel]-3
+                if autotune_scan_matrix[T, channel] < desired_rate * (1.5) and autotune_scan_matrix[T, channel] > desired_rate * (0.5):
+                    doing_tuning_matrix[channel] = 0
+
+                if doing_tuning_matrix[channel] == 1:
+                    if autotune_scan_matrix[T, channel] < desired_rate:
+                        self.vthr_matrix[T, channel] = self.vthr_matrix[T, channel] + 1
+                    if autotune_scan_matrix[T, channel] > desired_rate:
+                        self.vthr_matrix[T, channel] = self.vthr_matrix[T, channel] - 1
+
+                    if self.vthr_matrix[T, channel] <= 0:
+                        self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, channel, 1, 3)
+                        self.vthr_matrix[T, channel] = 0
+                    if self.vthr_matrix[T, channel] > 63:
+                        self.vthr_matrix[T, channel] = 63
+
+                if doing_tuning_matrix[channel] == 0 and (autotune_scan_matrix[T, channel] > desired_rate * (15) or autotune_scan_matrix[T, channel] < desired_rate * (0.06)):
+                    doing_tuning_matrix[channel] = 1
+
+                self.GEM_COM.Load_VTH_fromMatrix(self.c_inst, T, self.vthr_matrix)
+            pipe_out.send(T*iter+iter)
+            if print_to_screen:
+                print(" \n Scan matrix TIGER {}".format(T))
+                print autotune_scan_matrix[T, :]
+                print(" \n Threshold matrix TIGER {}".format(T))
+                print(self.vthr_matrix[T, :])
+                # self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, self.GEMROC_ID, T, 64, 1, 3)
+        # for T in range (first_TIGER_to_SCAN,last_TIGER_to_scan):
+
+
+        name = "." + sep + "log_folder" + sep + "THR_LOG{}_GEMROC{}_TIGER_{}_autotuned.txt".format(
+            datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"), self.GEMROC_ID, T)
+        np.savetxt(name, np.c_[self.vthr_matrix[T, :]])
+        name = "." + sep + "conf" + sep +"thr" +sep+"GEMROC{}_TIGER_{}_autotuned.thr".format(self.GEMROC_ID, T)
+        np.savetxt(name, np.c_[self.vthr_matrix[T, :]])
+
+        X = "Autotune done"
     def thr_conf_using_GEMROC_COUNTERS_progress_bar(self,test_r, first_TIGER_to_SCAN, last_TIGER_to_SCAN,pipe_out,print_to_screen=True):
 
         with open(self.log_path, 'a') as log_file:
@@ -219,7 +284,7 @@ class analisys_conf: #Analysis class used for configurations10
                         time.sleep(0.03)
                         thr_scan_matrix[T, j, i] = self.GEM_COM.GEMROC_counter_get()
                         # print ("Events: {}".format(thr_scan_matrix[T, j, i]))
-                        position=(T+1)*(j+1)*(i+1)
+                        position=(T*64*64)+(j*64)+(i)
                         pipe_out.send(position)
                         if print_to_screen:
                             os.system('clear')
@@ -319,7 +384,7 @@ class analisys_conf: #Analysis class used for configurations10
 
     def fill_VTHR_matrix(self, number_sigma, offset, tiger_id):
 
-        file_p = self.GEM_COM.conf_folder + sep + "GEMROC{}_Chip{}.thr".format(self.GEMROC_ID,tiger_id)
+        file_p = self.GEM_COM.conf_folder + sep +"thr"+sep+ "GEMROC{}_Chip{}.thr".format(self.GEMROC_ID,tiger_id)
         thr0 = np.loadtxt(file_p, )
         thr = np.rint(thr0[:, 0]) - np.rint(thr0[:, 1]) * number_sigma + offset
         for c in range(0, 64):
@@ -454,7 +519,7 @@ class analisys_conf: #Analysis class used for configurations10
         name = "." + sep + "log_folder" + sep + "THR_LOG{}_GEMROC{}_TIGER_{}_autotuned.txt".format(
             datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"), self.GEMROC_ID, T)
         np.savetxt(name, np.c_[self.vthr_matrix[T, :]])
-        name = "." + sep + "conf" + sep + "GEMROC{}_TIGER_{}_autotuned.thr".format(self.GEMROC_ID, T)
+        name = "." + sep + "conf" + sep +"thr"+sep+ "GEMROC{}_TIGER_{}_autotuned.thr".format(self.GEMROC_ID, T)
         np.savetxt(name, np.c_[self.vthr_matrix[T, :]])
 
         X = "Autotune done"
@@ -521,7 +586,7 @@ class analisys_conf: #Analysis class used for configurations10
         name = "." + sep + "log_folder" + sep + "THR_LOG{}_GEMROC{}_TIGER_{}_autotuned.txt".format(
             datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"), self.GEMROC_ID, T)
         np.savetxt(name, np.c_[self.vthr_matrix[T, :]])
-        name = "." + sep + "conf" + sep + "GEMROC{}_TIGER_{}_autotuned.thr".format(self.GEMROC_ID, T)
+        name = "." + sep + "conf" + sep +"thr" +sep+ "GEMROC{}_TIGER_{}_autotuned.thr".format(self.GEMROC_ID, T)
         np.savetxt(name, np.c_[self.vthr_matrix[T, :]])
 
         X = "Autotune done"

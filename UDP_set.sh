@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "Optimizing settings for UDP performances for enp2s0f1"
+echo "Optimizing settings for UDP performances for enp0s31f6"
 ifconfig enp0s31f6: txqueuelen 100000
 ethtool -G enp0s31f6: rx 2047
 sysctl -w net.core.netdev_max_backlog=64000
