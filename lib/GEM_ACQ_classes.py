@@ -153,7 +153,7 @@ class reader:
 
         try:
             self.dataSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            self.dataSock.settimeout(50)
+            self.dataSock.settimeout(10)
             self.dataSock.bind((self.HOST_IP, self.HOST_PORT))
         except:
             Exception("TIMED_OUT")
