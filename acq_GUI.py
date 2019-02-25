@@ -449,7 +449,7 @@ class menu():
                 self.LED[int(i.GEMROC_ID)]['image'] = self.icon_bad
             else:
                 self.LED[int(i.GEMROC_ID)]['image'] = self.icon_on
-        if self.simple_analysis.get() or self.build_errors():
+        if self.simple_analysis.get() or self.run_analysis.get():
             self.build_errors()
         self.refresh_error_status()
         self.refresh_plot()

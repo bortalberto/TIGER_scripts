@@ -31,6 +31,7 @@ class Thread_handler(Thread):
         self.isTM = False
 
     def run(self):
+        Total_data_MAX_size = 2 ** 20
         datapath = "." + sep + "data_folder" + sep + "Spill_{}_GEMROC_{}.dat".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"), self.reader.GEMROC_ID)
         # with open(self.reader.log_path, 'a') as log_file:
         #     log_file.write("{} --Launching acquisition on GEMROC {} for {} seconds\n".format(time.ctime(),self.reader.GEMROC_ID,self.acq_time))
@@ -42,16 +43,28 @@ class Thread_handler(Thread):
         print "Acquiring GEMROC {} for {} seconds".format(self.reader.GEMROC_ID, self.acq_time)
         self.reader.start_socket()
         while time.time() - time0 < self.acq_time and self.running:
-            try:
-                print "Running (GEM {})".format(self.reader.GEMROC_ID)
-                x = self.reader.fast_acquisition(data_list)  # self.reader.fast_acquisition(data_list)
-            except:
-                Exception ("GEMROC {} TIMED_OUT".format(self.reader.GEMROC_ID))
-                print ("\n---TIMED_OUT!!!...\n")
-                self.reader.dataSock.close()
-                self.running = False
-                self.reader.TIMED_out = True
-                return 0
+            Total_Data = 0
+
+            while (Total_Data < Total_data_MAX_size) and self.running:
+                try:
+                    x = self.reader.fast_acquisition(data_list)  # self.reader.fast_acquisition(data_list)
+                    Total_Data += x
+
+                except:
+                    Exception ("GEMROC {} TIMED_OUT".format(self.reader.GEMROC_ID))
+                    print ("\n---TIMED_OUT!!!...\n")
+                    self.reader.dataSock.close()
+                    self.running = False
+                    self.reader.TIMED_out = True
+                    return 0
+            self.reader.data_list = list(data_list)
+            with open(datapath, 'wb') as datafile:
+                try:  # add a method to write the list on the file
+                    self.reader.dump_list(datafile, data_list)
+                except:
+                    print ("\n----SOMETHING WRONG---FILE MISSING\n")
+                    return 0
+
         self.reader.dataSock.close()
         self.reader.data_list = list(data_list)
         print len(self.reader.data_list)
@@ -96,7 +109,7 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
                     x = self.reader.fast_acquisition(data_list)  # self.reader.fast_acquisition(data_list)
                     Total_Data += x
                     Total_packets+=1
-                    print ("Packet from GEMROC {}".format(self.reader.GEMROC_ID))
+                    #print ("Packet from GEMROC {}".format(self.reader.GEMROC_ID))
                 except:
                     Exception("GEMROC {} TIMED_OUT".format(self.reader.GEMROC_ID))
                     with open(self.reader.log_path, 'a') as f:
