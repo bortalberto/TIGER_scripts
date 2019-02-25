@@ -54,6 +54,8 @@ class menu():
             self.GEMROC_reading_dict = GEMROC_reading_dict
 
         self.simple_analysis = IntVar(self.master_window)
+        self.run_analysis = IntVar(self.master_window)
+
 
         Label(self.master_window, text='Acquisition setting', font=("Courier", 25)).pack()
 
@@ -92,6 +94,8 @@ class menu():
         self.time_in.insert(END, '1')
         self.time_in.grid(row=0, column=1, sticky=NW, pady=4)
         Checkbutton(self.start_frame, text="Fast analysis", variable=self.simple_analysis).grid(row=0, column=2, sticky=NW, pady=4)
+        Checkbutton(self.start_frame, text="On run analysis", variable=self.run_analysis).grid(row=0, column=3, sticky=NW, pady=4)
+
 
         a_frame = Frame(self.master_window)
         a_frame.pack()
@@ -237,7 +241,7 @@ class menu():
             else:
                 self.LED[int(i.GEMROC_ID)]['image'] = self.icon_on
         for i in self.GEM:
-            if i.TIMED_out == True:
+            if i.TIMED_out and self.restart:
                 self.relaunch_acq()
                 break
     def PMT_on(self):
@@ -267,7 +271,7 @@ class menu():
             if self.PMT:
                 os.system("./HVWrappdemo ttyUSB0 VSet 2000")
 
-        self.start_acq()
+            self.start_acq()
 
     def ref_adv_acq(self):
         widget_list = all_children(self.adv_wind)
@@ -277,16 +281,17 @@ class menu():
 
 
     def plotta(self):
-        if self.GEM_to_read_last[self.plotting_gemroc] == 1:
-            for i in range(0, len(self.GEM)):
-                if int(self.GEM[i].GEMROC_ID) == self.plotting_gemroc:
-                    self.plot_rate.set_title("TIGER {}, GEMROC {}".format(self.plotting_TIGER, self.plotting_gemroc))
-                    self.scatter.set_ydata(self.GEM[i].thr_scan_rate[self.plotting_TIGER])
-                    self.plot_rate.set_ylim(top=np.max(self.GEM[i].thr_scan_rate[self.plotting_TIGER]) + np.max(self.GEM[i].thr_scan_rate[self.plotting_TIGER] / 20))
+        if self.simple_analysis.get() or self.run_analysis.get():
+            if self.GEM_to_read_last[self.plotting_gemroc] == 1:
+                for i in range(0, len(self.GEM)):
+                    if int(self.GEM[i].GEMROC_ID) == self.plotting_gemroc:
+                        self.plot_rate.set_title("TIGER {}, GEMROC {}".format(self.plotting_TIGER, self.plotting_gemroc))
+                        self.scatter.set_ydata(self.GEM[i].thr_scan_rate[self.plotting_TIGER])
+                        self.plot_rate.set_ylim(top=np.max(self.GEM[i].thr_scan_rate[self.plotting_TIGER]) + np.max(self.GEM[i].thr_scan_rate[self.plotting_TIGER] / 20))
 
-        else:
-            self.plot_rate.set_title("GEMROC not acquired".format(self.plotting_TIGER, self.plotting_gemroc))
-            self.scatter.set_ydata(np.zeros((64)))
+            else:
+                self.plot_rate.set_title("GEMROC not acquired".format(self.plotting_TIGER, self.plotting_gemroc))
+                self.scatter.set_ydata(np.zeros((64)))
         self.canvas.draw()
         self.canvas.flush_events()
 
@@ -355,8 +360,7 @@ class menu():
 
         self.GEM = []
         self.thread = []
-        self.TM_errors = []
-        self.TL_errors = []
+
         self.time = self.time_in.get()
         lista = []
         for i in range(0, len(self.GEM_to_read)):
@@ -383,37 +387,42 @@ class menu():
 
     def refresh_error_status(self):
         self.LBGEM_err['text'] = 'GEMROC {}'.format(self.plotting_gemroc)
-        if self.GEM_to_read_last[self.plotting_gemroc] == 1:
+        if self.simple_analysis.get() or self.run_analysis.get():
+            if self.GEM_to_read_last[self.plotting_gemroc] == 1:
 
-            for i in range(0, len(self.GEM)):
-                if int(self.GEM[i].GEMROC_ID) == self.plotting_gemroc:
-                    if self.mode == 'TM':
+                for i in range(0, len(self.GEM)):
+                    if int(self.GEM[i].GEMROC_ID) == self.plotting_gemroc:
+                        if self.mode == 'TM':
 
-                        if len(self.TM_errors[i][1]) > 0:
-                            self.LED_UDP['image'] = self.icon_bad
-                        else:
-                            self.LED_UDP['image'] = self.icon_on
-                        for i in range(0, len(self.GEM)):
-                            for j in range(0, 8):
-                                self.FIELD_TIGER['text'] = '{}'.format(self.TM_errors[i][0])
-                        self.LBUDP0['text'] = "UDP packet error  "
+                            if len(self.TM_errors[i][1]) > 0:
+                                self.LED_UDP['image'] = self.icon_bad
+                            else:
+                                self.LED_UDP['image'] = self.icon_on
+                            for i in range(0, len(self.GEM)):
+                                for j in range(0, 8):
+                                    self.FIELD_TIGER['text'] = '{}'.format(self.TM_errors[i][0])
+                            self.LBUDP0['text'] = "UDP packet error  "
 
-                        self.LBerror['text'] = "Acquisition errors check(TM) "
+                            self.LBerror['text'] = "Acquisition errors check(TM) "
 
-                    if self.mode == 'TL':
+                        if self.mode == 'TL':
 
-                        if len(self.TL_errors[i][1]) > 0:
-                            self.LED_UDP['image'] = self.icon_bad
-                        else:
-                            self.LED_UDP['image'] = self.icon_on
-                        for i in range(0, len(self.GEM)):
-                            for j in range(0, 8):
-                                self.FIELD_TIGER['text'] = '{}'.format(self.TL_errors[i][0])
-                        self.LBUDP0['text'] = "Frameword missing   "
+                            if len(self.TL_errors[i][1]) > 0:
+                                self.LED_UDP['image'] = self.icon_bad
+                            else:
+                                self.LED_UDP['image'] = self.icon_on
+                            for i in range(0, len(self.GEM)):
+                                for j in range(0, 8):
+                                    self.FIELD_TIGER['text'] = '{}'.format(self.TL_errors[i][0])
+                            self.LBUDP0['text'] = "Frameword missing   "
 
-                        self.LBerror['text'] = "Acquisition errors check(TL) "
+                            self.LBerror['text'] = "Acquisition errors check(TL) "
+            else:
+                self.LBerror['text'] = "GEMROC not acquired "
+                self.LED_UDP['image'] = self.icon_off
+                self.FIELD_TIGER['text'] = '-'
         else:
-            self.LBerror['text'] = "GEMROC not acquired "
+            self.LBerror['text'] = "Data not analyzed "
             self.LED_UDP['image'] = self.icon_off
             self.FIELD_TIGER['text'] = '-'
         #self.FIELD_810['text'] = '{}'.format(int(self.errors_counters_810[self.plotting_gemroc])) TODO check later
@@ -441,19 +450,24 @@ class menu():
             else:
                 self.LED[int(i.GEMROC_ID)]['image'] = self.icon_on
         if self.simple_analysis.get():
-            for i in range(0, len(self.GEM)):
-                if self.mode == 'TL':
-                    # self.TL_errors.append(self.GEM[i].check_TL_Frame_TIGERS("./data_folder/Spill_2018_12_11_11_02_03_GEMROC_3.dat"))
-                    self.TL_errors.append(self.GEM[i].check_TL_Frame_TIGERS(self.GEM[i].datapath))
-                    print self.TL_errors
-                else:
-                    # self.TM_errors.append(self.GEM[i].check_TM_continuity("./data_folder/Spill_2018_12_12_17_39_51_GEMROC_0.dat"))
-                    self.TM_errors.append(self.GEM[i].check_TM_continuity(self.GEM[i].datapath))
-
-                    print self.TM_errors
+            self.build_errors()
         self.refresh_error_status()
         self.refresh_plot()
         self.but7.config(state='normal')
+
+    def build_errors(self):
+        self.TM_errors = []
+        self.TL_errors = []
+        for i in range(0, len(self.GEM)):
+            if self.mode == 'TL':
+                # self.TL_errors.append(self.GEM[i].check_TL_Frame_TIGERS("./data_folder/Spill_2018_12_11_11_02_03_GEMROC_3.dat"))
+                self.TL_errors.append(self.GEM[i].check_TL_Frame_TIGERS(self.GEM[i].datapath))
+                # print self.TL_errors
+            else:
+                # self.TM_errors.append(self.GEM[i].check_TM_continuity("./data_folder/Spill_2019_02_09_07_22_18_GEMROC_10_TM.dat"))
+                self.TM_errors.append(self.GEM[i].check_TM_continuity(self.GEM[i].datapath))
+
+                # print self.TM_errors
 
     def close(self):
         self.master.destroy()
@@ -480,7 +494,9 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
         self.caller=caller
     def run(self):
         while self.running:
-            time.sleep(5)
+            time.sleep(10)
+            if self.caller.run_analysis:
+                self.update_err_and_plot_onrun()
             process_list = []
             pipe_list = []
             TIGER_LIST = [0, 1, 2, 3, 4, 5, 6, 7]
@@ -519,7 +535,12 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
             self.caller.refresh_8_10_counters_and_TimeOut()
             del process_list[:]
             del pipe_list[:]
+    def update_err_and_plot_onrun(self):
+        self.caller.build_errors()
+        self.caller.refresh_error_status()
+        self.caller.refresh_plot()
 
+                    #print self.TM_errors
     def acquire_errors(self, GEMROC_num, TIGER, pipe_in, reset):
         GEMROC = self.GEMROC_reading_dict[GEMROC_num]
         if reset:
