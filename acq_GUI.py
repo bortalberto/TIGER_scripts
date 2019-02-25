@@ -383,7 +383,8 @@ class menu():
         self.GEM_to_read_last = self.GEM_to_read
         for i in range(0, len(self.GEM)):
             self.thread[i].start()
-        self.error_thread.start()
+        if not self.std_alone:
+            self.error_thread.start()
 
     def refresh_error_status(self):
         self.LBGEM_err['text'] = 'GEMROC {}'.format(self.plotting_gemroc)

@@ -44,7 +44,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.IVT_log_fname = "."+sep+"log_folder"+sep+"GEMROC{}_IVT_log_{}.txt".format(self.GEMROC_ID,datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         self.IVT_log_file = open(self.IVT_log_fname, 'w')
 
-        local_test=True
+        local_test=False
 
         if local_test==True:
             # HOST_DYNAMIC_IP_ADDRESS = "192.168.1.%d" %(GEMROC_ID)

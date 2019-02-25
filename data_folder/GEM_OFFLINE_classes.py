@@ -86,8 +86,7 @@ class reader:
 
                     hex_to_int = (int(hexdata[x], 16)) * 16 + int(hexdata[x + 1], 16)  # acr 2017-11-17 this should fix the problem
                     int_x = (int_x + hex_to_int)
-                    raw = "{}".format(bin(int_x))
-
+                    raw = "{}".format(bin((int_x & 0xFFFFFFFFFFFFFFFF)))
 
                     if (((int_x & 0xFF00000000000000) >> 59) == 0x04):  # It's a frameword
                         s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'HB: ' + 'Framecount: %08X ' % (
@@ -130,6 +129,8 @@ class reader:
                         int_x = (int_x + hex_to_int) << 8
                     hex_to_int = (int(hexdata[x], 16)) * 16 + int(hexdata[x + 1], 16)  # acr 2017-11-17 this should fix the problem
                     int_x = (int_x + hex_to_int)
+                    raw = "{}".format(bin(int_x))
+
                     s = '%016X \n' % int_x
                     # acr 2018-06-25 out_file.write(s)
 
@@ -172,6 +173,7 @@ class reader:
                         s = 'UDP_SEQNO: ' + 'GEMROC_ID: %02X ' % ((int_x >> 52) & 0x1F) + 'UDP_SEQNO_U48: %012X \n\n' % (((int_x >> 32) & 0xFFFFF) + ((int_x >> 0) & 0xFFFFFFF))
                     if (1):  # (HITCOUNT > 0):
                         out_file.write(s)
+                        out_file.write(raw)
             ##        out_file.write(s)
             ## comment this block to avoid parsing
 
