@@ -449,7 +449,7 @@ class menu():
                 self.LED[int(i.GEMROC_ID)]['image'] = self.icon_bad
             else:
                 self.LED[int(i.GEMROC_ID)]['image'] = self.icon_on
-        if self.simple_analysis.get():
+        if self.simple_analysis.get() or self.build_errors():
             self.build_errors()
         self.refresh_error_status()
         self.refresh_plot()
@@ -495,7 +495,7 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
     def run(self):
         while self.running:
             time.sleep(10)
-            if self.caller.run_analysis:
+            if self.caller.run_analysis.get():
                 self.update_err_and_plot_onrun()
             process_list = []
             pipe_list = []
