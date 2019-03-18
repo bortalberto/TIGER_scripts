@@ -32,6 +32,8 @@ class communication: ##The directory are declared here to avoid multiple declara
     def __init__(self, gemroc_ID, feb_pwr_pattern, keep_cfg_log=False, keep_IVT_log=False):
         self.conf_folder = "conf"
         self.Tscan_folder="thr_scan"
+        self.Noise_folder="noise_scan"
+
         self.GEMROC_ID=gemroc_ID
         self.FEB_PWR_EN_pattern=feb_pwr_pattern
 
@@ -44,9 +46,11 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.IVT_log_fname = "."+sep+"log_folder"+sep+"GEMROC{}_IVT_log_{}.txt".format(self.GEMROC_ID,datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         self.IVT_log_file = open(self.IVT_log_fname, 'w')
 
-        local_test=False
+        self.success_counter=0
+        self.fail_counter=0
+        local_test=True
 
-        if local_test==True:
+        if local_test:
             # HOST_DYNAMIC_IP_ADDRESS = "192.168.1.%d" %(GEMROC_ID)
             self.HOST_IP = "127.0.0.1"  # uncomment for test only
 
@@ -138,6 +142,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.good_com=0
         self.bad_com=0
     def __del__(self):
+        print("GEMROC {}    Successful communication: {}  Fails: {}".format(self.GEMROC_ID, self.success_counter, self.fail_counter))
         path_cfg=self.log_file.name
         path_IVT=self.IVT_log_file.name
         self.log_file.close()
@@ -166,46 +171,59 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.gemroc_LV_XX.set_gemroc_cmd_code(COMMAND_STRING, 1)
         self.gemroc_LV_XX.update_command_words()
         array_to_send = self.gemroc_LV_XX.command_words
-        try:
-            command_echo_ivt = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
+        command_echo_ivt = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
                                                         self.DEST_PORT_NO)
-        except:
-            print "Timed out"
-            raise Exception('Timed out testing communication with GEMROC {}'.format(self.GEMROC_ID))
-        else:
-            return True
+
         # print '\nGEMROC_ID: %d: CMD_GEMROC_LV_IVT_READ' %self.GEMROC_ID
 
+
+
     def send_GEMROC_CFG_CMD_PKT(self, COMMAND_STRING_PARAM, array_to_send_param, DEST_IP_ADDRESS_PARAM,
-                                DEST_PORT_NO_PARAM):
+                                DEST_PORT_NO_PARAM,log_save=False,retry=True):
+        # print ("Sent: \n")
+        # print (hex(array_to_send_param[0]))
+        # print (hex(array_to_send_param[1]))
+        # print (hex(array_to_send_param[2]))
+        # print (hex(array_to_send_param[3]))
+        # print (hex(array_to_send_param[4]))
 
-        buffer_to_send = struct.pack('>' + str(len(array_to_send_param)) + 'L', *array_to_send_param)
-        #self.flush_socket()
-        self.clientSock.sendto(buffer_to_send, (DEST_IP_ADDRESS_PARAM, DEST_PORT_NO_PARAM))
+        buffer_to_send = struct.pack('>' + str(len(array_to_send_param)) + 'I', *array_to_send_param)
         cmd_message = "\nTarget GEMROC: %d; CMD sent (%s): \n" % (self.GEMROC_ID, COMMAND_STRING_PARAM)
-        self.log_file.write(cmd_message)
-        self.log_file.write(binascii.b2a_hex(buffer_to_send))
-        try:
-            command_echo_f = self.receiveSock.recv(self.BUFSIZE)
-        except:
-            try:
-                time.sleep(1)
-                self.SynchReset_to_TgtTCAM()
-                self.SynchReset_to_TgtFEB()
-                self.log_file.write(cmd_message)
-                self.log_file.write(binascii.b2a_hex(buffer_to_send))
-                command_echo_f = self.receiveSock.recv(self.BUFSIZE)
-            except:
-                print ("GEMROC {} communication timed out".format(self.GEMROC_ID))
+        i=0
 
-                raise Exception("GEMROC {} communication timed out".format(self.GEMROC_ID))
+        while i<5:
+            try:
+                self.clientSock.sendto(buffer_to_send, (DEST_IP_ADDRESS_PARAM, DEST_PORT_NO_PARAM))
+
+                if log_save:
+                    self.log_file.write(cmd_message)
+                    self.log_file.write(binascii.b2a_hex(buffer_to_send))
+                command_echo_f = self.receiveSock.recv(self.BUFSIZE)
+                self.success_counter+=1
+                break
+            except:
+                    if not retry:
+                        raise Exception("GEMROC {} communication timed out for 5 times".format(self.GEMROC_ID))
+                        break
+                    self.fail_counter+=1
+                    time.sleep(1)
+                    self.SynchReset_to_TgtTCAM()
+                    self.SynchReset_to_TgtFEB()
+                    if log_save:
+                        self.log_file.write(cmd_message)
+                        self.log_file.write(binascii.b2a_hex(buffer_to_send))
+                    i+=1
+
+        if i==5:
+            raise Exception("GEMROC {} communication timed out for 5 times".format(self.GEMROC_ID))
 
         ##    (command_echo_f, source_IPADDR) = receiveSock.recvfrom(BUFSIZE) #S.C. 2018-03-08
         ##    cmd_message = "\nTarget GEMROC: %d; Target GEMROC IP_ADDR_LOWER_BYTE: %s; \nCMD echo (%s): \n" %(TARGET_GEMROC_ID_param, source_IPADDR, COMMAND_STRING_PARAM)
         ##    print (cmd_message)
         ##    time.sleep(5)
-        self.log_file.write(cmd_message)
-        self.log_file.write(binascii.b2a_hex(command_echo_f))
+        if log_save:
+            self.log_file.write(cmd_message)
+            self.log_file.write(binascii.b2a_hex(command_echo_f))
         return command_echo_f
 
 
@@ -581,53 +599,84 @@ class communication: ##The directory are declared here to avoid multiple declara
         return TL_vs_nTM_string
 
     def send_TIGER_GCFG_Reg_CMD_PKT(self, TIGER_ID_param, COMMAND_STRING_PARAM, array_to_send_param, DEST_IP_ADDRESS_PARAM,
-                                    DEST_PORT_NO_PARAM):  # acr 2018-03-05
+                                    DEST_PORT_NO_PARAM,log_save=False,retry=True):  # acr 2018-03-05
         buffer_to_send = struct.pack('>' + str(len(array_to_send_param)) + 'L', *array_to_send_param)
-        self.flush_socket()
 
-        self.clientSock.sendto(buffer_to_send, (DEST_IP_ADDRESS_PARAM, DEST_PORT_NO_PARAM))
         cmd_message = '\nTIGER%d Global Cfg Reg CMD %s sent:\n' % (TIGER_ID_param, COMMAND_STRING_PARAM)
-        self.log_file.write(cmd_message)
-        self.log_file.write(binascii.b2a_hex(buffer_to_send))
-        cmd_message = '\nTIGER%d Global Cfg Reg CMD %s command echo:\n' % (TIGER_ID_param, COMMAND_STRING_PARAM)
-        self.log_file.write(cmd_message)
-        command_echo_f = self.receiveSock.recv(self.BUFSIZE)
-        self.log_file.write(binascii.b2a_hex(command_echo_f))
-        # print "\nMandato : {}".format(binascii.b2a_hex(buffer_to_send))
-        # print "\nRicevuto : {}".format(binascii.b2a_hex(command_echo_f))
-        # time.sleep(2)
+        i=0
+
+        while i<5:
+            try:
+                self.clientSock.sendto(buffer_to_send, (DEST_IP_ADDRESS_PARAM, DEST_PORT_NO_PARAM))
+
+                if log_save:
+                    self.log_file.write(cmd_message)
+                    self.log_file.write(binascii.b2a_hex(buffer_to_send))
+                command_echo_f = self.receiveSock.recv(self.BUFSIZE)
+                self.success_counter+=1
+                break
+            except:
+                    if not retry :
+                        raise Exception("GEMROC {} communication timed out for 5 times".format(self.GEMROC_ID))
+                        break
+                    self.fail_counter+=1
+                    time.sleep(1)
+                    self.SynchReset_to_TgtTCAM()
+                    self.SynchReset_to_TgtFEB()
+                    if log_save:
+                        self.log_file.write(cmd_message)
+                        self.log_file.write(binascii.b2a_hex(buffer_to_send))
+                    i+=1
+
+        if i==5:
+            raise Exception("GEMROC {} communication timed out for 5 times".format(self.GEMROC_ID))
+
+
+        if log_save:
+            self.log_file.write(cmd_message)
+            self.log_file.write(binascii.b2a_hex(command_echo_f))
         return command_echo_f
 
 
     def send_TIGER_Ch_CFG_Reg_CMD_PKT(self, TIGER_ID_param, COMMAND_STRING_PARAM, array_to_send_param, DEST_IP_ADDRESS_PARAM,
-                                      DEST_PORT_NO_PARAM):  # acr 2018-03-04
+                                      DEST_PORT_NO_PARAM,log_write=False):  # acr 2018-03-04
         buffer_to_send = struct.pack('>' + str(len(array_to_send_param)) + 'L', *array_to_send_param)
-        self.flush_socket()
 
-        self.clientSock.sendto(buffer_to_send, (DEST_IP_ADDRESS_PARAM, DEST_PORT_NO_PARAM))
+
         Target_Ch_ToALL_f = (array_to_send_param[(len(array_to_send_param) - 1)] >> 6) & 0x1
         Target_Ch_ID_f = (array_to_send_param[(len(array_to_send_param) - 1)] >> 0) & 0x3F
         cmd_message = '\nTIGER% d; TOALL = % d; Channel% s Cfg Reg CMD %s sent\n' % (
         TIGER_ID_param, Target_Ch_ToALL_f, Target_Ch_ID_f, COMMAND_STRING_PARAM)
-        self.log_file.write(cmd_message)
-        self.log_file.write(binascii.b2a_hex(buffer_to_send))
+        if log_write:
+            self.log_file.write(cmd_message)
+            self.log_file.write(binascii.b2a_hex(buffer_to_send))
         cmd_message = '\nTIGER% d; TOALL = % d; Channel% s Cfg Reg CMD %s echo\n' % (
         TIGER_ID_param, Target_Ch_ToALL_f, Target_Ch_ID_f, COMMAND_STRING_PARAM)
-        self.log_file.write(cmd_message)
-        try:
-            command_echo_f = self.receiveSock.recv(self.BUFSIZE)
-        except:
+        if log_write:
+            self.log_file.write(cmd_message)
+        i=0
+        while i<5:
+
             try:
-                time.sleep(1)
                 self.clientSock.sendto(buffer_to_send, (DEST_IP_ADDRESS_PARAM, DEST_PORT_NO_PARAM))
+
                 command_echo_f = self.receiveSock.recv(self.BUFSIZE)
-
-
+                self.success_counter += 1
+                break
             except:
-                print "Can't recive answer from GEMROC  {}".format(self.GEMROC_ID)
-                raise Exception( "Can't recive answer from GEMROC  {}".format(self.GEMROC_ID))
+                self.fail_counter += 1
+                time.sleep(1)
+                self.SynchReset_to_TgtTCAM()
+                self.SynchReset_to_TgtFEB()
+                i+=1
 
-        self.log_file.write(binascii.b2a_hex(command_echo_f))
+
+
+        if i==5:
+            raise Exception("GEMROC {} communication timed out for 5 times".format(self.GEMROC_ID))
+        if log_write:
+            self.log_file.write(binascii.b2a_hex(command_echo_f))
+
         return command_echo_f
 
 
@@ -656,7 +705,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         return
     def GEMROC_counter_get(self):
 
-        command_echo_ivt = self.Read_GEMROC_LV_CfgReg()
+        command_echo_ivt = self.Read_GEMROC_LV_CfgReg(False)
         L_array = array.array('I')  # L is an array of unsigned long, I for some systems, L for others
         L_array.fromstring(command_echo_ivt)
         L_array.byteswap()
@@ -665,23 +714,12 @@ class communication: ##The directory are declared here to avoid multiple declara
         counter3 =((L_array[6]) >> 22) & 0xff
         Counter_value = (counter3<<16)+(counter2<<8)+counter1
         return Counter_value
-    def send_GEMROC_LV_CMD(self, COMMAND_STRING_PARAM):
+    def send_GEMROC_LV_CMD(self, COMMAND_STRING_PARAM,retry=True):
         self.gemroc_LV_XX.set_target_GEMROC(self.GEMROC_ID)
         self.gemroc_LV_XX.set_gemroc_cmd_code(COMMAND_STRING_PARAM, 1)
         self.gemroc_LV_XX.update_command_words()
         array_to_send = self.gemroc_LV_XX.command_words
-        try:
-            command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING_PARAM, array_to_send, self.DEST_IP_ADDRESS,
-                                                    self.DEST_PORT_NO)
-        except:
-            try:
-                time.sleep(1)
-                array_to_send = self.gemroc_LV_XX.command_words
-                command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING_PARAM, array_to_send, self.DEST_IP_ADDRESS,self.DEST_PORT_NO)
-            except:
-                print ("Can't get LV cmd response from GEMROC {}".format(self.GEMROC_ID))
-                raise Exception ("Can't get LV cmd response from GEMROC {}".format(self.GEMROC_ID))
-
+        command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING_PARAM, array_to_send, self.DEST_IP_ADDRESS,self.DEST_PORT_NO,retry=retry)
         return command_echo
 
 
@@ -760,26 +798,29 @@ class communication: ##The directory are declared here to avoid multiple declara
         gemroc_DAQ_inst_param.update_command_words()
 
         array_to_send = gemroc_DAQ_inst_param.command_words
-        try:
-            command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING_PARAM, array_to_send, self.DEST_IP_ADDRESS,
+        command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING_PARAM, array_to_send, self.DEST_IP_ADDRESS,
                                                     self.DEST_PORT_NO)
-        except:
-            try:
-                time.sleep(1)
-                command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING_PARAM, array_to_send, self.DEST_IP_ADDRESS,
-                                                    self.DEST_PORT_NO)
-            except:
-                print ("Can't configure DAQ GEMROC {}".format(self.GEMROC_ID))
-                raise Exception ("CCan't configure DAQ  GEMROC {}".format(self.GEMROC_ID))
         return command_echo
 
     # acr 2018-04-23
-    def send_GEMROC_DAQ_CMD_num_rep(self, gemroc_DAQ_inst_param, COMMAND_STRING_PARAM, num_of_repetitions_param):
-        gemroc_DAQ_inst_param.set_target_GEMROC(self.GEMROC_ID)
-        gemroc_DAQ_inst_param.set_gemroc_cmd_code(COMMAND_STRING_PARAM, num_of_repetitions_param)
-        gemroc_DAQ_inst_param.update_command_words()
+
+    def Soft_TP_generate(self,TP_Num_in_burst_param):
+        # acr 2018-11-02 updated paradigm definition END
+        self.gemroc_DAQ_XX.set_target_GEMROC(self.GEMROC_ID)
+        self.gemroc_DAQ_XX.set_TP_period(10)
+        number_of_repetitions = TP_Num_in_burst_param
+        COMMAND_STRING = 'CMD_GEMROC_DAQ_TP_GEN'
+        command_echo = self.send_GEMROC_DAQ_CMD_num_rep( COMMAND_STRING, number_of_repetitions)
+        return command_echo
+
+
+    def send_GEMROC_DAQ_CMD_num_rep(self, COMMAND_STRING_PARAM, num_of_repetitions_param):
+        self.gemroc_DAQ_XX.set_gemroc_cmd_code(COMMAND_STRING_PARAM, num_of_repetitions_param)
+        self.gemroc_DAQ_XX.set_target_TCAM_ID(0,0)
+        self.gemroc_DAQ_XX.update_command_words()
         #print '\n gemroc_DAQ_inst_param.number_of_repetitions = %03X' % gemroc_DAQ_inst_param.number_of_repetitions
-        array_to_send = gemroc_DAQ_inst_param.command_words
+        array_to_send = self.gemroc_DAQ_XX.command_words
+        print array_to_send
         command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING_PARAM, array_to_send, self.DEST_IP_ADDRESS,
                                                     self.DEST_PORT_NO)
         return command_echo
@@ -1038,6 +1079,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         return command_echo
 
     def DAQ_set_Pause_Mode(self, DAQ_PauseMode_Enable_param):
+        self.gemroc_DAQ_XX.DAQ_config_dict["Enable_DAQPause_Until_First_Trigger"]=(DAQ_PauseMode_Enable_param & 0x1)
         gemroc_DAQ_inst=self.gemroc_DAQ_XX
         Dbg_funct_ctrl_bits_U4_localcopy = gemroc_DAQ_inst.get_Dbg_functions_ctrl_bits_LoNibble()
         Dbg_funct_ctrl_bits_U4_localcopy &= 0x7
@@ -1050,6 +1092,8 @@ class communication: ##The directory are declared here to avoid multiple declara
         return command_echo
 
     def DAQ_Toggle_Set_Pause_bit(self):
+        self.gemroc_DAQ_XX.DAQ_config_dict["DAQPause_Set"]=1
+
         gemroc_DAQ_inst=self.gemroc_DAQ_XX
         Dbg_funct_ctrl_bits_U4_localcopy = gemroc_DAQ_inst.get_Dbg_functions_ctrl_bits_LoNibble()
         Dbg_funct_ctrl_bits_U4_localcopy &= 0xB
@@ -1071,6 +1115,8 @@ class communication: ##The directory are declared here to avoid multiple declara
         return command_echo
 
     def DAQ_set_DAQck_source(self, DAQck_source_param):
+        self.gemroc_DAQ_XX.DAQ_config_dict["EXT_nINT_B3clk"]=(DAQck_source_param & 0x1)
+
         gemroc_DAQ_inst=self.gemroc_DAQ_XX
         # Dbg_funct_ctrl_bits_U4_localcopy = gemroc_DAQ_inst.get_Dbg_functions_ctrl_bits_LoNibble()
         Dbg_funct_ctrl_bits_U4_localcopy = gemroc_DAQ_inst.get_Dbg_functions_ctrl_bits_LoNibble()
@@ -1123,6 +1169,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         return command_echo
 
     # acr 2018-11-02 BEGIN added function definition
+    #OLD DAQ SET
     def DAQ_set(self, TCAM_Enable_pattern_param, Per_FEB_TP_Enable_pattern_param, TP_repeat_burst_param, TP_Num_in_burst_param, TL_nTM_ACQ_param, Per_L1_En_bit_param, Enab_Auto_L1_from_TP_bit_param=0, print_mode=False):
         gemroc_DAQ_inst=self.gemroc_DAQ_XX
         gemroc_DAQ_inst.set_target_GEMROC(self.GEMROC_ID)
@@ -1146,10 +1193,33 @@ class communication: ##The directory are declared here to avoid multiple declara
         # acr 2018-04-023 command_echo = send_GEMROC_DAQ_CMD(self.GEMROC_ID, gemroc_DAQ_inst, COMMAND_STRING)
         command_echo = self.send_GEMROC_DAQ_CMD_num_rep(gemroc_DAQ_inst, COMMAND_STRING, number_of_repetitions)
         return command_echo
+    #NEW DAQ SET
+    def DAQ_set(self, TCAM_Enable_pattern_param, Per_FEB_TP_Enable_pattern_param, TP_repeat_burst_param, TP_Num_in_burst_param, TL_nTM_ACQ_param, Per_L1_En_bit_param, Enab_Auto_L1_from_TP_bit_param=0, print_mode=False):
+        self.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"]=(TCAM_Enable_pattern_param)
+        self.gemroc_DAQ_XX.DAQ_config_dict["Periodic_TP_EN_pattern"]=(Per_FEB_TP_Enable_pattern_param)
+        self.gemroc_DAQ_XX.DAQ_config_dict["Periodic_L1En"]=Per_L1_En_bit_param
+        self.gemroc_DAQ_XX.DAQ_config_dict["AUTO_L1_EN"]=Enab_Auto_L1_from_TP_bit_param
+        self.gemroc_DAQ_XX.DAQ_config_dict["TL_nTM_ACQ"]=(TL_nTM_ACQ_param)
+        self.gemroc_DAQ_XX.DAQ_config_dict["number_of_repetitions"] = ((TP_repeat_burst_param & 0X1) << 9) + TP_Num_in_burst_param
+        self.DAQ_set_with_dict()
+
+
+    def DAQ_set_with_dict(self):
+        COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
+        number_of_repetitions = self.gemroc_DAQ_XX.DAQ_config_dict["number_of_repetitions"]
+        self.gemroc_DAQ_XX.set_gemroc_cmd_code(COMMAND_STRING, number_of_repetitions)
+        self.gemroc_DAQ_XX.update_command_words()
+
+        self.gemroc_DAQ_XX.update_command_words_dict()
+        array_to_send = self.gemroc_DAQ_XX.command_words
+        command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
+                                                    self.DEST_PORT_NO)
+        return command_echo
     def change_acq_mode(self,TL_nTM_ACQ):
         gemroc_DAQ_inst=self.gemroc_DAQ_XX
         gemroc_DAQ_inst.set_TL_nTM_ACQ(TL_nTM_ACQ)
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
+        self.gemroc_DAQ_XX.DAQ_config_dict["TL_nTM_ACQ"]=(TL_nTM_ACQ & 0x1)
         command_echo = self.send_GEMROC_DAQ_CMD_num_rep(gemroc_DAQ_inst, COMMAND_STRING,1)
         return command_echo
     def DAQ_TIGER_SET(self, gemroc_DAQ_inst, TCAM_Enable_pattern_param, Per_FEB_TP_Enable_pattern_param=0,
@@ -1497,9 +1567,9 @@ class communication: ##The directory are declared here to avoid multiple declara
             self.log_file.write('\nTIMING_DLY_FEB0 : %d' % ((L_array[10] >> 0) & 0x3F))
 
 
-    def Read_GEMROC_LV_CfgReg(self):
+    def Read_GEMROC_LV_CfgReg(self,retry=True):
         COMMAND_STRING = 'CMD_GEMROC_LV_CFG_RD'
-        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
+        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING,retry)
         return command_echo
 
     def set_sampleandhold_mode(self, ChCFGReg_setting_inst):
@@ -1765,12 +1835,16 @@ class communication: ##The directory are declared here to avoid multiple declara
                 log_file.write("TRIGGER mode WRONG, {} instead of {}\n ".format(((L_array2[8] >> 16) & 0x3),((L_array[8] >> 16) & 0x3)))
 
     def recieve_from_socket_with_control(self,array_to_send):
-        try:
-            command_echo_f=self.receiveSock.recv(self.BUFSIZE)
-        except:
+        i=0
+        while True:
             try:
-                time.sleep(1)
                 command_echo_f=self.receiveSock.recv(self.BUFSIZE)
+
             except:
                 Exception("Can't receive any answer from GEMROC")
+                i+=1
+                time.sleep(1)
+                if i>5:
+                    break
 
+        return command_echo_f
