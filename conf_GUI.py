@@ -483,6 +483,7 @@ class menu():
                 line = line.rstrip('\n')
                 self.field_array.append(Label(single_use_frame, text='-'))
                 if line in self.dict_pram_list:
+                    print (self.dict_pram_list)
                     self.input_array[line] = (Entry(single_use_frame, width=3))
                 self.label_array.append(Label(single_use_frame, text=line))
 

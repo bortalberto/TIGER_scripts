@@ -1672,7 +1672,7 @@ class communication: ##The directory are declared here to avoid multiple declara
     def Load_VTH_fromfile(self, ChCFGReg_setting_inst, TIGER_ID_param, number_sigma, offset, save_on_LOG=False):
         file_p=self.conf_folder+sep+"thr"+ sep+"GEMROC{}_Chip{}.thr".format(self.GEMROC_ID,TIGER_ID_param)
         self.log_file.write("\n Setting VTH from file in  TIGER {}\n".format(TIGER_ID_param))
-        print "Setting VTH from file in  TIGER {}, {} sigmas\n".format(TIGER_ID_param,number_sigma)
+        print "Setting VTH from file in GEMROC {}, TIGER {}, {} sigmas\n".format(self.GEMROC_ID,TIGER_ID_param,number_sigma)
 
 
         thr0=np.loadtxt(file_p,)

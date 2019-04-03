@@ -447,7 +447,13 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
       sav_channel_dic={
       "TP_disable_FE": self.parameter_array [4],  ## TP_disable_FE_param
       "Integ": self.parameter_array [7],  ## Integ_param
+      "Vth_T2": self.parameter_array [10],  ## Vth_T2_param
       "Vth_T1": self.parameter_array [11],  ## Vth_T1_param
+      "TriggerBLatched": self.parameter_array [15],  ## TriggerBLatched_param
+      "TriggerMode2B": self.parameter_array[19],  ## TriggerMode2B_param
+      "TriggerMode2Q": self.parameter_array[20],  ## TriggerMode2Q_param
+      "TriggerMode2E": self.parameter_array[21],  ## TriggerMode2E_param
+      "TriggerMode2T": self.parameter_array[22],  ## TriggerMode2T_param
       "QdcMode": self.parameter_array [16],  ## QdcMode_param
       "CounterMode": self.parameter_array [25],  ## CounterMode_param
       "TriggerMode": self.parameter_array [29]  ## TriggerMode_param
@@ -611,16 +617,22 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
       else:
           TP_disable_FE=self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["TP_disable_FE"] & 0x1
           Integ=self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["Integ"] & 0x1
+          Vth_T2= self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["Vth_T2"] & 0x3F
           Vth_T1= self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["Vth_T1"] & 0x3F
+          TriggerBLatched = self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["TriggerBLatched"] & 0x1  ## TriggerBLatched_param
+          TriggerMode2B = self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["TriggerMode2B"] & 0x7   ## TriggerMode2B_param
+          TriggerMode2Q = self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["TriggerMode2Q"] & 0x3   ## TriggerMode2Q_param
+          TriggerMode2E = self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["TriggerMode2E"] & 0x7  ## TriggerMode2E_param
+          TriggerMode2T = self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["TriggerMode2T"] & 0x3  ## TriggerMode2T_param
           QdcMode= self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["QdcMode"] & 0x1
           CounterMode= self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["CounterMode"]  & 0xF
           TriggerMode= self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["TriggerMode"]  & 0x3
           self.cmd_word8 = ((self.DisableHyst & 0x1) << 24) + ((self.T2Hyst & 0x7) << 16) + ((self.T1Hyst & 0x7) << 8) + ((self.Ch63ObufMSB & 0x1))
           self.cmd_word7 = (TP_disable_FE << 24) + ((self.TDC_IB_E & 0xF) << 16) + ((self.TDC_IB_T & 0xF) << 8) + (Integ )
-          self.cmd_word6 = ((self.PostAmpGain & 0x3) << 24) + ((self.FE_delay & 0x1F) << 16) + ((self.Vth_T2 & 0x3F) << 8) + (Vth_T1 )
-          self.cmd_word5 = ((self.QTx2Enable & 0x1) << 24) + ((self.MaxIntegTime & 0x7F) << 16) + ((self.MinIntegTime & 0x7F) << 8) + ((self.TriggerBLatched & 0x1))
-          self.cmd_word4 = (QdcMode << 24) + ((self.BranchEnableT & 0x1) << 16) + ((self.BranchEnableEQ & 0x1) << 8) + (self.TriggerMode2B & 0x7)
-          self.cmd_word3 = ((self.TriggerMode2Q & 0x3) << 24) + ((self.TriggerMode2E & 0x7) << 16) + ((self.TriggerMode2T & 0x3) << 8) + ((self.TACMinAge & 0x1F))
+          self.cmd_word6 = ((self.PostAmpGain & 0x3) << 24) + ((self.FE_delay & 0x1F) << 16) + (Vth_T2 << 8) + (Vth_T1 )
+          self.cmd_word5 = ((self.QTx2Enable & 0x1) << 24) + ((self.MaxIntegTime & 0x7F) << 16) + ((self.MinIntegTime & 0x7F) << 8) + ((TriggerBLatched))
+          self.cmd_word4 = (QdcMode << 24) + ((self.BranchEnableT & 0x1) << 16) + ((self.BranchEnableEQ & 0x1) << 8) + (TriggerMode2B )
+          self.cmd_word3 = (TriggerMode2Q << 24) + (TriggerMode2E << 16) + (TriggerMode2T << 8) + ((self.TACMinAge & 0x1F))
           self.cmd_word2 = ((self.TACMaxAge & 0x1F) << 24) + (CounterMode << 16) + ((self.DeadTime & 0x3F) << 8) + ((self.SyncChainLen & 0x3))
           self.cmd_word1 = ((self.Ch_DebugMode & 0x3) << 24) + (TriggerMode  << 16)
 

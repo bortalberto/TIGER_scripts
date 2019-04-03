@@ -516,6 +516,7 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
                     process.join()
                     try:
                         key, value = pipe_out.recv()
+                        print value
                         if value!=0 and (self.caller.GEMROC_reading_dict[key]):
                             with open(self.caller.logfile, 'a') as f:
                                 f.write("{} -- {} : {} 8/10 bit errors in the last 20 seconds\n".format(time.ctime(), key,value ))
@@ -527,10 +528,8 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
                             # GEMROC.GEM_COM.SynchReset_to_TgtTCAM()
                         self.TIGER_error_counters[key] = value
 
-
-
-                    except:
-                        print "Can't get errors"
+                    except Exception as e:
+                        print e
                     process.terminate()
 
             self.caller.refresh_8_10_counters_and_TimeOut()
