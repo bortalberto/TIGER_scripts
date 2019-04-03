@@ -295,6 +295,7 @@ class analisys_conf: #Analysis class used for configurations10
                 self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 3)
 
         return thr_scan_matrix
+    
 
     def noise_scan_using_GEMROC_COUNTERS_progress_bar(self, T,j,i, print_to_screen=True):
 
