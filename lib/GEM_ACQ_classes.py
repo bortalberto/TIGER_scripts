@@ -31,6 +31,7 @@ class Thread_handler(Thread):
         self.isTM = False
 
     def run(self):
+        Total_data_MAX_size = 2 ** 11
         datapath = "." + sep + "data_folder" + sep + "Spill_{}_GEMROC_{}.dat".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"), self.reader.GEMROC_ID)
         # with open(self.reader.log_path, 'a') as log_file:
         #     log_file.write("{} --Launching acquisition on GEMROC {} for {} seconds\n".format(time.ctime(),self.reader.GEMROC_ID,self.acq_time))
@@ -38,29 +39,44 @@ class Thread_handler(Thread):
         time0 = time.time()
         data_list = []
         self.TIMED_out = False
-
+        with open(datapath, 'wb'):
+            pass
         print "Acquiring GEMROC {} for {} seconds".format(self.reader.GEMROC_ID, self.acq_time)
         self.reader.start_socket()
         while time.time() - time0 < self.acq_time and self.running:
-            try:
-                print "Running (GEM {})".format(self.reader.GEMROC_ID)
-                x = self.reader.fast_acquisition(data_list)  # self.reader.fast_acquisition(data_list)
-            except:
-                Exception ("GEMROC {} TIMED_OUT".format(self.reader.GEMROC_ID))
-                print ("\n---TIMED_OUT!!!...\n")
-                self.reader.dataSock.close()
-                self.running = False
-                self.reader.TIMED_out = True
-                return 0
+            Total_Data = 0
+
+            while (Total_Data < Total_data_MAX_size) and time.time() - time0 < self.acq_time and self.running:
+                try:
+                    x = self.reader.fast_acquisition(data_list)  # self.reader.fast_acquisition(data_list)
+                    Total_Data += x
+                except:
+                    Exception ("GEMROC {} TIMED_OUT".format(self.reader.GEMROC_ID))
+                    print ("\n---TIMED_OUT!!!...\n")
+                    self.reader.dataSock.close()
+                    self.running = False
+                    self.reader.TIMED_out = True
+                    return 0
+            self.reader.data_list = list(data_list)
+            with open(datapath, 'ab') as datafile:
+                try:  # add a method to write the list on the file
+                    self.reader.dump_list(datafile, data_list)
+                    data_list = []
+                except:
+                    print ("\n----SOMETHING WRONG---FILE MISSING\n")
+                    return 0
+
         self.reader.dataSock.close()
         self.reader.data_list = list(data_list)
         print len(self.reader.data_list)
 
         # with open(self.reader.log_path, 'a') as log_file:
         #     log_file.write("{} -- Closing acquisition on GEMROC {}\n".format(time.ctime(),self.reader.GEMROC_ID))
-        with open(datapath, 'wb') as datafile:
+        with open(datapath, 'ab') as datafile:
             try:  # add a method to write the list on the file
                 self.reader.dump_list(datafile, data_list)
+                data_list=[]
+
             except:
                 print ("\n----SOMETHING WRONG---FILE MISSING\n")
                 return 0
@@ -96,7 +112,7 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
                     x = self.reader.fast_acquisition(data_list)  # self.reader.fast_acquisition(data_list)
                     Total_Data += x
                     Total_packets+=1
-                    print ("Packet from GEMROC {}".format(self.reader.GEMROC_ID))
+                    #print ("Packet from GEMROC {}".format(self.reader.GEMROC_ID))
                 except:
                     Exception("GEMROC {} TIMED_OUT".format(self.reader.GEMROC_ID))
                     with open(self.reader.log_path, 'a') as f:
@@ -133,10 +149,14 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
 
 class reader:
     def __init__(self, GEMROC_ID,logfile="ACQ_log"):
+        self.local_test=False
         self.GEMROC_ID = GEMROC_ID
         # self.log_path = "Acq_log_{}.txt".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         self.HOST_IP = "192.168.1.200"
         self.HOST_PORT = 58880 + self.GEMROC_ID  # 58880 + 1 # original +2
+        if self.local_test:
+            self.HOST_IP = "127.0.0.1"
+            self.HOST_PORT = 54816 + 26  # 58880 + 1 # original +2
         self.TIMED_out=False
 
         self.thr_scan_matrix = np.zeros((8, 64))  # Tiger,Channel
@@ -153,7 +173,7 @@ class reader:
 
         try:
             self.dataSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            self.dataSock.settimeout(30)
+            self.dataSock.settimeout(10)
             self.dataSock.bind((self.HOST_IP, self.HOST_PORT))
         except:
             Exception("TIMED_OUT")
@@ -283,7 +303,7 @@ class reader:
     def dump_list(self, savefile, data_list_tmp):
         for item in data_list_tmp:
             savefile.write('%s' % item)
-        with open(self.log_path, 'a') as f:
+        with open(self.log_path, 'ab') as f:
             f.write("{} -- Dumping Data for GEMROC {} in file {}\n".format(time.ctime(), self.GEMROC_ID,savefile))
 
     def read_bin(self, path):

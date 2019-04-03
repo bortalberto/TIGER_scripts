@@ -447,7 +447,13 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
       sav_channel_dic={
       "TP_disable_FE": self.parameter_array [4],  ## TP_disable_FE_param
       "Integ": self.parameter_array [7],  ## Integ_param
+      "Vth_T2": self.parameter_array [10],  ## Vth_T2_param
       "Vth_T1": self.parameter_array [11],  ## Vth_T1_param
+      "TriggerBLatched": self.parameter_array [15],  ## TriggerBLatched_param
+      "TriggerMode2B": self.parameter_array[19],  ## TriggerMode2B_param
+      "TriggerMode2Q": self.parameter_array[20],  ## TriggerMode2Q_param
+      "TriggerMode2E": self.parameter_array[21],  ## TriggerMode2E_param
+      "TriggerMode2T": self.parameter_array[22],  ## TriggerMode2T_param
       "QdcMode": self.parameter_array [16],  ## QdcMode_param
       "CounterMode": self.parameter_array [25],  ## CounterMode_param
       "TriggerMode": self.parameter_array [29]  ## TriggerMode_param
@@ -611,16 +617,22 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
       else:
           TP_disable_FE=self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["TP_disable_FE"] & 0x1
           Integ=self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["Integ"] & 0x1
+          Vth_T2= self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["Vth_T2"] & 0x3F
           Vth_T1= self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["Vth_T1"] & 0x3F
+          TriggerBLatched = self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["TriggerBLatched"] & 0x1  ## TriggerBLatched_param
+          TriggerMode2B = self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["TriggerMode2B"] & 0x7   ## TriggerMode2B_param
+          TriggerMode2Q = self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["TriggerMode2Q"] & 0x3   ## TriggerMode2Q_param
+          TriggerMode2E = self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["TriggerMode2E"] & 0x7  ## TriggerMode2E_param
+          TriggerMode2T = self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["TriggerMode2T"] & 0x3  ## TriggerMode2T_param
           QdcMode= self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["QdcMode"] & 0x1
           CounterMode= self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["CounterMode"]  & 0xF
           TriggerMode= self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["TriggerMode"]  & 0x3
           self.cmd_word8 = ((self.DisableHyst & 0x1) << 24) + ((self.T2Hyst & 0x7) << 16) + ((self.T1Hyst & 0x7) << 8) + ((self.Ch63ObufMSB & 0x1))
           self.cmd_word7 = (TP_disable_FE << 24) + ((self.TDC_IB_E & 0xF) << 16) + ((self.TDC_IB_T & 0xF) << 8) + (Integ )
-          self.cmd_word6 = ((self.PostAmpGain & 0x3) << 24) + ((self.FE_delay & 0x1F) << 16) + ((self.Vth_T2 & 0x3F) << 8) + (Vth_T1 )
-          self.cmd_word5 = ((self.QTx2Enable & 0x1) << 24) + ((self.MaxIntegTime & 0x7F) << 16) + ((self.MinIntegTime & 0x7F) << 8) + ((self.TriggerBLatched & 0x1))
-          self.cmd_word4 = (QdcMode << 24) + ((self.BranchEnableT & 0x1) << 16) + ((self.BranchEnableEQ & 0x1) << 8) + (self.TriggerMode2B & 0x7)
-          self.cmd_word3 = ((self.TriggerMode2Q & 0x3) << 24) + ((self.TriggerMode2E & 0x7) << 16) + ((self.TriggerMode2T & 0x3) << 8) + ((self.TACMinAge & 0x1F))
+          self.cmd_word6 = ((self.PostAmpGain & 0x3) << 24) + ((self.FE_delay & 0x1F) << 16) + (Vth_T2 << 8) + (Vth_T1 )
+          self.cmd_word5 = ((self.QTx2Enable & 0x1) << 24) + ((self.MaxIntegTime & 0x7F) << 16) + ((self.MinIntegTime & 0x7F) << 8) + ((TriggerBLatched))
+          self.cmd_word4 = (QdcMode << 24) + ((self.BranchEnableT & 0x1) << 16) + ((self.BranchEnableEQ & 0x1) << 8) + (TriggerMode2B )
+          self.cmd_word3 = (TriggerMode2Q << 24) + (TriggerMode2E << 16) + (TriggerMode2T << 8) + ((self.TACMinAge & 0x1F))
           self.cmd_word2 = ((self.TACMaxAge & 0x1F) << 24) + (CounterMode << 16) + ((self.DeadTime & 0x3F) << 8) + ((self.SyncChainLen & 0x3))
           self.cmd_word1 = ((self.Ch_DebugMode & 0x3) << 24) + (TriggerMode  << 16)
 
@@ -896,20 +908,8 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
       self.parameter_array = [0 for i in range(GEMROC_CMD_DAQ_Num_of_params-1)] # acr 2018-01-15
       with open(self.cfg_filename, "r") as f:
          self.parameter_array = map(int, f)
-      # acr 2018-06-08 changed significance of Periodic_L1_EN_pattern = roc_ctl_port[19:16] --> Debug_Function_ctrl[7..4] = roc_ctl_port[19:16]
-      # Dbg_functions_ctrl_bits_U8[7] <-> roc_ctl_port[19] <-> RESERVED
-      # Dbg_functions_ctrl_bits_U8[6] <-> roc_ctl_port[18] <-> RESERVED
-      # Dbg_functions_ctrl_bits_U8[5] <-> roc_ctl_port[17] <-> Tpulse_generation_w_L1Chk_enable
-      # Dbg_functions_ctrl_bits_U8[4] <-> roc_ctl_port[16] <-> Periodic_L1_EN_bit
-      # Dbg_functions_ctrl_bits_U8[3] <-> aux_ctrl_port_out[17] <-> Enable_DAQPause_Until_First_Trigger      acr 2018-04-24 DAQPause will have effect only if this bit allows it
-      # Dbg_functions_ctrl_bits_U8[2] <-> aux_ctrl_port_out[16] <-> DAQPause_Set                             acr 2018-04-24 DAQPause will be removed by the first trigger received
-      # Dbg_functions_ctrl_bits_U8[1] <-> aux_ctrl_port_out[15] <-> Tpulse_generation_w_ext_trigger_enable
-      # Dbg_functions_ctrl_bits_U8[0] <-> aux_ctrl_port_out[14] <-> EXT_nINT_B3clk
-      # acr 2018-01-15 NOTE: position of parameters in parameter file and index in parameter array redefined on the basis of GEMROC_CMD_DAQ_Num_of_params
       self.Dbg_functions_ctrl_bits_LoNibble = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-16] # acr 2018-04-24 last parameter written (at the top!) in default configuration file v4
-      #acr 2018-07-10 introduced the upper nibble of "Dbg_functions_ctrl_bits": self.Dbg_functions_ctrl_bits_LoNibble = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-16] # acr 2018-04-24 last parameter written in default configuration file v4:
       self.Dbg_functions_ctrl_bits_HiNibble = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-15] # Enable simulated L1 (periodic) Trigger Generation for TCAM[3..0]
-      ## ACR 2018-03-15 AT IHEP: ADDED UDP_DATA_DESTINATION_IPADDR AND UDP_DATA_DESTINATION_IPPORT; GEMROC_CMD_DAQ_Num_of_params = 13 # acr 2018-01-15
       self.UDP_DATA_DESTINATION_IPADDR = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-14] # latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
       self.UDP_DATA_DESTINATION_IPPORT = int(TARGET_GEMROC_ID_param) # latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
       self.L1_latency_OBSOLETE = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-12] # acr 2018-07-11 IT IS OBSOLETE!!! latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
@@ -941,6 +941,33 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
                             'CMD_GEMROC_DAQ_XCVR_LPBCK_TEST'
                        ]
       self.is_a_write = 0x1
+
+      self.DAQ_config_dict = {
+        "GEMROC":                                   self.TARGET_GEMROC_ID,
+        "UDP_DATA_DESTINATION_IPADDR":              self.UDP_DATA_DESTINATION_IPADDR,
+        "Simulated_L1_latency":                     self.L1_latency_OBSOLETE,
+        "TP_width":                                 self.TP_width,
+        "L1_scan_window_UPPER_edge":                self.L1_win_upper_edge_offset,
+        "L1_period_simulated":                      self.L1_period,
+        "Tpulse_generation_w_L1Chk_enable":         ((self.Dbg_functions_ctrl_bits_HiNibble &0x2 )>>1),
+        "Periodic_L1En":                            ((self.Dbg_functions_ctrl_bits_HiNibble &0x1 )>>0),
+        "L1_scan_window_LOWER_edge":                self.L1_win_lower_edge_offset,
+        "TP_period":                                self.TP_period,
+        "Periodic_TP_EN_pattern":                   self.Periodic_TP_EN_pattern,
+        "Enable_DAQPause_Until_First_Trigger":      ((self.Dbg_functions_ctrl_bits_LoNibble &0x8)>>3),
+        "DAQPause_Set":                             ((self.Dbg_functions_ctrl_bits_LoNibble &0x4)>>2),
+        "Tpulse_generation_w_ext_trigger_enable":   ((self.Dbg_functions_ctrl_bits_LoNibble &0x2)>>1),
+        "EXT_nINT_B3clk":                           ((self.Dbg_functions_ctrl_bits_LoNibble &0x1)>>0),
+        "TL_nTM_ACQ":                               self.TL_nTM_ACQ,
+        "AUTO_L1_EN":                               self.AUTO_L1_EN_bit,
+        "AUTO_TP_EN":                               self.AUTO_TP_EN_bit,
+        "TP_Pos_nNeg":                              self.TP_Pos_nNeg,
+        "EN_TM_TCAM_pattern":                       self.EN_TM_TCAM_pattern,
+        "UDP_DATA_DESTINATION_IPPORT":              self.UDP_DATA_DESTINATION_IPPORT,
+        "number_of_repetitions":                    self.number_of_repetitions,
+        "target_TCAM_ID":                           self.target_TCAM_ID,
+        "TO_ALL_TCAM_EN":                           self.to_ALL_TCAM_enable
+      }
       for i in range (0, len(self.command_list)):
          if (self.command_string == self.command_list[i]):
             self.gemroc_cmd_code = i
@@ -1057,7 +1084,34 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
             self.gemroc_cmd_code = i
 
 ## acr 2018-01-15 updated definition: zero all setting when it's a 'CMD_GEMROC_DAQ_CFG_RD' ( = 2 ) or
+   def update_command_words_dict(self):
+       if ( ((self.gemroc_cmd_code & 0xF) != 0x0) and ((self.gemroc_cmd_code & 0xF) != 0x1) ):
+           self.cmd_header &= ~(0xFF << 8)
+           self.cmd_word3  = 0
+           self.cmd_word2  = 0
+           self.cmd_word1  = 0
+           self.cmd_word0 = ((self.DAQ_config_dict["number_of_repetitions"] & 0x3FF) << 16) + ((self.gemroc_cmd_code & 0xF) << 11) + ((self.DAQ_config_dict["target_TCAM_ID"] & 0x3) << 8) + ((self.DAQ_config_dict["TO_ALL_TCAM_EN"] & 0x1) << 6)
+       else:
+           Dbg_functions_ctrl_bits_HiNibble= ((self.DAQ_config_dict["Tpulse_generation_w_L1Chk_enable"] &0x1 )<<1) +((self.DAQ_config_dict["Periodic_L1En"] &0x1 )<<0)
+           Dbg_functions_ctrl_bits_LoNibble=((self.DAQ_config_dict["Enable_DAQPause_Until_First_Trigger"] &0x1)<<3 ) +((self.DAQ_config_dict["DAQPause_Set"] &0x1 )<<2)+((self.DAQ_config_dict["Tpulse_generation_w_ext_trigger_enable"] &0x1 )<<1) +((self.DAQ_config_dict["EXT_nINT_B3clk"] & 0x1 )<<0)
+           print self.DAQ_config_dict["Tpulse_generation_w_ext_trigger_enable"]
+           self.cmd_header &= ~(0xFF << 8)
+           self.cmd_header += ((self.DAQ_config_dict["UDP_DATA_DESTINATION_IPADDR"] & 0xFF)<<8)
+           self.cmd_word3 = ((self.DAQ_config_dict["Simulated_L1_latency"] & 0x3FF) << 20) + ((self.DAQ_config_dict["TP_width"] & 0xF) << 16) + (self.DAQ_config_dict["L1_scan_window_UPPER_edge"] & 0xFFFF)
+           self.cmd_word2 = ((self.DAQ_config_dict["L1_period_simulated"]  & 0x3FF) << 20) + ((self.DAQ_config_dict["Tpulse_generation_w_L1Chk_enable"] &0x1 )<<17) +((self.DAQ_config_dict["Periodic_L1En"] &0x1 )<<16) + (self.DAQ_config_dict["L1_scan_window_LOWER_edge"] & 0xFFFF)
+           self.cmd_word1 = ((self.DAQ_config_dict["TP_period"] & 0x3FF) << 20) + ((self.DAQ_config_dict["Periodic_TP_EN_pattern"] & 0xF) << 16) +((self.DAQ_config_dict["Enable_DAQPause_Until_First_Trigger"] &0x1)<<15 ) +((self.DAQ_config_dict["DAQPause_Set"] &0x1 )<<14)+((self.DAQ_config_dict["Tpulse_generation_w_ext_trigger_enable"] &0x1 )<<13) +((self.DAQ_config_dict["EXT_nINT_B3clk"] & 0x1 )<<12)+ ((self.DAQ_config_dict["TL_nTM_ACQ"] & 0x1) << 11) + ((self.DAQ_config_dict["AUTO_L1_EN"] & 0x1) << 10) + ((self.DAQ_config_dict["AUTO_TP_EN"] & 0x1) << 9) + ((self.DAQ_config_dict["TP_Pos_nNeg"] & 0x1) << 8)  + (self.DAQ_config_dict["EN_TM_TCAM_pattern"] & 0xFF)
+           self.cmd_word0 = ((self.DAQ_config_dict["UDP_DATA_DESTINATION_IPPORT"] & 0xF)<<26) + ((self.DAQ_config_dict["number_of_repetitions"] & 0x3FF) << 16) + ((self.gemroc_cmd_code & 0xF) << 11) + ((self.DAQ_config_dict["target_TCAM_ID"] & 0x3) << 8 )+ ((self.DAQ_config_dict["TO_ALL_TCAM_EN"] & 0x1) << 6)
+           # self.cmd_word0 = ((self.UDP_DATA_DESTINATION_IPPORT & 0xF) << 26) + ((self.number_of_repetitions & 0x3FF) << 16) + ((self.gemroc_cmd_code & 0xF) << 11) + ((self.target_TCAM_ID & 0x3) << 8) + ((self.to_ALL_TCAM_enable & 0x1) << 6)
+
+       self.command_words = [ self.cmd_header,
+                             self.cmd_word3,
+                             self.cmd_word2,
+                             self.cmd_word1,
+                             self.cmd_word0
+                             ]
+
    def update_command_words(self):
+
        if ( ((self.gemroc_cmd_code & 0xF) != 0x0) and ((self.gemroc_cmd_code & 0xF) != 0x1) ):
            self.cmd_header &= ~(0xFF << 8)
            self.cmd_word3  = 0
@@ -1068,11 +1122,12 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
            self.cmd_header &= ~(0xFF << 8)
            self.cmd_header += ((self.UDP_DATA_DESTINATION_IPADDR & 0xFF)<<8)
            self.cmd_word3 = ((self.L1_latency_OBSOLETE & 0x3FF) << 20) + ((self.TP_width & 0xF) << 16) + (self.L1_win_upper_edge_offset & 0xFFFF)
+
            # acr 2018-07-11 BEGIN
            # self.cmd_word2 = ((self.L1_period  & 0x3FF) << 20) + ((self.Dbg_functions_ctrl_bits_HiNibble  & 0xF) << 16) + (self.L1_win_lower_edge_offset & 0xFFFF)
            # self.cmd_word1 = ((self.TP_period & 0x3FF) << 20) + ((self.Periodic_TP_EN_pattern & 0xF) << 16) + ((self.Dbg_functions_ctrl_bits_U8 & 0xF) << 12) + ((self.TL_nTM_ACQ & 0x1) << 11) + ((self.AUTO_L1_EN_pattern & 0x1) << 10) + ((self.AUTO_TP_EN_pattern & 0x1) << 9) + ((self.TP_Pos_nNeg & 0x1) << 8)  + (self.EN_TM_TCAM_pattern & 0xFF)
            self.cmd_word2 = ((self.L1_period  & 0x3FF) << 20) + ((self.Dbg_functions_ctrl_bits_HiNibble  & 0xF) << 16) + (self.L1_win_lower_edge_offset & 0xFFFF)
-           self.cmd_word1 = ((self.TP_period & 0x3FF) << 20) + ((self.Periodic_TP_EN_pattern & 0xF) << 16) + ((self.Dbg_functions_ctrl_bits_LoNibble & 0xF) << 12) + ((self.TL_nTM_ACQ & 0x1) << 11) + ((self.AUTO_L1_EN_bit & 0x1) << 10) + ((self.AUTO_L1_EN_bit & 0x1) << 9) + ((self.TP_Pos_nNeg & 0x1) << 8)  + (self.EN_TM_TCAM_pattern & 0xFF)
+           self.cmd_word1 = ((self.TP_period & 0x3FF) << 20) + ((self.Periodic_TP_EN_pattern & 0xF) << 16) + ((self.Dbg_functions_ctrl_bits_LoNibble & 0xF) << 12) + ((self.TL_nTM_ACQ & 0x1) << 11) + ((self.AUTO_L1_EN_bit & 0x1) << 10) + ((self.AUTO_TP_EN_bit & 0x1) << 9) + ((self.TP_Pos_nNeg & 0x1) << 8)  + (self.EN_TM_TCAM_pattern & 0xFF)
            # acr 2018-07-11 END
            self.cmd_word0 = ((self.UDP_DATA_DESTINATION_IPPORT & 0xF)<<26) + ((self.number_of_repetitions & 0x3FF) << 16) + ((self.gemroc_cmd_code & 0xF) << 11) + ((self.target_TCAM_ID & 0x3) << 8) + ((self.to_ALL_TCAM_enable & 0x1) << 6)
        self.command_words = [ self.cmd_header,

@@ -262,16 +262,17 @@ class analisys_conf: #Analysis class used for configurations10
 
         X = "Autotune done"
     def thr_conf_using_GEMROC_COUNTERS_progress_bar(self,test_r, first_TIGER_to_SCAN, last_TIGER_to_SCAN,pipe_out,print_to_screen=True):
-
+#TODO change TP enable with proper command
         with open(self.log_path, 'a') as log_file:
             log_file.write("{} -- Starting thr scan\n".format(time.ctime()))
         thr_scan_matrix=np.zeros((8,64,64))
         for T in range(first_TIGER_to_SCAN, last_TIGER_to_SCAN):
+            self.GEM_COM.sfo
             self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, 64, 1, 3)
             self.GEM_COM.DAQ_set(0, 0, 0, 0, 1, 1)
 
             for j in range (0,64):  #Channel cycle
-                self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 0, 0)
+                self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 0)
                 for i in range(0,64):#VTH Cycle, i)**
                         # with open(self.log_path, 'a') as log_file:
                         command_sent = self.GEM_COM.Set_Vth_T1(self.c_inst, T, j, i)
@@ -294,6 +295,28 @@ class analisys_conf: #Analysis class used for configurations10
                 self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 3)
 
         return thr_scan_matrix
+
+
+    def noise_scan_using_GEMROC_COUNTERS_progress_bar(self, T,j,i, print_to_screen=True):
+
+        self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode", T, j, 0)
+        self.GEM_COM.Set_param_dict_channel(self.c_inst, "Vth_T1", T, j, i)
+        self.GEM_COM.set_counter(T, 0, j)
+        self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
+        #self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
+        self.GEM_COM.reset_counter()
+        time.sleep(0.1)
+        value = self.GEM_COM.GEMROC_counter_get()
+        print value
+        if print_to_screen:
+            os.system('clear')
+            string = "SCANNING [TIGER={}, VTh={}, CH={}]\n".format(T, i, j)
+            sys.stdout.write(string)
+
+        self.GEM_COM.Set_param_dict_channel(self.c_inst, "TriggerMode", T, j, 3)
+
+        return value
+
     def acquire_rate(self, frame_count, rate_matrix,test_r):
         try:
             data, addr = test_r.dataSock.recvfrom(BUFSIZE)
@@ -822,7 +845,8 @@ class analisys_conf: #Analysis class used for configurations10
     def __del__(self):
         return 0
 class analisys_read:
-    def __init__(self, com, c_inst):
+    def __init__(self, com, c_inst,rate=0):
+        self.TP_rate=rate
         self.c_inst=c_inst
         self.GEM_COM=com
         self.GEMROC_ID=self.GEM_COM.GEMROC_ID
@@ -1023,7 +1047,6 @@ class analisys_read:
 
     def normalize_rate(self,first_TIGER_to_SCAN,last_TIGER_to_scan):
         for T in range(first_TIGER_to_SCAN, last_TIGER_to_scan):
-
             for z in range(0, 64):
                 max = np.max(self.thr_scan_rate[T, z, :])
                 self.thr_scan_rate[T, z, :] = self.thr_scan_rate[T, z, :] / max
@@ -1032,6 +1055,11 @@ class analisys_read:
                 #         for j in range (i,64):
                 #             if self.thr_scan_rate[T, z, j] <0.9: #Force to 1 all the values after the max, necessary for convergence
                 #                 self.thr_scan_rate[T, z, j]=1
+
+    def global_sfit_noise(self, scan_matrix):
+        TP_rate=10000 #Set accordingly with the test pulse generator
+
+        self.close()
 
     def global_sfit(self,first_TIGER_to_SCAN, last_TIGER_to_scan, retry=False):
         for T in range(first_TIGER_to_SCAN, last_TIGER_to_scan):
@@ -1148,7 +1176,7 @@ class analisys_read:
         showplot = True
         # ydata = ydata
         for i, ytest in enumerate(ydata):
-            if ytest > 0.9:
+            if ytest> self.TP_rate*1.2:
                 m = i
                 break
         xdata = np.arange(0, int(m) )
