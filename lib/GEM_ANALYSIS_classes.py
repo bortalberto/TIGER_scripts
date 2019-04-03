@@ -300,6 +300,8 @@ class analisys_conf: #Analysis class used for configurations10
     def noise_scan_using_GEMROC_COUNTERS_progress_bar(self, T,j,i, print_to_screen=True):
 
         self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode", T, j, 0)
+        self.GEM_COM.Set_param_dict_channel(self.c_inst,"TP_disable_FE", T, j, 0)
+
         self.GEM_COM.Set_param_dict_channel(self.c_inst, "Vth_T1", T, j, i)
         self.GEM_COM.set_counter(T, 0, j)
         self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
@@ -314,6 +316,7 @@ class analisys_conf: #Analysis class used for configurations10
             sys.stdout.write(string)
 
         self.GEM_COM.Set_param_dict_channel(self.c_inst, "TriggerMode", T, j, 3)
+        self.GEM_COM.Set_param_dict_channel(self.c_inst,"TP_disable_FE", T, j, 1)
 
         return value
 
