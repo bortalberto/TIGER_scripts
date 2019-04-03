@@ -296,7 +296,6 @@ class analisys_conf: #Analysis class used for configurations10
 
         return thr_scan_matrix
 
-
     def noise_scan_using_GEMROC_COUNTERS_progress_bar(self, T,j,i, print_to_screen=True):
 
         self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode", T, j, 0)
