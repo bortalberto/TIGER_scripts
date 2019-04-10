@@ -45,7 +45,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.log_file.write("Tiger configuration log file")
         self.IVT_log_fname = "."+sep+"log_folder"+sep+"GEMROC{}_IVT_log_{}.txt".format(self.GEMROC_ID,datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         self.IVT_log_file = open(self.IVT_log_fname, 'w')
-
+        self.DiagnDPRAM_data_log_fname="."+sep+"log_folder"+sep+"GEMROC{}_Diagn_log_{}.txt".format(self.GEMROC_ID,datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         self.success_counter=0
         self.fail_counter=0
         local_test=True
@@ -804,13 +804,10 @@ class communication: ##The directory are declared here to avoid multiple declara
 
     # acr 2018-04-23
 
-    def Soft_TP_generate(self,TP_Num_in_burst_param):
+    def Soft_TP_generate(self):
         # acr 2018-11-02 updated paradigm definition END
-        self.gemroc_DAQ_XX.set_target_GEMROC(self.GEMROC_ID)
-        self.gemroc_DAQ_XX.set_TP_period(10)
-        number_of_repetitions = TP_Num_in_burst_param
         COMMAND_STRING = 'CMD_GEMROC_DAQ_TP_GEN'
-        command_echo = self.send_GEMROC_DAQ_CMD_num_rep( COMMAND_STRING, number_of_repetitions)
+        command_echo = self.send_GEMROC_DAQ_CMD(self.gemroc_DAQ_XX,COMMAND_STRING)
         return command_echo
 
 
@@ -1191,25 +1188,21 @@ class communication: ##The directory are declared here to avoid multiple declara
             print '\n number_of_repetitions = %d' % number_of_repetitions
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
         # acr 2018-04-023 command_echo = send_GEMROC_DAQ_CMD(self.GEMROC_ID, gemroc_DAQ_inst, COMMAND_STRING)
-        command_echo = self.send_GEMROC_DAQ_CMD_num_rep(gemroc_DAQ_inst, COMMAND_STRING, number_of_repetitions)
+        command_echo = self.send_GEMROC_DAQ_CMD_num_rep(COMMAND_STRING, number_of_repetitions)
         return command_echo
     #NEW DAQ SET
-    def DAQ_set(self, TCAM_Enable_pattern_param, Per_FEB_TP_Enable_pattern_param, TP_repeat_burst_param, TP_Num_in_burst_param, TL_nTM_ACQ_param, Per_L1_En_bit_param, Enab_Auto_L1_from_TP_bit_param=0, print_mode=False):
+    def DAQ_set(self, TCAM_Enable_pattern_param, Per_FEB_TP_Enable_pattern_param, TP_repeat_burst_param, TP_Num_in_burst_param, TL_nTM_ACQ_param, Per_L1_En_bit_param, Enab_Auto_L1_from_TP_bit_param=0):
         self.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"]=(TCAM_Enable_pattern_param)
         self.gemroc_DAQ_XX.DAQ_config_dict["Periodic_TP_EN_pattern"]=(Per_FEB_TP_Enable_pattern_param)
         self.gemroc_DAQ_XX.DAQ_config_dict["Periodic_L1En"]=Per_L1_En_bit_param
         self.gemroc_DAQ_XX.DAQ_config_dict["AUTO_L1_EN"]=Enab_Auto_L1_from_TP_bit_param
         self.gemroc_DAQ_XX.DAQ_config_dict["TL_nTM_ACQ"]=(TL_nTM_ACQ_param)
-        self.gemroc_DAQ_XX.DAQ_config_dict["number_of_repetitions"] = ((TP_repeat_burst_param & 0X1) << 9) + TP_Num_in_burst_param
         self.DAQ_set_with_dict()
 
 
     def DAQ_set_with_dict(self):
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
-        number_of_repetitions = self.gemroc_DAQ_XX.DAQ_config_dict["number_of_repetitions"]
-        self.gemroc_DAQ_XX.set_gemroc_cmd_code(COMMAND_STRING, number_of_repetitions)
-        self.gemroc_DAQ_XX.update_command_words()
-
+        self.gemroc_DAQ_XX.set_gemroc_cmd_code(COMMAND_STRING)
         self.gemroc_DAQ_XX.update_command_words_dict()
         array_to_send = self.gemroc_DAQ_XX.command_words
         command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
@@ -1619,6 +1612,10 @@ class communication: ##The directory are declared here to avoid multiple declara
             print ('L1_period: %d' % ((L_array[2] >> 20) & 0x3FF))
             print ('Debug_Funct_Ctl_patt_Hi4bit: %X' % ((L_array[2] >> 16) & 0xF))
             print ('Debug_Funct_Ctl_patt_Lo4bit: %X' % ((L_array[3] >> 12) & 0xF))  # acr 2018-11-02
+            print ('Dbg_functions_ctrl_bits_HiNibble[3].unused = %d' % ((L_array[2] >> 19) & 0x1) )
+            print ('Dbg_functions_ctrl_bits_HiNibble[2].simul_besiii_clk_gen_en = %d' % ((L_array[2] >> 18) & 0x1) )
+            print ('Dbg_functions_ctrl_bits_HiNibble[1].Tpulse_generation_w_L1Chk_enable = %d' % ((L_array[2] >> 17) & 0x1) )
+            print ('Dbg_functions_ctrl_bits_HiNibble[0].Periodic_L1En = %d' % ((L_array[2] >> 16) & 0x1) )
             print ('Debug_Fun_Ctl_Lo4bit[3] = Enable_DAQPause_Until_First_Trigger: %X' % ((L_array[3] >> 15) & 0x1))  # acr 2018-11-02
             print ('Debug_Fun_Ctl_Lo4bit[2] = DAQPause_Set                       : %X' % ((L_array[3] >> 14) & 0x1))  # acr 2018-11-02
             print ('Debug_Fun_Ctl_Lo4bit[1] = Tpulse_gen_w_ext_trigger_enable    : %X' % ((L_array[3] >> 13) & 0x1))  # acr 2018-11-02
@@ -1634,6 +1631,8 @@ class communication: ##The directory are declared here to avoid multiple declara
             print ('number_of_repetitions: %d' % ((L_array[4] >> 16) & 0x3FF))
             print ('target_TCAM_ID: %d' % ((L_array[4] >> 8) & 0x3))
             print ('to_ALL_TCAM_enable: %d' % ((L_array[4] >> 6) & 0x1))
+            print ('DAQPause_Flag: %d' % ((L_array[4] >> 1) & 0x1))  # acr 2019-03-14
+            print ('top_daq_pll_unlocked_sticky_flag: %d' % ((L_array[4] >> 0) & 0x1))  # acr 2019-03-14
         if (log_enable_param == 1):
             self.log_file.write(
                 '\nList of DAQ related GEMROC Config Register parameters read back RESPONDING GEMROC%d:' % (
@@ -1661,6 +1660,9 @@ class communication: ##The directory are declared here to avoid multiple declara
             self.log_file.write('\nnumber_of_repetitions: %d' % ((L_array[4] >> 16) & 0x3FF))
             self.log_file.write('\ntarget_TCAM_ID: %d' % ((L_array[4] >> 8) & 0x3))
             self.log_file.write('\nto_ALL_TCAM_enable: %d' % ((L_array[4] >> 6) & 0x1))
+            self.log_file.write('\nDAQPause_Flag: %d' % ((L_array[4] >> 1) & 0x1))
+            self.log_file.write('\ntop_daq_pll_unlocked_sticky_flag: %d' % ((L_array[4] >> 0) & 0x1))
+
 
 
     def Read_GEMROC_DAQ_CfgReg(self):
@@ -1848,3 +1850,130 @@ class communication: ##The directory are declared here to avoid multiple declara
                     break
 
         return command_echo_f
+
+    # acr 2019-02-19 BEGIN
+    def Access_diagn_DPRAM_read_and_log(self, display_enable_param, log_enable_param):  # acr 2019-02-19
+        # acr 2019-02-19 not foreseen for the moment resources to send the auxiliary configuration word to be writtern to the diagn_dpram address 0 (a new word in the DAQ CMD packet would be needed)
+        COMMAND_STRING = 'CMD_GEMROC_DAQ_DIAGN_DPRAM_ACCESS'
+        self.gemroc_DAQ_XX.set_gemroc_cmd_code(COMMAND_STRING)
+        self.gemroc_DAQ_XX.update_command_words()
+        array_to_send = self.gemroc_DAQ_XX.update_command_words_dict()
+        command_echo_diagn_dpram_data_rdback = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING, array_to_send,
+                                                                       self.DEST_IP_ADDRESS,self.DEST_PORT_NO)
+        self.display_and_log_diagn_dpram_data(command_echo_diagn_dpram_data_rdback, display_enable_param, log_enable_param)  # acr 2018-11-27 log_file mode updated*
+
+    def display_and_log_diagn_dpram_data(self,command_echo_param, display_enable_param, log_enable_param):
+        L_array = array.array('I')  # L is an array of unsigned long
+        L_array.fromstring(command_echo_param)
+        L_array.byteswap()
+        L_array_size = len(L_array)
+        print '\n L_array_size: %d' % L_array_size
+        time.sleep(1)
+        for i in range(0, L_array_size, 1):
+            print '\nL_array[%d]: %08X' % (i, L_array[i])
+        time.sleep(1)
+        GEMROC_CMD_DAQ_Num_PktWords = GEM_CONF_classes.GEMROC_CMD_DAQ_Num_Of_PktWords  # acr 2019-02-19
+        print '\n GEMROC_CMD_DAQ_Num_PktWords = %d' % GEMROC_CMD_DAQ_Num_PktWords
+        time.sleep(1)
+        ## print L_array
+        TL_in_buf_full_feb0_t0_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 0]
+        TL_in_buf_full_feb0_t1_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 1]
+        TL_in_buf_full_feb1_t0_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 2]
+        TL_in_buf_full_feb1_t1_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 3]
+        TL_in_buf_full_feb2_t0_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 4]
+        TL_in_buf_full_feb2_t1_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 5]
+        TL_in_buf_full_feb3_t0_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 6]
+        TL_in_buf_full_feb3_t1_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 7]
+        #
+        TM_in_buf_full_feb0_t0_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 8 + 0]
+        TM_in_buf_full_feb0_t1_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 8 + 1]
+        TM_in_buf_full_feb1_t0_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 8 + 2]
+        TM_in_buf_full_feb1_t1_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 8 + 3]
+        TM_in_buf_full_feb2_t0_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 8 + 4]
+        TM_in_buf_full_feb2_t1_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 8 + 5]
+        TM_in_buf_full_feb3_t0_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 8 + 6]
+        TM_in_buf_full_feb3_t1_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 8 + 7]
+        #
+        TL_mrgr_buf_full_feb0_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 16 + 0]
+        TL_mrgr_buf_full_feb1_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 16 + 1]
+        TL_mrgr_buf_full_feb2_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 16 + 2]
+        TL_mrgr_buf_full_feb3_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 16 + 3]
+        #
+        TM_evnt_fifo_full_feb0_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 16 + 4]
+        TM_evnt_fifo_full_feb1_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 16 + 5]
+        TM_evnt_fifo_full_feb2_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 16 + 6]
+        TM_evnt_fifo_full_feb3_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 16 + 7]
+        #
+        TL_AB_merger_fifo_full_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 24]
+        TL_CD_merger_fifo_full_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 25]
+        TM_AB_merger_fifo_full_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 26]
+        TM_CD_merger_fifo_full_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 27]
+        TM_OUT_fifo_full_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 28]
+        #
+        top_pll_unlocked_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 29]
+        top_daq_pll_unlocked_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 30]
+        # acr 2019-03-06
+        L1_choke_req_from_top_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 31]  # acr 2019-03-06
+        XCVR_TX_pll_unlocked_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 32]  # acr 2019-03-06
+        XCVR_Input_link_rx_err_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 33]  # acr 2019-03-06
+        #
+        del L_array
+        if (display_enable_param == 1):
+            print '\n' + 'TL_in_buf_full_feb0_t0_cntr: ' + '%d; ' % TL_in_buf_full_feb0_t0_cntr + 'TL_in_buf_full_feb0_t1_cntr: ' + '%d; ' % TL_in_buf_full_feb0_t1_cntr
+            print '\n' + 'TL_in_buf_full_feb1_t0_cntr: ' + '%d; ' % TL_in_buf_full_feb1_t0_cntr + 'TL_in_buf_full_feb1_t1_cntr: ' + '%d; ' % TL_in_buf_full_feb1_t1_cntr
+            print '\n' + 'TL_in_buf_full_feb2_t0_cntr: ' + '%d; ' % TL_in_buf_full_feb2_t0_cntr + 'TL_in_buf_full_feb2_t1_cntr: ' + '%d; ' % TL_in_buf_full_feb2_t1_cntr
+            print '\n' + 'TL_in_buf_full_feb3_t0_cntr: ' + '%d; ' % TL_in_buf_full_feb3_t0_cntr + 'TL_in_buf_full_feb3_t1_cntr: ' + '%d; ' % TL_in_buf_full_feb3_t1_cntr
+            print '\n' + 'TM_in_buf_full_feb0_t0_cntr: ' + '%d; ' % TM_in_buf_full_feb0_t0_cntr + 'TM_in_buf_full_feb0_t1_cntr: ' + '%d; ' % TM_in_buf_full_feb0_t1_cntr
+            print '\n' + 'TM_in_buf_full_feb1_t0_cntr: ' + '%d; ' % TM_in_buf_full_feb1_t0_cntr + 'TM_in_buf_full_feb1_t1_cntr: ' + '%d; ' % TM_in_buf_full_feb1_t1_cntr
+            print '\n' + 'TM_in_buf_full_feb2_t0_cntr: ' + '%d; ' % TM_in_buf_full_feb2_t0_cntr + 'TM_in_buf_full_feb2_t1_cntr: ' + '%d; ' % TM_in_buf_full_feb2_t1_cntr
+            print '\n' + 'TM_in_buf_full_feb3_t0_cntr: ' + '%d; ' % TM_in_buf_full_feb3_t0_cntr + 'TM_in_buf_full_feb3_t1_cntr: ' + '%d; ' % TM_in_buf_full_feb3_t1_cntr
+            print '\n' + 'TL_mrgr_buf_full_feb0_cntr: ' + '%d; ' % TL_mrgr_buf_full_feb0_cntr + 'TL_mrgr_buf_full_feb1_cntr: ' + '%d; ' % TL_mrgr_buf_full_feb1_cntr
+            print '\n' + 'TL_mrgr_buf_full_feb2_cntr: ' + '%d; ' % TL_mrgr_buf_full_feb2_cntr + 'TL_mrgr_buf_full_feb3_cntr: ' + '%d; ' % TL_mrgr_buf_full_feb3_cntr
+            print '\n' + 'TM_evnt_fifo_full_feb0_cntr: ' + '%d; ' % TM_evnt_fifo_full_feb0_cntr + 'TM_evnt_fifo_full_feb1_cntr: ' + '%d; ' % TM_evnt_fifo_full_feb1_cntr
+            print '\n' + 'TM_evnt_fifo_full_feb2_cntr: ' + '%d; ' % TM_evnt_fifo_full_feb2_cntr + 'TM_evnt_fifo_full_feb3_cntr: ' + '%d; ' % TM_evnt_fifo_full_feb3_cntr
+            print '\n' + 'TL_AB_merger_fifo_full_cntr: ' + '%d; ' % TL_AB_merger_fifo_full_cntr + 'TL_CD_merger_fifo_full_cntr: ' + '%d; ' % TL_CD_merger_fifo_full_cntr
+            print '\n' + 'TM_AB_merger_fifo_full_cntr: ' + '%d; ' % TM_AB_merger_fifo_full_cntr + 'TM_CD_merger_fifo_full_cntr: ' + '%d; ' % TM_CD_merger_fifo_full_cntr
+            print '\n' + 'TM_OUT_fifo_full_cntr: ' + '%d; ' % TM_OUT_fifo_full_cntr
+            print '\n' + 'top_pll_unlocked_cntr: ' + '%d; ' % top_pll_unlocked_cntr + 'top_daq_pll_unlocked_cntr: ' + '%d; ' % top_daq_pll_unlocked_cntr
+            print '\n' + 'L1_choke_req_from_top_cntr: ' + '%d; ' % L1_choke_req_from_top_cntr
+            print '\n' + 'XCVR_TX_pll_unlocked_cntr: ' + '%d; ' % XCVR_TX_pll_unlocked_cntr
+            print '\n' + 'XCVR_Input_link_rx_err_cntr: ' + '%d; ' % XCVR_Input_link_rx_err_cntr
+
+        if (log_enable_param == 1):
+            with open(self.DiagnDPRAM_data_log_fname, 'a') as DiagnDPRAM_data_log_file:
+                DiagnDPRAM_data_log_file.write('\n%s' % datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
+                DiagnDPRAM_data_log_file.write('\n' + 'TL_in_buf_full_feb0_t0_cntr: ' + '%d; ' % TL_in_buf_full_feb0_t0_cntr + 'TL_in_buf_full_feb0_t1_cntr: ' + '%d; ' % TL_in_buf_full_feb0_t1_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TL_in_buf_full_feb1_t0_cntr: ' + '%d; ' % TL_in_buf_full_feb1_t0_cntr + 'TL_in_buf_full_feb1_t1_cntr: ' + '%d; ' % TL_in_buf_full_feb1_t1_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TL_in_buf_full_feb2_t0_cntr: ' + '%d; ' % TL_in_buf_full_feb2_t0_cntr + 'TL_in_buf_full_feb2_t1_cntr: ' + '%d; ' % TL_in_buf_full_feb2_t1_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TL_in_buf_full_feb3_t0_cntr: ' + '%d; ' % TL_in_buf_full_feb3_t0_cntr + 'TL_in_buf_full_feb3_t1_cntr: ' + '%d; ' % TL_in_buf_full_feb3_t1_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TM_in_buf_full_feb0_t0_cntr: ' + '%d; ' % TM_in_buf_full_feb0_t0_cntr + 'TM_in_buf_full_feb0_t1_cntr: ' + '%d; ' % TM_in_buf_full_feb0_t1_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TM_in_buf_full_feb1_t0_cntr: ' + '%d; ' % TM_in_buf_full_feb1_t0_cntr + 'TM_in_buf_full_feb1_t1_cntr: ' + '%d; ' % TM_in_buf_full_feb1_t1_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TM_in_buf_full_feb2_t0_cntr: ' + '%d; ' % TM_in_buf_full_feb2_t0_cntr + 'TM_in_buf_full_feb2_t1_cntr: ' + '%d; ' % TM_in_buf_full_feb2_t1_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TM_in_buf_full_feb3_t0_cntr: ' + '%d; ' % TM_in_buf_full_feb3_t0_cntr + 'TM_in_buf_full_feb3_t1_cntr: ' + '%d; ' % TM_in_buf_full_feb3_t1_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TL_mrgr_buf_full_feb0_cntr: ' + '%d; ' % TL_mrgr_buf_full_feb0_cntr + 'TL_mrgr_buf_full_feb1_cntr: ' + '%d; ' % TL_mrgr_buf_full_feb1_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TL_mrgr_buf_full_feb2_cntr: ' + '%d; ' % TL_mrgr_buf_full_feb2_cntr + 'TL_mrgr_buf_full_feb3_cntr: ' + '%d; ' % TL_mrgr_buf_full_feb3_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TM_evnt_fifo_full_feb0_cntr: ' + '%d; ' % TM_evnt_fifo_full_feb0_cntr + 'TM_evnt_fifo_full_feb1_cntr: ' + '%d; ' % TM_evnt_fifo_full_feb1_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TM_evnt_fifo_full_feb2_cntr: ' + '%d; ' % TM_evnt_fifo_full_feb2_cntr + 'TM_evnt_fifo_full_feb3_cntr: ' + '%d; ' % TM_evnt_fifo_full_feb3_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TL_AB_merger_fifo_full_cntr: ' + '%d; ' % TL_AB_merger_fifo_full_cntr + 'TL_CD_merger_fifo_full_cntr: ' + '%d; ' % TL_CD_merger_fifo_full_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TM_AB_merger_fifo_full_cntr: ' + '%d; ' % TM_AB_merger_fifo_full_cntr + 'TM_CD_merger_fifo_full_cntr: ' + '%d; ' % TM_CD_merger_fifo_full_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TM_OUT_fifo_full_cntr: ' + '%d; ' % TM_OUT_fifo_full_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'top_pll_unlocked_cntr: ' + '%d; ' % top_pll_unlocked_cntr + 'top_daq_pll_unlocked_cntr: ' + '%d; ' % top_daq_pll_unlocked_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'L1_choke_req_from_top_cntr: ' + '%d; ' % L1_choke_req_from_top_cntr)  # acr 2019-04-03
+                DiagnDPRAM_data_log_file.write('\n' + 'XCVR_TX_pll_unlocked_cntr: ' + '%d; ' % XCVR_TX_pll_unlocked_cntr)  # acr 2019-04-03
+                DiagnDPRAM_data_log_file.write('\n' + 'XCVR_Input_link_rx_err_cntr: ' + '%d; ' % XCVR_Input_link_rx_err_cntr)  # acr 2019-04-03
+
+    # acr 2019-02-19 END
+
+    # acr 2019-03-06 BEGIN
+    def HARDReset_Send(self):
+        COMMAND_STRING = 'CMD_GEMROC_LV_REMOTE_HARD_RESET'
+        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
+        return command_echo
+    # acr 2019-03-06 END
+    # def Change_B3Clk_sim_mode(self, B3Clk_sim_en_param):
+    #     Dbg_funct_ctrl_bits_U4_HI_localcopy |= ((B3Clk_sim_en_param & 0x1) << 2)
+    #     # print '\n Dbg_funct_ctrl_bits_U4_HI_localcopy = %x' % Dbg_funct_ctrl_bits_U4_HI_localcopy
+    #     gemroc_DAQ_inst.set_Dbg_functions_ctrl_bits_HiNibble(Dbg_funct_ctrl_bits_U4_HI_localcopy)
+    #     COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
+    #     command_echo = self.send_GEMROC_DAQ_CMD( COMMAND_STRING)
+    #     return command_echo

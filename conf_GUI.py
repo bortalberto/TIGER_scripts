@@ -50,7 +50,7 @@ class menu():
         self.all_GEMROCs = StringVar(self.main_window)
         self.rate=IntVar(self.main_window)
         # fields_options=["DAQ configuration", "LV configuration", "Global Tiger configuration", "Channel Tiger configuration"]
-        fields_options = ["DAQ configuration", "Global Tiger configuration", "Channel Tiger configuration"]
+        fields_options = ["DAQ configuration", "Global Tiger configuration", "Channel Tiger configuration","LV and diagnosis"]
         Label(self.main_window, text='Configuration', font=("Courier", 25)).pack()
         self.conf_frame = Frame(self.main_window)
         self.conf_frame.pack()
@@ -236,6 +236,10 @@ class menu():
             self.entry_text.trace("w", lambda *args: character_limit(self.entry_text))
             self.Channel_IN.grid(row=1, column=2, sticky=W, pady=4)
             self.Go = Button(self.second_row_frame, text='Go', command=self.TIGER_CHANNEL_configurator)
+            self.Go.grid(row=1, column=5, sticky=NW, pady=4)
+
+        elif self.configure_MODE.get()== "LV and diagnostic":
+            self.Go = Button(self.second_row_frame, text='Go', command=self.LV_diag)
             self.Go.grid(row=1, column=5, sticky=NW, pady=4)
 
     def power_on_FEBS(self):
@@ -593,7 +597,16 @@ class menu():
         GEMROC = self.showing_GEMROC.get()
         for T in range(0, 8):
             self.write_CHANNEL(self.GEMROC_reading_dict[GEMROC], T, 64, False)
-
+    def LV_diag(self):
+        self.third_row_frame.destroy()
+        self.third_row_frame = Frame(self.conf_frame)
+        self.third_row_frame.grid(row=2, column=0, sticky=NW, pady=4)
+        single_use_frame = Frame(self.third_row_frame)
+        single_use_frame.grid(row=0, column=0, sticky=W, pady=2)
+        Button(single_use_frame, text='Read configuration', command=self.read_DAQ_CR).grid(row=0, column=1, sticky=W, pady=2)
+        self.field_array = []
+        self.input_array = []
+        self.label_array = []
     def DAQ_configurator(self):
         self.third_row_frame.destroy()
         self.third_row_frame = Frame(self.conf_frame)
@@ -623,7 +636,6 @@ class menu():
         Label(single_use_frame,text="---").grid(row=i+2,column=1,pady=1, sticky=W)
         TP_num=Entry(single_use_frame,width="4",textvariable=self.TP_num)
         TP_num.grid(row=i+2,column=2,pady=1, sticky=W)
-
         # another_frame = Frame(self.third_row_frame)
         # another_frame.grid(row=0, column=1, sticky=W, pady=2)
         # Label(another_frame, text="Change configuration", font=("Courier", 20)).grid(row=0, column=0, columnspan=8, sticky=S, pady=5)
@@ -680,7 +692,9 @@ class menu():
         self.Clock_state.pack(side=LEFT)
         self.Pause_state.pack(side=LEFT)
         self.Acq_state.pack(side=LEFT)
-        another1=LabelFrame(self.third_row_frame)
+        another0=Frame(self.third_row_frame)
+        another0.grid(row=0, column=1, sticky=W, pady=2)
+        another1=LabelFrame(another0)
         another1.grid(row=0, column=1, sticky=W, pady=2)
         Label(another1, text="Trigger window settings", font=("Courier", 20)).grid(row=0, column=0, columnspan=8, sticky=S, pady=5)
 
@@ -700,7 +714,18 @@ class menu():
         Label(another1, text="L1_win_lower_edge_offset").grid(row=2, column=0, sticky=S, pady=0)
 
         self.L1_entry2.grid(row=2, column=3, sticky=S, pady=0)
+        another2=Frame(another0)
+        another2.grid(row=1, column=1, sticky=E, pady=2)
 
+        Button(another2,text='Hard reset',width="10",command= lambda:self.hard_reset("False")).grid(row=3,column=2,pady=20, sticky=E,columnspan=8)
+
+    def hard_reset(self,to_all):
+        if not to_all:
+            GEMROC = self.GEMROC_reading_dict[self.showing_GEMROC.get()]
+            GEMROC.GEM_COM.HARDReset_Send()
+        else:
+            for number, GEMROC in self.GEMROC_reading_dict.items():
+                GEMROC.GEM_COM.HARDReset_Send()
 
     def check_clock_state(self):
         button = self.Clock_state
@@ -745,7 +770,7 @@ class menu():
                     button['state'] = "normal"
 
                     for label, field in zip(self.label_array, self.field_array):
-                        if label.cget('text').split()[0] == "DAQPause_Set":
+                        if label.cget('text').split()[0] == "DAQPause_Flag":
                             if field.cget('text') == 1:
                                 button['text'] = "Paused"
                                 button['state'] = "normal"
@@ -898,6 +923,7 @@ class menu():
         "Enable_DAQPause_Until_First_Trigger":      ((L_array[3] >> 15) & 0x1),
         "DAQPause_Set":                             ((L_array[3] >> 14) & 0x1),
         "Tpulse_generation_w_ext_trigger_enable":   ((L_array[3] >> 13) & 0x1),
+        "B3Clk_sim_en":                             ((L_array[2] >> 18) & 0x1),
         "EXT_nINT_B3clk":                           ((L_array[3] >> 12) & 0x1),
         "TL_nTM_ACQ":                               ((L_array[3] >> 11) & 0x1),
         "AUTO_L1_EN":                               ((L_array[3] >> 10) & 0x1),
@@ -908,6 +934,8 @@ class menu():
         "number_of_repetitions":                    ((L_array[4] >> 16) & 0x3FF),
         "target_TCAM_ID":                           ((L_array[4] >> 8) & 0x3),
         "TO_ALL_TCAM_EN":                           ((L_array[4] >> 6) & 0x1),
+        "DAQPause_Flag":                            ((L_array[4] >> 1) & 0x1),
+        "top_daq_pll_unlocked_sticky_flag":         ((L_array[4] >> 0) & 0x1)
         }
         for i in range (0,len(self.label_array)):
             label=self.label_array[i]
@@ -919,60 +947,6 @@ class menu():
             entry.insert(END,DAQ_inst.DAQ_config_dict[label['text']])
 
 
-
-
-
-
-        # self.L1_field1['text']=((L_array[1] >> 0) & 0xFFFF)
-        # self.L1_field2['text']=((L_array[2] >> 0) & 0xFFFF)
-        # self.field_array[0]['text'] = ((L_array[0] >> 16) & 0X1f)
-        # self.field_array[1]['text'] = ((L_array[0] >> 8) & 0xFF)
-        # self.field_array[2]['text'] = ((L_array[4] >> 26) & 0xF)
-        # self.field_array[3]['text'] = ((L_array[1] >> 20) & 0x3FF)
-        # self.field_array[4]['text'] = ((L_array[1] >> 16) & 0xF)
-        # # self.field_array[5]['text'] = ((L_array[1] >> 0) & 0xFFFF)
-        # self.field_array[5]['text'] = ((L_array[2] >> 20) & 0x3FF)
-        # # self.field_array[7]['text'] = ((L_array[2] >> 16) & 0xF)
-        # # self.field_array[8]['text'] = ((L_array[3] >> 12) & 0xF)  # acr 2018-11-02
-        # self.field_array[6]['text'] = ((L_array[3] >> 15) & 0x1)  # acr 2018-11-02
-        # self.field_array[7]['text'] = ((L_array[3] >> 14) & 0x1)  # acr 2018-11-02
-        # self.field_array[8]['text'] = ((L_array[3] >> 13) & 0x1)  # acr 2018-11-02
-        # self.field_array[9]['text'] = ((L_array[3] >> 12) & 0x1)  # acr 2018-11-02
-        # # self.field_array[13]['text'] = ((L_array[2] >> 0) & 0xFFFF)
-        # self.field_array[10]['text'] = ((L_array[3] >> 20) & 0x3FF)
-        # self.field_array[11]['text'] = ((L_array[3] >> 16) & 0xF)
-        # self.field_array[12]['text'] = ((L_array[3] >> 11) & 0x1)
-        # self.field_array[13]['text'] = ((L_array[3] >> 10) & 0x1)
-        # self.field_array[14]['text'] = ((L_array[3] >> 9) & 0x1)
-        # self.field_array[15]['text'] = ((L_array[3] >> 8) & 0x1)
-        # self.field_array[16]['text'] = ((L_array[3] >> 0) & 0xFF)
-        # self.field_array[17]['text'] = ((L_array[4] >> 16) & 0x3FF)
-        # self.field_array[18] = ((L_array[4] >> 8) & 0x3)
-        # # self.field_array[23]['text'] = ((L_array[4] >> 6) & 0x1)
-        #
-        # self.IN1.delete(0, END)
-        # self.IN2.delete(0, END)
-        # self.IN3.delete(0, END)
-        # self.IN4.delete(0, END)
-        # self.IN5.delete(0, END)
-        # # self.IN6.delete(0,END)
-        # self.IN7.delete(0, END)
-        # self.IN8.delete(0, END)
-        #
-        # self.IN11.delete(0, END)
-        #
-        # self.IN1.insert(END, (L_array[3] >> 0) & 0xFF)
-        # self.IN2.insert(END, (L_array[3] >> 16) & 0xF)
-        # self.IN3.insert(END, (L_array[3] >> 9) & 0x1)  # TODO verificare!
-        # self.IN4.insert(END, (L_array[4] >> 16) & 0x3FF)
-        # self.IN5.insert(END, (L_array[3] >> 11) & 0x1)
-        # # self.IN6.insert(END,(L_array[3] >> 16) & 0xF)
-        # self.IN7.insert(END, 0)
-        #
-        # self.IN8.insert(END, ((L_array[3] >> 15) & 0x1))
-        # # self.IN9.insert(END,((L_array[3] >> 14) & 0x1))
-        # # self.IN10.insert(END,((L_array[3] >> 13) & 0x1))
-        # self.IN11.insert(END, ((L_array[3] >> 12) & 0x1))
         self.check_clock_state()
         self.check_pause_state()
         self.check_acq_state()
