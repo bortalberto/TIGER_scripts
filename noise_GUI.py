@@ -107,6 +107,8 @@ class menu():
 
         self.strart_button=Button(self.third_row, text ='Threshold scan',  command=self.noise_scan)
         self.strart_button.pack(side=LEFT,padx=2)
+        self.strart_button=Button(self.third_row, text ='Threshold scan on VTH2',  command= lambda: self.noise_scan(True))
+        self.strart_button.pack(side=LEFT,padx=2)
         Button(self.third_row, text="Save", command=self.SAVE).pack(side=LEFT,padx=2)
         Button(self.third_row, text="Load", command=self.LOAD).pack(side=LEFT,padx=2)
         Button(self.third_row, text="Fit", command=self.fit).pack(side=LEFT,padx=2)
@@ -239,7 +241,7 @@ class menu():
         # Label(ChannelFrame,text="Channel configurations").pack()
 
 
-    def noise_scan(self):  # if GEMROC num=-1--> To all GEMROC, if TIGER_num=-1 --> To all TIGERs
+    def noise_scan(self,vth2=False):  # if GEMROC num=-1--> To all GEMROC, if TIGER_num=-1 --> To all TIGERs
         self.bar_win = Toplevel(self.error_window)
         #self.bar_win.focus_set()  # set focus on the ProgressWindow
         #self.bar_win.grab_set()
@@ -267,7 +269,7 @@ class menu():
         i = 0
         for number, GEMROC_num in dictio.items():
             pipe_in, pipe_out = Pipe()
-            p = Process(target=self.noise_scan_process, args=(number,  pipe_out))
+            p = Process(target=self.noise_scan_process, args=(number,  pipe_out,vth2))
             # pipe_in.send(progress_bars[i])
             process_list.append(p)
             pipe_list.append(pipe_in)
@@ -310,7 +312,7 @@ class menu():
         #     g_inst = GEMROC.g_inst
         #     test_r = (AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst))
 
-    def noise_scan_process(self, number,  pipe_out):
+    def noise_scan_process(self, number,  pipe_out,vth2):
         scan_matrix=np.zeros((8,64,64))
         GEMROC = self.GEMROC_reading_dict[number]
         GEM_COM = GEMROC.GEM_COM
@@ -329,8 +331,8 @@ class menu():
         for T in range(first,last):#TIGER
             for J in range (firstch,lastch):#Channel
                 for i in range (0,64):#THR
-                    scan_matrix[T,J,i]=test_c.noise_scan_using_GEMROC_COUNTERS_progress_bar(T,J, i,False)
-                position = (T * 64+1) + (J)
+                    scan_matrix[T,J,i]=test_c.noise_scan_using_GEMROC_COUNTERS_progress_bar(T,J, i,False,vth2)
+                position = ((T-first) * (lastch-firstch)+1) + (J)
                 pipe_out.send(position)
 
 
@@ -345,7 +347,7 @@ class menu():
 
 
         print "GEMROC {} done".format(GEMROC_ID)
-        position = (last * 64 + 1) + (lastch)
+        position = (last * (lastch-firstch) + 1) + (lastch)
         pipe_out.send(position)
 
     def change_G_or_T(self, i, G_or_T):

@@ -48,7 +48,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.DiagnDPRAM_data_log_fname="."+sep+"log_folder"+sep+"GEMROC{}_Diagn_log_{}.txt".format(self.GEMROC_ID,datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         self.success_counter=0
         self.fail_counter=0
-        local_test=True
+        local_test=False
 
         if local_test:
             # HOST_DYNAMIC_IP_ADDRESS = "192.168.1.%d" %(GEMROC_ID)
@@ -79,7 +79,7 @@ class communication: ##The directory are declared here to avoid multiple declara
 
 
         self.receiveSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1   )
         self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 106496 )
         self.receiveSock.settimeout(12)
         #self.receiveSock.setblocking(False)
@@ -136,7 +136,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
         COMMAND_STRING = 'CMD_GEMROC_TIMING_DELAYS_UPDATE'
         command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
-
+        self.flush_socket()
 
         #Communication errors acquisition
         self.good_com=0
@@ -162,8 +162,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.receiveSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 106496 )
-        self.receiveSock.settimeout(12)
-
+        self.receiveSock.settimeout(1)
         self.receiveSock.bind((self.HOST_IP, self.HOST_PORT_RECEIVE))
     def test_GEMROC_communication (self):
         self.gemroc_LV_XX.set_target_GEMROC(self.GEMROC_ID)
@@ -795,7 +794,7 @@ class communication: ##The directory are declared here to avoid multiple declara
     def send_GEMROC_DAQ_CMD(self, gemroc_DAQ_inst_param, COMMAND_STRING_PARAM):
         gemroc_DAQ_inst_param.set_target_GEMROC(self.GEMROC_ID)
         gemroc_DAQ_inst_param.set_gemroc_cmd_code(COMMAND_STRING_PARAM, 1)
-        gemroc_DAQ_inst_param.update_command_words()
+        gemroc_DAQ_inst_param.update_command_words_dict()
 
         array_to_send = gemroc_DAQ_inst_param.command_words
         command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING_PARAM, array_to_send, self.DEST_IP_ADDRESS,
@@ -1856,8 +1855,8 @@ class communication: ##The directory are declared here to avoid multiple declara
         # acr 2019-02-19 not foreseen for the moment resources to send the auxiliary configuration word to be writtern to the diagn_dpram address 0 (a new word in the DAQ CMD packet would be needed)
         COMMAND_STRING = 'CMD_GEMROC_DAQ_DIAGN_DPRAM_ACCESS'
         self.gemroc_DAQ_XX.set_gemroc_cmd_code(COMMAND_STRING)
-        self.gemroc_DAQ_XX.update_command_words()
-        array_to_send = self.gemroc_DAQ_XX.update_command_words_dict()
+        self.gemroc_DAQ_XX.update_command_words_dict()
+        array_to_send = self.gemroc_DAQ_XX.command_words
         command_echo_diagn_dpram_data_rdback = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING, array_to_send,
                                                                        self.DEST_IP_ADDRESS,self.DEST_PORT_NO)
         self.display_and_log_diagn_dpram_data(command_echo_diagn_dpram_data_rdback, display_enable_param, log_enable_param)  # acr 2018-11-27 log_file mode updated*
@@ -1868,14 +1867,11 @@ class communication: ##The directory are declared here to avoid multiple declara
         L_array.byteswap()
         L_array_size = len(L_array)
         print '\n L_array_size: %d' % L_array_size
-        time.sleep(1)
-        for i in range(0, L_array_size, 1):
-            print '\nL_array[%d]: %08X' % (i, L_array[i])
-        time.sleep(1)
+        # for i in range(0, L_array_size, 1):
+        #     print '\nL_array[%d]: %08X' % (i, L_array[i])
         GEMROC_CMD_DAQ_Num_PktWords = GEM_CONF_classes.GEMROC_CMD_DAQ_Num_Of_PktWords  # acr 2019-02-19
-        print '\n GEMROC_CMD_DAQ_Num_PktWords = %d' % GEMROC_CMD_DAQ_Num_PktWords
-        time.sleep(1)
-        ## print L_array
+        # print '\n GEMROC_CMD_DAQ_Num_PktWords = %d' % GEMROC_CMD_DAQ_Num_PktWords
+        # print L_array
         TL_in_buf_full_feb0_t0_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 0]
         TL_in_buf_full_feb0_t1_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 1]
         TL_in_buf_full_feb1_t0_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 2]
