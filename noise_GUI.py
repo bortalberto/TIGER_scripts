@@ -165,8 +165,11 @@ class menu():
         self.canvas.flush_events()
         self.toolbar = NavigationToolbar2Tk(self.canvas, self.corn1)
         self.toolbar.draw()
-
-        for number, GEMROC_number in self.GEMROC_reading_dict.items():
+        #
+        # for number, GEMROC_number in self.GEMROC_reading_dict.items():
+        #     print number
+        for i in range (0,21):
+            number="GEMROC {}".format(i)
             self.scan_matrixs[number]=np.zeros((8,64,64))
             self.fits[number]={}
             self.TPfits[number]={}
@@ -176,7 +179,7 @@ class menu():
 
             self.chi[number]={}
             self.TPchi[number]={}
-
+            self.TP_settings={}
             # self.gaussians[number]={}
 
             for T in range (0,8):
@@ -188,6 +191,7 @@ class menu():
                 self.chi[number]["TIG{}".format(T)]={}
                 self.TPchi[number]["TIG{}".format(T)]={}
 
+                self.TP_settings["TIG{}".format(T)]={}
                 # self.gaussians[number]["TIG{}".format(T)] = {}
 
                 for ch in range (0,64):
@@ -199,7 +203,7 @@ class menu():
 
                     self.chi[number]["TIG{}".format(T)]["CH{}".format(ch)] = np.zeros((6,6))
                     self.TPchi[number]["TIG{}".format(T)]["CH{}".format(ch)] = np.zeros((3,3))
-
+                    self.TP_settings[number]["TIG{}".format(T)]["CH{}".format(ch)] = (25    )
 
         # self.Conf_Frame=Frame(self.error_window_main)
         # self.Conf_Frame.pack(side=LEFT,pady=10,padx=20)
@@ -259,7 +263,7 @@ class menu():
         for number, GEMROC_number in dictio.items():
             Label(self.bar_win, text='{}'.format(number)).pack()
             progress_list.append(IntVar())
-            maxim = ((self.CHANNEL_num_last.get()-self.CHANNEL_num_first.get()))*(self.TIGER_num_last.get()-self.TIGER_num_first.get())
+            maxim = ((self.CHANNEL_num_last.get()-self.CHANNEL_num_first.get()))*(self.TIGER_num_last.get()-self.TIGER_num_first.get())+1
             progress_bars.append(Progressbar(self.bar_win, maximum=maxim, orient=HORIZONTAL, variable=progress_list[i], length=200, mode='determinate'))
             progress_bars[i].pack()
 
@@ -406,7 +410,6 @@ class menu():
                 for x in range (0,64):
                     y[x]=double_error_func(x,*parameters)
                     if TPparameters[0]!="Fail":
-                        TPy[x]=errorfunc(x,*TPparameters)
                         noise = round(convert_to_fC(TPparameters[1], 55),2)
                     else:
                         noise= "Canno't fit"
@@ -437,7 +440,7 @@ class menu():
 
     def fit(self):
         for GEMROC,matrix in self.scan_matrixs.items():
-            for TIG in range (7,8):
+            for TIG in range (0,8):
                 for channel in range (0,64):
                     if any(matrix[TIG][channel]) != 0:
                         values=error_fit(matrix[TIG][channel])
@@ -510,7 +513,7 @@ def error_fit(data):
 
         chi1=squared_sum(ydata,y)/64
         end=int(round(popt1[1]-5*popt1[3]))
-        if end>5 and chi1<10000:
+        if end>5:
             xdata=xdata[:end]
             ydata=ydata[:end]
             guess=np.array([popt1[0],popt1[2],popt1[4]])

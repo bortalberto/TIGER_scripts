@@ -81,7 +81,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.receiveSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1   )
         self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 106496 )
-        self.receiveSock.settimeout(12)
+        self.receiveSock.settimeout(6)
         #self.receiveSock.setblocking(False)
         self.receiveSock.bind((self.HOST_IP, self.HOST_PORT_RECEIVE))
         self.remote_IP_Address = '192.168.1.%d' % (self.GEMROC_ID + 16)
@@ -98,20 +98,25 @@ class communication: ##The directory are declared here to avoid multiple declara
         cfg_filename =self.conf_folder+sep+ 'GEMROC_ALL_def_cfg_LV_2018_v2.txt'
         self.time_delay_path= self.conf_folder+sep+ 'time_delay_save'
         self.gemroc_LV_XX = GEM_CONF_classes.gemroc_cmd_LV_settings(self.GEMROC_ID, 'NONE', 1, cfg_filename,self.time_delay_path)
+
+        cfg_filename = self.conf_folder + sep + 'GEMROC_ALL_def_cfg_DAQ_2018_v6.txt'
+        self.gemroc_DAQ_XX = GEM_CONF_classes.gemroc_cmd_DAQ_settings(self.GEMROC_ID, 'NONE', 0, 1, 0, cfg_filename)
+
+
         self.gemroc_LV_XX.set_FEB_PWR_EN_pattern(self.FEB_PWR_EN_pattern)
 
-        self.test_GEMROC_communication()
 
-        COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
-        self.gemroc_LV_XX.set_gemroc_cmd_code(COMMAND_STRING, 1)
         self.gemroc_LV_XX.update_command_words()
         # keep gemroc_LV_XX.print_command_words()
         # keep gemroc_LV_XX.extract_parameters_from_UDP_packet()
         array_to_send = self.gemroc_LV_XX.command_words
 
+        COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
+        self.gemroc_LV_XX.set_gemroc_cmd_code(COMMAND_STRING, 1)
+
 
         command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
-                                                    self.DEST_PORT_NO)
+                                                    self.DEST_PORT_NO,retry=False)
         ##print 'CMD_GEMROC_LV_CFG_WR'
 
         ## creating an instance of the GEMROC DAQ configuration settings object
@@ -123,9 +128,6 @@ class communication: ##The directory are declared here to avoid multiple declara
         ##  to_ALL_TCAM_enable_param = 0,
 
         #cfg_filename =self.conf_folder+sep+ 'GEMROC_%d_def_cfg_DAQ_2018v5.txt' % self.GEMROC_ID
-        cfg_filename = self.conf_folder + sep + 'GEMROC_ALL_def_cfg_DAQ_2018_v6.txt'
-        self.gemroc_DAQ_XX = GEM_CONF_classes.gemroc_cmd_DAQ_settings(self.GEMROC_ID, 'NONE', 0, 1, 0, cfg_filename)
-
 
 
         ##acr 2018-03-16 added yesterday while debugging DAQ_CFG readback, removed today: gemroc_DAQ_XX.extract_parameters_from_UDP_packet()
@@ -136,9 +138,12 @@ class communication: ##The directory are declared here to avoid multiple declara
         command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
         COMMAND_STRING = 'CMD_GEMROC_TIMING_DELAYS_UPDATE'
         command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
-        self.flush_socket()
+        #self.flush_socket()
+        self.test_GEMROC_communication()
 
         #Communication errors acquisition
+        #self.receiveSock.settimeout(1)
+
         self.good_com=0
         self.bad_com=0
     def __del__(self):
@@ -159,11 +164,11 @@ class communication: ##The directory are declared here to avoid multiple declara
 
     def flush_socket(self):
         self.receiveSock.close()
-        self.receiveSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 106496 )
+        # self.receiveSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 106496 )
         self.receiveSock.settimeout(1)
-        self.receiveSock.bind((self.HOST_IP, self.HOST_PORT_RECEIVE))
+        # self.receiveSock.bind((self.HOST_IP, self.HOST_PORT_RECEIVE))
     def test_GEMROC_communication (self):
         self.gemroc_LV_XX.set_target_GEMROC(self.GEMROC_ID)
         COMMAND_STRING = 'CMD_GEMROC_LV_IVT_READ'
@@ -171,7 +176,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.gemroc_LV_XX.update_command_words()
         array_to_send = self.gemroc_LV_XX.command_words
         command_echo_ivt = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
-                                                        self.DEST_PORT_NO)
+                                                        self.DEST_PORT_NO,retry=False)
 
         # print '\nGEMROC_ID: %d: CMD_GEMROC_LV_IVT_READ' %self.GEMROC_ID
 
@@ -202,7 +207,7 @@ class communication: ##The directory are declared here to avoid multiple declara
                 break
             except:
                     if not retry:
-                        raise Exception("GEMROC {} communication timed out for 5 times".format(self.GEMROC_ID))
+                        raise Exception("GEMROC {} communication timed out".format(self.GEMROC_ID))
                         break
                     self.fail_counter+=1
                     time.sleep(1)
@@ -604,7 +609,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         cmd_message = '\nTIGER%d Global Cfg Reg CMD %s sent:\n' % (TIGER_ID_param, COMMAND_STRING_PARAM)
         i=0
 
-        while i<5:
+        while i<3:
             try:
                 self.clientSock.sendto(buffer_to_send, (DEST_IP_ADDRESS_PARAM, DEST_PORT_NO_PARAM))
 
@@ -627,8 +632,8 @@ class communication: ##The directory are declared here to avoid multiple declara
                         self.log_file.write(binascii.b2a_hex(buffer_to_send))
                     i+=1
 
-        if i==5:
-            raise Exception("GEMROC {} communication timed out for 5 times".format(self.GEMROC_ID))
+        if i==3:
+            raise Exception("GEMROC {} communication timed out for 3 times".format(self.GEMROC_ID))
 
 
         if log_save:
@@ -703,11 +708,17 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.display_and_log_IVT(command_echo_ivt, display_enable_param, log_enable_param, log_filename_param)
         return
     def GEMROC_counter_get(self):
-
         command_echo_ivt = self.Read_GEMROC_LV_CfgReg(False)
         L_array = array.array('I')  # L is an array of unsigned long, I for some systems, L for others
         L_array.fromstring(command_echo_ivt)
         L_array.byteswap()
+        # print L_array
+        while len(L_array)<8:
+            command_echo_ivt = self.Read_GEMROC_LV_CfgReg(False)
+            L_array = array.array('I')  # L is an array of unsigned long, I for some systems, L for others
+            L_array.fromstring(command_echo_ivt)
+            L_array.byteswap()
+
         counter1 =((L_array[8]) >> 22) & 0xff
         counter2 =((L_array[7]) >> 22) & 0xff
         counter3 =((L_array[6]) >> 22) & 0xff
@@ -793,7 +804,7 @@ class communication: ##The directory are declared here to avoid multiple declara
     # acr 2018-03-06 changed order of parameters of send_GEMROC_DAQ_CMD
     def send_GEMROC_DAQ_CMD(self, gemroc_DAQ_inst_param, COMMAND_STRING_PARAM):
         gemroc_DAQ_inst_param.set_target_GEMROC(self.GEMROC_ID)
-        gemroc_DAQ_inst_param.set_gemroc_cmd_code(COMMAND_STRING_PARAM, 1)
+        gemroc_DAQ_inst_param.set_gemroc_cmd_code(COMMAND_STRING_PARAM)
         gemroc_DAQ_inst_param.update_command_words_dict()
 
         array_to_send = gemroc_DAQ_inst_param.command_words
@@ -884,8 +895,8 @@ class communication: ##The directory are declared here to avoid multiple declara
         GCFGReg_setting_inst.set_command_code(COMMAND_STRING)
         GCFGReg_setting_inst.update_command_words()
         array_to_send = GCFGReg_setting_inst.command_words
-        command_echo = self.send_TIGER_GCFG_Reg_CMD_PKT(TIGER_ID_param, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
-                                                   self.DEST_PORT_NO) #Leggo due volte, la prima mi ritorna cio che ho mandato, la seconda la lettura vera.
+        # command_echo = self.send_TIGER_GCFG_Reg_CMD_PKT(TIGER_ID_param, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
+        #                                            self.DEST_PORT_NO) #Leggo due volte, la prima mi ritorna cio che ho mandato, la seconda la lettura vera.
         command_echo = self.send_TIGER_GCFG_Reg_CMD_PKT(TIGER_ID_param, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
                                                    self.DEST_PORT_NO)
         return command_echo
@@ -1963,6 +1974,7 @@ class communication: ##The directory are declared here to avoid multiple declara
     # acr 2019-03-06 BEGIN
     def HARDReset_Send(self):
         COMMAND_STRING = 'CMD_GEMROC_LV_REMOTE_HARD_RESET'
+
         command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
         return command_echo
     # acr 2019-03-06 END

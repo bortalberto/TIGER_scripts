@@ -244,8 +244,6 @@ class menu():
     def power_off_FEBS(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():
             GEMROC.GEM_COM.FEBPwrEnPattern_set(0)
-    def auto(self,GEMROC_num, TIGER_nume,rate):
-        print (rate)
     def thr_Scan(self, GEMROC_num, TIGER_num):  # if GEMROC num=-1--> To all GEMROC, if TIGER_num=-1 --> To all TIGERs
         startT=time.time()
         self.bar_win = Toplevel(self.main_window)
@@ -293,12 +291,12 @@ class menu():
                 for progress, pipe in zip(progress_list, pipe_list):
                     try:
                         progress.set(pipe.recv())
+
+                        self.bar_win.update()
+                        time.sleep(0.2)
                     except:
-                        Exception("Can't acquire status")
                         print ("Can't acquire status")
 
-                    self.bar_win.update()
-                    time.sleep(0.00001)
 
                     # print progress.get()
 
@@ -486,7 +484,7 @@ class menu():
                 line = line.rstrip('\n')
                 self.field_array.append(Label(single_use_frame, text='-'))
                 if line in self.dict_pram_list:
-                    print (self.dict_pram_list)
+                    #print (self.dict_pram_list)
                     self.input_array[line] = (Entry(single_use_frame, width=3))
                 self.label_array.append(Label(single_use_frame, text=line))
 
@@ -888,7 +886,7 @@ class menu():
                 for G in range(0, len(self.label_array)):
                     label = self.label_array[G]
                     entry = self.input_array[G]
-                    if label['text'] not in (("GEMROC","UDP_DATA_DESTINATION_IPADDR","UDP_DATA_DESTINATION_IPPORT")):
+                    if label['text'] not in (("GEMROC","UDP_DATA_DESTINATION_IPADDR","UDP_DATA_DESTINATION_IPPORT","B3Clk_sim_en")):
                         DAQ_inst=j.GEM_COM.gemroc_DAQ_XX
                         DAQ_inst.DAQ_config_dict[label['text']] = int(entry.get())
                         DAQ_inst.DAQ_config_dict['number_of_repetitions']=((int(self.TP_repeat.get()) & 0X1) << 9) + int(self.TP_num.get())

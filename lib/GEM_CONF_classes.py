@@ -1104,7 +1104,6 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
        else:
            Dbg_functions_ctrl_bits_HiNibble= ((self.DAQ_config_dict["B3Clk_sim_en"]& 0x1) << 2)+ ((self.DAQ_config_dict["Tpulse_generation_w_L1Chk_enable"] &0x1 )<<1) +((self.DAQ_config_dict["Periodic_L1En"] &0x1 )<<0)
            Dbg_functions_ctrl_bits_LoNibble=((self.DAQ_config_dict["Enable_DAQPause_Until_First_Trigger"] &0x1)<<3 ) +((self.DAQ_config_dict["DAQPause_Set"] &0x1 )<<2)+((self.DAQ_config_dict["Tpulse_generation_w_ext_trigger_enable"] &0x1 )<<1) +((self.DAQ_config_dict["EXT_nINT_B3clk"] & 0x1 )<<0)
-           print self.DAQ_config_dict["Tpulse_generation_w_ext_trigger_enable"]
            self.cmd_header &= ~(0xFF << 8)
            self.cmd_header += ((self.DAQ_config_dict["UDP_DATA_DESTINATION_IPADDR"] & 0xFF)<<8)
            self.cmd_word3 = ((self.DAQ_config_dict["Simulated_L1_latency"] & 0x3FF) << 20) + ((self.DAQ_config_dict["TP_width"] & 0xF) << 16) + (self.DAQ_config_dict["L1_scan_window_UPPER_edge"] & 0xFFFF)

@@ -309,7 +309,6 @@ class analisys_conf: #Analysis class used for configurations10
         self.GEM_COM.reset_counter()
         time.sleep(0.1)
         value = self.GEM_COM.GEMROC_counter_get()
-        print value
         if print_to_screen:
             os.system('clear')
             string = "SCANNING [TIGER={}, VTh={}, CH={}]\n".format(T, i, j)
@@ -320,6 +319,47 @@ class analisys_conf: #Analysis class used for configurations10
 
         return value
 
+    def thr_conf_progress_bar(self,test_r, first_TIGER_to_SCAN, last_TIGER_to_SCAN,pipe_out,print_to_screen=True):
+        with open(self.log_path, 'a') as log_file:
+            log_file.write("{} -- Starting thr scan\n".format(time.ctime()))
+        thr_scan_matrix=np.zeros((8,64,64))
+        for T in range(first_TIGER_to_SCAN, last_TIGER_to_SCAN):
+            # self.GEM_COM.sfo
+            self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, 64, 1, 3)
+            self.GEM_COM.DAQ_set(2 ** T, 0, 0, 0, 1, 0)
+
+            for j in range (0,64):  #Channel cycle
+                self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 0)
+                for i in range(0,64):#VTH Cycle, i)
+                        # with open(self.log_path, 'a') as log_file:
+                        command_sent = self.GEM_COM.Set_Vth_T1(self.c_inst, T, j, i)
+                        word_count=0
+                        self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
+                        self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
+                        test_r.start_socket()
+                        while word_count < 60:
+                            # print word_count
+                            try:
+                                word_count = test_r.data_save_thr_scan(j, i, T, word_count, save_binout=False, save_txt=False)
+                            # print "after word count {}".format(word_count)
+                            except:
+                                with open(self.log_path, 'a') as log_file:
+                                    log_file.write("{} -- Timed out \n".format(time.ctime(), i, j))
+                                    print ("\nTIMED OUT\n")
+                                    time.sleep(0.1)
+                                    break
+                        test_r.dataSock.close()
+                        position=(T*64*64)+(j*64)+(i)
+                        pipe_out.send(position)
+                        if print_to_screen:
+                            os.system('clear')
+                            string="SCANNING [TIGER={}, VTh={}, CH={}]\n".format(T,i,j)
+                            sys.stdout.write(string)
+
+                self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 3)
+        thr_scan_matrix=test_r.thr_scan_matrix
+
+        return thr_scan_matrix
     def acquire_rate(self, frame_count, rate_matrix,test_r):
         try:
             data, addr = test_r.dataSock.recvfrom(BUFSIZE)
@@ -737,9 +777,9 @@ class analisys_conf: #Analysis class used for configurations10
         self.check_sync()
     def TIGER_delay_tuning(self):
         for T in range (0,8):
-            self.GEM_COM.Set_param_dict_global(self.g_inst, "FE_TPEnable",T,1)
+            self.GEM_COM.Set_param_dict_global(self.g_inst, "FE_TPEnable",T,0)
             for ch in range (0,64):
-                self.GEM_COM.Set_param_dict_channel(self.c_inst, "TP_disable_FE", T, ch, 0)
+                self.GEM_COM.Set_param_dict_channel(self.c_inst, "TP_disable_FE", T, ch, 1)
                 self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode",T,ch,1)
 
         error_matrix = np.zeros((8,64))
