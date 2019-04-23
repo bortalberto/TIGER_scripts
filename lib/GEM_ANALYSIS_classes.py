@@ -246,9 +246,9 @@ class analisys_conf: #Analysis class used for configurations10
                 self.GEM_COM.Load_VTH_fromMatrix(self.c_inst, T, self.vthr_matrix)
             pipe_out.send(T*iter+iter)
             if print_to_screen:
-                print(" \n Scan matrix TIGER {}".format(T))
+                print(" \n Scan matrix GEMROC {} TIGER {}".format(self.GEMROC_ID,T))
                 print autotune_scan_matrix[T, :]
-                print(" \n Threshold matrix TIGER {}".format(T))
+                print(" \n Threshold matrix GEMROC {} TIGER {}".format(self.GEMROC_ID,T))
                 print(self.vthr_matrix[T, :])
                 # self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, self.GEMROC_ID, T, 64, 1, 3)
         # for T in range (first_TIGER_to_SCAN,last_TIGER_to_scan):
@@ -267,6 +267,7 @@ class analisys_conf: #Analysis class used for configurations10
         thr_scan_matrix=np.zeros((8,64,64))
         for T in range(first_TIGER_to_SCAN, last_TIGER_to_SCAN):
             # self.GEM_COM.sfo
+            self.GEM_COM.set_ToT_mode(self.c_inst)
             self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, 64, 1, 3)
             self.GEM_COM.DAQ_set(0, 0, 0, 0, 1, 1)
 
@@ -292,6 +293,7 @@ class analisys_conf: #Analysis class used for configurations10
                             sys.stdout.write(string)
 
                 self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 3)
+            self.GEM_COM.set_sampleandhold_mode(self.c_inst)
 
         return thr_scan_matrix
 
@@ -305,10 +307,12 @@ class analisys_conf: #Analysis class used for configurations10
             self.GEM_COM.Set_param_dict_channel(self.c_inst, "Vth_T1", T, j, i)
         self.GEM_COM.set_counter(T, 0, j)
         self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
-        #self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
+        # self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
+        # self.GEM_COM.Access_diagn_DPRAM_read_and_log(1,0)
         self.GEM_COM.reset_counter()
         time.sleep(0.1)
         value = self.GEM_COM.GEMROC_counter_get()
+        print value
         if print_to_screen:
             os.system('clear')
             string = "SCANNING [TIGER={}, VTh={}, CH={}]\n".format(T, i, j)
@@ -320,8 +324,8 @@ class analisys_conf: #Analysis class used for configurations10
         return value
 
     def thr_conf_progress_bar(self,test_r, first_TIGER_to_SCAN, last_TIGER_to_SCAN,pipe_out,print_to_screen=True):
-        with open(self.log_path, 'a') as log_file:
-            log_file.write("{} -- Starting thr scan\n".format(time.ctime()))
+        # with open(self.log_path, 'a') as log_file:
+        #     log_file.write("{} -- Starting thr scan\n".format(time.ctime()))
         thr_scan_matrix=np.zeros((8,64,64))
         for T in range(first_TIGER_to_SCAN, last_TIGER_to_SCAN):
             # self.GEM_COM.sfo
@@ -1112,7 +1116,7 @@ class analisys_read:
             for ch in range(0, 64):
                 try:
                     # (x,k)=self.sfit(self.thr_scan_rate[T,i,:])
-                    print ("Showing fit channel {}".format(ch))
+                    print ("Fitting channel {}, TIGER {}".format(ch,T))
                     (x, k, c) = self.errfit_thr(self.thr_scan_rate[T, ch, :], T,ch )
                 except:
                     if retry:
@@ -1194,6 +1198,15 @@ class analisys_read:
         try:
             popt, pcov = curve_fit(errorfunc, xdata, ydata, p0=(32,2,1),method='lm', maxfev=5000)
         except:
+            if showplot:
+                xdata = np.arange(0, 64)
+                plt.plot(xdata, ydataorg, 'o', label='original data', color='r')
+                plt.plot(xdata, ydata, 'o', label='data')
+                plt.ylim(0, 1.05)
+                plt.legend(loc='best')
+                plt.title("TIGER_{}_channel {}".format(Tiger, Channel))
+                plt.savefig(self.GEM_COM.Tscan_folder + sep + "GEMROC{}".format(self.GEMROC_ID) + sep + "channel_fits" + sep + "TIGER_{}_channel {}.png".format(Tiger, Channel))
+                plt.clf()
             pass
 
         print ("\n")

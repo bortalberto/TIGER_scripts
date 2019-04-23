@@ -50,12 +50,14 @@ class Thread_handler(Thread):
                 try:
                     x = self.reader.fast_acquisition(data_list)  # self.reader.fast_acquisition(data_list)
                     Total_Data += x
-                except:
-                    Exception ("GEMROC {} TIMED_OUT".format(self.reader.GEMROC_ID))
+                except Exception as e:
+                    print e
                     print ("\n---TIMED_OUT!!!...\n")
                     self.reader.dataSock.close()
                     self.running = False
                     self.reader.TIMED_out = True
+                    Exception ("GEMROC {} TIMED_OUT".format(self.reader.GEMROC_ID))
+
                     return 0
             self.reader.data_list = list(data_list)
             with open(datapath, 'ab') as datafile:
@@ -103,28 +105,28 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
         with open(datapath, 'wb'):
             pass
         data_list = []
+        self.reader.start_socket()
         while True:
             Total_Data = 0
             Total_packets =0
-            self.reader.start_socket()
             while (Total_Data < Total_data_MAX_size) and (Total_packets<Total_MAX_packets) and self.running:
                 try:
                     x = self.reader.fast_acquisition(data_list)  # self.reader.fast_acquisition(data_list)
                     Total_Data += x
                     Total_packets+=1
                     #print ("Packet from GEMROC {}".format(self.reader.GEMROC_ID))
-                except:
-                    Exception("GEMROC {} TIMED_OUT".format(self.reader.GEMROC_ID))
+                except Exception as e:
+                    print e
                     with open(self.reader.log_path, 'a') as f:
                         f.write("{} -- GEMROC {} TIMED_OUT\n".format(time.ctime(), self.reader.GEMROC_ID))
 
-                    print ("\n---TIMED_OUT!!!...\n")
+                    print ("\n---GEMROC {} - {}\n".format(self.reader.GEMROC_ID, e))
                     self.reader.TIMED_out = True
+                    Exception("GEMROC {} TIMED_OUT".format(self.reader.GEMROC_ID))
 
                     self.reader.dataSock.close()
                     self.running=False
                     return 0
-            self.reader.dataSock.close()
             self.reader.data_list = list(data_list)
 
             # with open(self.reader.log_path, 'a') as log_file:
@@ -143,8 +145,11 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
             except:
                 self.reader.datapath = datapath
                 return 0
+        self.reader.dataSock.close()
 
         self.reader.datapath = datapath
+
+
 
 
 class reader:
@@ -173,9 +178,10 @@ class reader:
 
         try:
             self.dataSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            self.dataSock.settimeout(10)
+            #self.dataSock.settimeout(15)
             self.dataSock.bind((self.HOST_IP, self.HOST_PORT))
-        except:
+        except Exception as e:
+            print "--GEMROC {}-{}".format(self.GEMROC_ID,e)
             Exception("TIMED_OUT")
             with open(self.log_path, 'a') as f:
                 f.write("{} -- GEMROC {} TIMED_OUT\n".format(time.ctime(), self.GEMROC_ID))
@@ -295,7 +301,7 @@ class reader:
         return 0
 
     def fast_acquisition(self, data_list_tmp):  # remove savefile to be added in a new class GM 11.06.18
-        data, addr = self.dataSock.recvfrom(self.BUFSIZE)
+        data = self.dataSock.recv(self.BUFSIZE)
         # savefile.write(data) # here the file is written - maybe to slow? APPEND? GM
         data_list_tmp.append(data)  # here append the data to the list, stored waiting to be dumped.
         return len(data)
@@ -501,7 +507,7 @@ class reader:
                                         break
                                     else:
                                         packet_missing.append(hex(F + 1))
-                                        print ("Missing packet number {}".format(hex(F + 1)))
+                                        print ("Missing packet number {}, GEMROC {}".format(hex(F + 1),self.GEMROC_ID))
                                         last_counter = last_counter + 1
 
                         LOCAL_L1_TIMESTAMP = int_x & 0xFFFF

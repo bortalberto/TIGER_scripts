@@ -242,20 +242,20 @@ class menu():
                 self.LED[int(i.GEMROC_ID)]['image'] = self.icon_on
         for i in self.GEM:
             if i.TIMED_out and self.restart:
-                self.relaunch_acq()
+                #self.relaunch_acq()
                 break
     def PMT_on(self):
         os.system("./HVWrappdemo ttyUSB0 VSet 2000")
 
     def PMT_OFF(self):
-        os.system("./HVWrappdemo ttyUSB0 VSet 1500")
+        os.system("./HVWrappdemo ttyUSB0 VSet 500")
 
     def relaunch_acq(self):
         self.stop_acq(True)
         if self.restart:
 
             if self.PMT:
-                os.system("./HVWrappdemo ttyUSB0 VSet 1500")
+                self.PMT_off()
 
             self.father.Synch_reset()
             self.father.power_off_FEBS()
@@ -265,11 +265,11 @@ class menu():
             self.father.load_default_config()
             self.father.Synch_reset()
             time.sleep(0.2)
-            self.father.set_pause_mode(to_all=True)
+            self.father.set_pause_mode(to_all=True,value=1)
             self.father.Synch_reset()
 
             if self.PMT:
-                os.system("./HVWrappdemo ttyUSB0 VSet 2000")
+                self.PMT_on()
 
             self.start_acq()
 
@@ -495,7 +495,7 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
         self.caller=caller
     def run(self):
         while self.running:
-            time.sleep(10)
+            time.sleep(30)
             if self.caller.run_analysis.get():
                 self.update_err_and_plot_onrun()
             process_list = []
@@ -516,12 +516,12 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
                     process.join()
                     try:
                         key, value = pipe_out.recv()
-                        print value
-                        if value!=0 and (self.caller.GEMROC_reading_dict[key]):
+                        if value!=0 :
+                        # if value!=0 and (self.caller.GEMROC_reading_dict[key]):
                             with open(self.caller.logfile, 'a') as f:
                                 f.write("{} -- {} : {} 8/10 bit errors in the last 20 seconds\n".format(time.ctime(), key,value ))
                             number=key.split()[0]+" "+key.split()[1]
-                            self.caller.relaunch_acq()
+                            #self.caller.relaunch_acq()
 
                             # GEMROC=self.GEMROC_reading_dict[number]
                             # GEMROC.GEM_COM.SynchReset_to_TgtFEB()

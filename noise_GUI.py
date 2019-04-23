@@ -203,7 +203,7 @@ class menu():
 
                     self.chi[number]["TIG{}".format(T)]["CH{}".format(ch)] = np.zeros((6,6))
                     self.TPchi[number]["TIG{}".format(T)]["CH{}".format(ch)] = np.zeros((3,3))
-                    self.TP_settings[number]["TIG{}".format(T)]["CH{}".format(ch)] = (25    )
+                    #self.TP_settings[number]["TIG{}".format(T)]["CH{}".format(ch)] = (25    )
 
         # self.Conf_Frame=Frame(self.error_window_main)
         # self.Conf_Frame.pack(side=LEFT,pady=10,padx=20)

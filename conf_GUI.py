@@ -286,6 +286,7 @@ class menu():
             for process in process_list:
                 alive_list.append(process.is_alive())
             if all(v == False for v in alive_list):
+                print "ABUBU"
                 break
             else:
                 for progress, pipe in zip(progress_list, pipe_list):
@@ -293,7 +294,7 @@ class menu():
                         progress.set(pipe.recv())
 
                         self.bar_win.update()
-                        time.sleep(0.2)
+                        time.sleep(0.0001)
                     except:
                         print ("Can't acquire status")
 
@@ -753,6 +754,7 @@ class menu():
                 else:
                     button['text'] = "----------"
                     button['state'] = "disable"
+
                 break
 
     def check_acq_state(self):
@@ -809,23 +811,37 @@ class menu():
 
             else:
                 DAQ_inst.DAQ_config_dict["Enable_DAQPause_Until_First_Trigger"] = 1
+                DAQ_inst.DAQ_config_dict["DAQPause_Set"] = 0
+                GEMROC.GEM_COM.DAQ_set_with_dict()
+                self.Synch_reset()
                 DAQ_inst.DAQ_config_dict["DAQPause_Set"] = 1
                 GEMROC.GEM_COM.DAQ_set_with_dict()
                 DAQ_inst.DAQ_config_dict["DAQPause_Set"] = 0
+                GEMROC.GEM_COM.DAQ_set_with_dict()
 
 
             self.read_DAQ_CR()
             self.check_pause_state()
         if to_all == True:
-            for number, GEMROC in self.GEMROC_reading_dict.items():
-                DAQ_inst = GEMROC.GEM_COM.gemroc_DAQ_XX
-                DAQ_inst.DAQ_config_dict["Enable_DAQPause_Until_First_Trigger"] = value
+            if value == 1:
 
-                if value == 1:
+                for number, GEMROC in self.GEMROC_reading_dict.items():
+                    DAQ_inst = GEMROC.GEM_COM.gemroc_DAQ_XX
+                    DAQ_inst.DAQ_config_dict["Enable_DAQPause_Until_First_Trigger"] = 1
+                    DAQ_inst.DAQ_config_dict["DAQPause_Set"] = 0
+                    GEMROC.GEM_COM.DAQ_set_with_dict()
+                self.Synch_reset(1)
+                for number, GEMROC in self.GEMROC_reading_dict.items():
+                    DAQ_inst = GEMROC.GEM_COM.gemroc_DAQ_XX
                     DAQ_inst.DAQ_config_dict["DAQPause_Set"] = 1
+                    GEMROC.GEM_COM.DAQ_set_with_dict()
+                    DAQ_inst.DAQ_config_dict["DAQPause_Set"] = 0
+                    GEMROC.GEM_COM.DAQ_set_with_dict()
+            else:
+                DAQ_inst.DAQ_config_dict["Enable_DAQPause_Until_First_Trigger"] = 0
+                DAQ_inst.DAQ_config_dict["DAQPause_Set"] = 0
                 GEMROC.GEM_COM.DAQ_set_with_dict()
 
-                DAQ_inst.DAQ_config_dict["DAQPause_Set"] = 0
 
 
     def change_clock_mode(self, to_all=0, value=0):

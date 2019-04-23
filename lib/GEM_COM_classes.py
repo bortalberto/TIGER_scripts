@@ -1582,6 +1582,13 @@ class communication: ##The directory are declared here to avoid multiple declara
                 self.Set_param_dict_channel(ChCFGReg_setting_inst, "Integ", T, ch, 1)
         return 0
 
+    def set_ToT_mode(self, ChCFGReg_setting_inst):
+        for T in range(0, 8):
+            for ch in range(0, 64):
+                self.Set_param_dict_channel(ChCFGReg_setting_inst, "QdcMode", T, ch, 0)
+                self.Set_param_dict_channel(ChCFGReg_setting_inst, "Integ", T, ch, 0)
+        return 0
+
         # ChCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
         # ChCFGReg_setting_inst.set_target_TIGER(TIGER_ID_param)
         # ChCFGReg_setting_inst.set_to_ALL_param(0)  ## let's do multiple configuration under script control rather than under GEMROC NIOS2 processor control
