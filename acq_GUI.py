@@ -28,7 +28,7 @@ class menu():
     def __init__(self, std_alone=True, main_winz=None, GEMROC_reading_dict=None,father=None):
         self.father=father
         self.restart=True
-        self.PMT=True
+        self.PMT=False
         self.std_alone = std_alone
         self.GEM_to_read = np.zeros((20))
         self.GEM_to_read_last = np.zeros((20))
@@ -181,7 +181,10 @@ class menu():
         self.canvas.flush_events()
         self.toolbar = NavigationToolbar2Tk(self.canvas, self.corn1)
         self.toolbar.draw()
-
+        self.switch_mode()
+        for number, GEMROC in self.GEMROC_reading_dict.items():
+            n=int(number.split()[1])
+            self.toggle(n)
     def open_adv_acq(self):
         self.adv_wind = Toplevel(self.main_winz)
         self.error_dict810 = {}
@@ -242,7 +245,7 @@ class menu():
                 self.LED[int(i.GEMROC_ID)]['image'] = self.icon_on
         for i in self.GEM:
             if i.TIMED_out and self.restart:
-                #self.relaunch_acq()
+                self.relaunch_acq()
                 break
     def PMT_on(self):
         os.system("./HVWrappdemo ttyUSB0 VSet 2000")
@@ -531,7 +534,6 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
                     except Exception as e:
                         print e
                     process.terminate()
-
             self.caller.refresh_8_10_counters_and_TimeOut()
             del process_list[:]
             del pipe_list[:]

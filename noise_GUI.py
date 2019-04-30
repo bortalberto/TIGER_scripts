@@ -13,6 +13,7 @@ import array
 import pickle
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
 
 OS = sys.platform
 if OS == 'win32':
@@ -54,7 +55,9 @@ class menu():
         self.chi = {}
         self.TPchi= {}
         self.gaussians={}
-
+        self.efine_average={}
+        self.efine_stdv={}
+        self.sampling_scan=False
         self.GEMROC_reading_dict=gemroc_handler
         self.error_window_main = Toplevel(main_window)
         self.error_window=Frame(self.error_window_main)
@@ -113,7 +116,8 @@ class menu():
         Button(self.third_row, text="Load", command=self.LOAD).pack(side=LEFT,padx=2)
         Button(self.third_row, text="Fit", command=self.fit).pack(side=LEFT,padx=2)
         Button(self.third_row, text="Save noise levels", command=self.SAVE_noise).pack(side=LEFT,padx=2)
-        Button(self.third_row, text="Switch to TP distribution measurment", command=self.switch_to_tp_distr).pack(side=LEFT, padx=25)
+        #Button(self.third_row, text="Switch to TP distribution measurment", command=self.switch_to_tp_distr).pack(side=LEFT, padx=25)
+        Button(self.third_row, text="Sampling time scan", command=self.sampling_time_scan).pack(side=LEFT,padx=25)
 
         self.corn0 = Frame(self.error_window)
         self.corn0.grid(row=4, column=0, sticky=S, pady=4,columnspan=10)
@@ -181,7 +185,8 @@ class menu():
             self.TPchi[number]={}
             self.TP_settings={}
             # self.gaussians[number]={}
-
+            self.efine_average[number]={}
+            self.efine_stdv[number]={}
             for T in range (0,8):
                 self.fits[number]["TIG{}".format(T)]={}
                 self.covs[number]["TIG{}".format(T)]={}
@@ -193,7 +198,8 @@ class menu():
 
                 self.TP_settings["TIG{}".format(T)]={}
                 # self.gaussians[number]["TIG{}".format(T)] = {}
-
+                self.efine_average[number]["TIG{}".format(T)]={}
+                self.efine_stdv[number]["TIG{}".format(T)]={}
                 for ch in range (0,64):
                     # self.gaussians[number]["TIG{}".format(T)]["CH{}".format(ch)]=(0,0,0,0)
                     self.fits[number]["TIG{}".format(T)]["CH{}".format(ch)] = (0,0,1,1,0,0)
@@ -204,45 +210,9 @@ class menu():
                     self.chi[number]["TIG{}".format(T)]["CH{}".format(ch)] = np.zeros((6,6))
                     self.TPchi[number]["TIG{}".format(T)]["CH{}".format(ch)] = np.zeros((3,3))
                     #self.TP_settings[number]["TIG{}".format(T)]["CH{}".format(ch)] = (25    )
+                    self.efine_average[number]["TIG{}".format(T)]["CH{}".format(ch)] = []
+                    self.efine_stdv[number]["TIG{}".format(T)]["CH{}".format(ch)] = []
 
-        # self.Conf_Frame=Frame(self.error_window_main)
-        # self.Conf_Frame.pack(side=LEFT,pady=10,padx=20)
-        # Global_frame=LabelFrame(self.Conf_Frame)
-        # Global_frame.grid(row=0,column=0,sticky=N,pady=10,padx=10)
-        # Label(Global_frame,text="Global configurations").pack()
-        # fields_frame=Frame(Global_frame)
-        # fields_frame.pack()
-        # with open("lib" + sep + "keys" + sep + "global_conf_file_keys", 'r') as f:
-        #     i = 0
-        #     lenght = len(f.readlines())
-        #     # print lenght
-        #     f.seek(0)
-        #     Label(fields_frame, text="Read").grid(row=1, column=1, sticky=W, pady=0)
-        #     Label(fields_frame, text="To load").grid(row=1, column=2, sticky=W, pady=0)
-        #     Label(fields_frame, text="Read").grid(row=1, column=4, sticky=W, pady=0)
-        #     Label(fields_frame, text="To load").grid(row=1, column=5, sticky=W, pady=0)
-        #
-        #     for line in f.readlines():
-        #         self.field_array.append(Label(fields_frame, text='-'))
-        #         self.input_array.append(Entry(fields_frame, width=3))
-        #         self.label_array.append(Label(fields_frame, text=line))
-        #
-        #         if i < lenght / 2:
-        #             self.label_array[i].grid(row=i + 2, column=0, sticky=W, pady=0)
-        #             self.input_array[i].grid(row=i + 2, column=2, sticky=W, pady=0)
-        #             self.field_array[i].grid(row=i + 2, column=1, sticky=W, pady=0)
-        #         else:
-        #             self.label_array[i].grid(row=i + 2 - lenght / 2, column=3, sticky=W, pady=0)
-        #             self.input_array[i].grid(row=i + 2 - lenght / 2, column=5, sticky=W, pady=0)
-        #             self.field_array[i].grid(row=i + 2 - lenght / 2, column=4, sticky=W, pady=0)
-        #
-        #         i += 1
-        #
-        #
-        #
-        # ChannelFrame=LabelFrame(self.Conf_Frame)
-        # ChannelFrame.grid(row=0,column=1,sticky=N,pady=10,padx=10)
-        # Label(ChannelFrame,text="Channel configurations").pack()
 
 
     def noise_scan(self,vth2=False):  # if GEMROC num=-1--> To all GEMROC, if TIGER_num=-1 --> To all TIGERs
@@ -315,8 +285,33 @@ class menu():
         #     c_inst = GEMROC.c_inst
         #     g_inst = GEMROC.g_inst
         #     test_r = (AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst))
+    def sampling_time_scan(self):
+        self.sampling_scan=True
+        GEMROC=self.GEMROC_reading_dict["GEMROC {}".format(self.plotting_gemroc)]
+        GEM_COM = GEMROC.GEM_COM
+        c_inst = GEMROC.c_inst
+        test_r = AN_CLASS.analisys_read(GEM_COM, c_inst)
+        first = self.TIGER_num_first.get()
+        last = self.TIGER_num_last.get()+1
+        firstch = self.CHANNEL_num_first.get()
+        lastch = self.CHANNEL_num_last.get()+1
+        GEMROC_ID = GEM_COM.GEMROC_ID
+
+        for T in range(first, last):  # TIGER
+            for J in range(firstch, lastch):  # Channel
+                self.efine_average["GEMROC {}".format(GEMROC_ID)]["TIG{}".format(T)]["CH{}".format(J)]=[]
+                self.efine_average["GEMROC {}".format(GEMROC_ID)]["TIG{}".format(T)]["CH{}".format(J)]=[]
+                for i in range(0, 11):
+                    print "Min Max integ time = {}".format(i)
+                    GEM_COM.Set_param_dict_channel(c_inst, "MaxIntegTime", T,J, i)
+                    GEM_COM.Set_param_dict_channel(c_inst, "MinIntegTime", T,J, i)
+                    GEM_COM.SynchReset_to_TgtFEB()
+                    average,stdv,total=test_r.acquire_Efine(J,T,0.5)
+                    self.efine_average["GEMROC {}".format(GEMROC_ID)]["TIG{}".format(T)]["CH{}".format(J)].append(average)
+                    self.efine_stdv["GEMROC {}".format(GEMROC_ID)]["TIG{}".format(T)]["CH{}".format(J)].append(stdv)
 
     def noise_scan_process(self, number,  pipe_out,vth2):
+        self.sampling_scan = False
         scan_matrix=np.zeros((8,64,64))
         GEMROC = self.GEMROC_reading_dict[number]
         GEM_COM = GEMROC.GEM_COM
@@ -392,39 +387,79 @@ class menu():
         for number, GEMROC_number in self.GEMROC_reading_dict.items():
             GEMROC_number.GEM_COM.Soft_TP_generate()
     def plotta(self):
-        for number, GEMROC_number in self.GEMROC_reading_dict.items():
-            if int(number.split()[1]) == int(self.plotting_gemroc):
+        if self.sampling_scan==True:
+            for number, GEMROC_number in self.GEMROC_reading_dict.items():
+                if int(number.split()[1]) == int(self.plotting_gemroc):
+                    GEMROC_ID=self.plotting_gemroc
+                    self.plot_rate.set_title("ROC {},TIG {}, CH {} ".format(self.plotting_gemroc, self.plotting_TIGER, self.plotting_Channel))
+                    y=(self.efine_average["GEMROC {}".format(GEMROC_ID)]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)])
+                    yerr=self.efine_stdv["GEMROC {}".format(GEMROC_ID)]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)]
+                    x=(range(0,11))
+                    # print "First fit {}".<format(parameters[2])
+                    # print "Second fit {}".format(TPparameters[1])
+                    # self.sampling_plot_figure = Figure(figsize=(6, 6))
+                    # self.samplit_plot = self.sampling_plot_figure.add_subplot(111)
+                    # self.samplit_plot_error, = self.samplit_plot.errorbar(x, y, yerr, 'r+')
+                    #
+                    # self.samplit_plot_error.set_title("TIGER {}, GEMROC {}".format(self.plotting_TIGER, self.plotting_gemroc))
+                    # self.samplit_plot_error.set_ylabel("Efine", fontsize=14)
+                    #
+                    # self.samplit_plot_error.set_xlabel("Sampling time", fontsize=14)
+                    # self.samplit_plot_error.ticklabel_format(style='sci', scilimits=(-3, 4), axis='both')
+                    # self.canvas = FigureCanvasTkAgg(self.sampling_plot_figure, master=self.corn1)
+                    # self.canvas.get_tk_widget().pack(side=BOTTOM)
+                    # self.canvas.draw()
+                    # self.canvas.flush_events()
+                    # self.toolbar = NavigationToolbar2Tk(self.canvas, self.corn1)
+                    # self.toolbar.draw()
+                    self.scatter.set_ydata(y)
+                    self.plot_rate.set_ylim(top=y+1)
+                    self.scatter.set_xdata(x)
+                    self.plot_rate.set_xlim(right=len(x)+1)
 
-                self.plot_rate.set_title("ROC {},TIG {}, CH {} ".format(self.plotting_gemroc, self.plotting_TIGER,self.plotting_Channel))
-                self.scatter.set_ydata(self.scan_matrixs[number][self.plotting_TIGER,self.plotting_Channel])
-                self.plot_rate.set_ylim(top=np.max(self.scan_matrixs[number][self.plotting_TIGER,self.plotting_Channel])+ np.max(self.scan_matrixs[number][self.plotting_TIGER,self.plotting_Channel])*0.2)
-                parameters=self.fits[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)]
-                TPparameters=self.TPfits[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)]
-                # base_parameters=self.gaussians[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)][0]
-                # print "Chi1 {}".format(self.chi[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)])
-                # print "Chi2 {}".format(self.TPchi[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)])
-                y=np.zeros((64))
-                TPy=np.zeros((64))
-                gauspnts=np.zeros((64))
+                    # base_parameters=self.gaussians[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)][0]
+                    # print "Chi1 {}".format(self.chi[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)])
+                    # print "Chi2 {}".format(self.TPchi[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)])
+                    self.canvas.draw()
+                    self.canvas.flush_events()
+                    break
 
-                for x in range (0,64):
-                    y[x]=double_error_func(x,*parameters)
-                    if TPparameters[0]!="Fail":
-                        noise = round(convert_to_fC(TPparameters[1], 55),2)
-                    else:
-                        noise= "Canno't fit"
+        else:
+            for number, GEMROC_number in self.GEMROC_reading_dict.items():
+                if int(number.split()[1]) == int(self.plotting_gemroc):
 
-                self.line.set_ydata(y)
-                self.line2.set_ydata(TPy)
-                self.line3.set_ydata(gauspnts)
-                # print "First fit {}".format(parameters[2])
-                # print "Second fit {}".format(TPparameters[1])
-                self.plot_rate.set_title("ROC {},TIG {}, CH {} , Sigma Noise={} fC".format(self.plotting_gemroc, self.plotting_TIGER,self.plotting_Channel,noise))
 
-                break
-            else:
-                self.plot_rate.set_title("GEMROC not active")
-                self.scatter.set_ydata(np.zeros((64)))
+                    self.plot_rate.set_title("ROC {},TIG {}, CH {} ".format(self.plotting_gemroc, self.plotting_TIGER,self.plotting_Channel))
+                    self.scatter.set_ydata(self.scan_matrixs[number][self.plotting_TIGER,self.plotting_Channel])
+                    self.plot_rate.set_ylim(top=np.max(self.scan_matrixs[number][self.plotting_TIGER,self.plotting_Channel])+ np.max(self.scan_matrixs[number][self.plotting_TIGER,self.plotting_Channel])*0.2)
+                    self.plot_rate.set_xlim(right=65)
+                    parameters=self.fits[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)]
+                    TPparameters=self.TPfits[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)]
+                    # base_parameters=self.gaussians[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)][0]
+                    # print "Chi1 {}".format(self.chi[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)])
+                    # print "Chi2 {}".format(self.TPchi[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)])
+                    y=np.zeros((64))
+                    TPy=np.zeros((64))
+                    gauspnts=np.zeros((64))
+
+                    for x in range (0,64):
+                        y[x]=double_error_func(x,*parameters)
+                        if TPparameters[0]!="Fail":
+                            noise = round(convert_to_fC(TPparameters[1], 55),2)
+                        else:
+                            noise= "Canno't fit"
+
+                    self.line.set_ydata(y)
+                    self.line2.set_ydata(TPy)
+                    self.line3.set_ydata(gauspnts)
+                    # print "First fit {}".format(parameters[2])
+                    # print "Second fit {}".format(TPparameters[1])
+                    self.plot_rate.set_title("ROC {},TIG {}, CH {} , Sigma Noise={} fC".format(self.plotting_gemroc, self.plotting_TIGER,self.plotting_Channel,noise))
+
+                    break
+                else:
+                    self.plot_rate.set_title("GEMROC not active")
+                    self.scatter.set_ydata(np.zeros((64)))
         self.canvas.draw()
         self.canvas.flush_events()
     def SAVE(self):

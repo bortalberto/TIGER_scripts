@@ -122,46 +122,51 @@ class reader:
             for i in range(0, statinfo.st_size / 8):
                 data = f.read(8)
                 hexdata = binascii.hexlify(data)
-                for x in range(0, len(hexdata) - 1, 16):
-                    int_x = 0
-                    for b in range(7, 0, -1):
-                        hex_to_int = (int(hexdata[x + b * 2], 16)) * 16 + int(hexdata[x + b * 2 + 1], 16)
-                        int_x = (int_x + hex_to_int) << 8
-                    hex_to_int = (int(hexdata[x], 16)) * 16 + int(hexdata[x + 1], 16)  # acr 2017-11-17 this should fix the problem
-                    int_x = (int_x + hex_to_int)
-                    raw = "{:054b}  ".format(int_x)
+                string= "{:064b}".format(int(hexdata,16))
+                inverted=[]
+                for i in range (8,0,-1):
+                    inverted.append(string[(i-1)*8:i*8])
+                string_inv="".join(inverted)
+                int_x = int(string_inv,2)
+                # for b in range(7, 0, -1):
+                #     hex_to_int = (int(hexdata[b * 2], 16)) * 16 + int(hexdata[b * 2 + 1], 16)
+                #     int_x = (int_x + hex_to_int) << 8
+                # hex_to_int = (int(hexdata[0], 16)) * 16 + int(hexdata[1], 16)  # acr 2017-11-17 this should fix the problem
+                # int_x = (int_x + hex_to_int)
+                raw = "{:064b}  ".format(int_x)
 
-                    s = '%016X \n' % int_x
-                    # acr 2018-06-25 out_file.write(s)
+                s = '%016X \n' % int_x
+                # acr 2018-06-25 out_file.write(s)
 
-                    ## comment this block to avoid parsing
-                    ##acr 2017-11-16        if (((int_x & 0xFF00000000000000)>>56) == 0x20):
-                    if (((int_x & 0xE000000000000000) >> 61) == 0x6):
-                        LOCAL_L1_COUNT_31_6 = int_x >> 32 & 0x3FFFFFF
-                        LOCAL_L1_COUNT_5_0 = int_x >> 24 & 0x3F
-                        LOCAL_L1_COUNT = (LOCAL_L1_COUNT_31_6 << 6) + LOCAL_L1_COUNT_5_0
-                        LOCAL_L1_TIMESTAMP = int_x & 0xFFFF
-                        HITCOUNT = (int_x >> 16) & 0xFF
-                        if (((int_x & 0xFFFF) - previous_L1_TS) > 0):
-                            L1_TS_abs_diff = ((int_x & 0xFFFF) - previous_L1_TS)
-                        else:
-                            L1_TS_abs_diff = 65536 + ((int_x & 0xFFFF) - previous_L1_TS)
-                        s = 'HEADER :  ' + 'STATUS BIT[2:0]: %01X: ' % ((int_x >> 58) & 0x7) + 'LOCAL L1 COUNT: %08X ' % (LOCAL_L1_COUNT) + 'HitCount: %02X ' % ((int_x >> 16) & 0xFF) + 'LOCAL L1 TIMESTAMP: %04X; ' % (int_x & 0xFFFF) + 'Diff w.r.t. previous L1_TS: %04f us\n' % (
-                                    L1_TS_abs_diff * 6 / 1000)
-                        previous_L1_TS = (int_x & 0xFFFF)
-                        # s = 'HEADER :  ' + 'STATUS BIT[2:0]: %01X: '%((int_x >> 58)& 0x7) + 'LOCAL L1 COUNT: %08X '%( LOCAL_L1_COUNT ) + 'HitCount: %02X '%((int_x >> 16) & 0xFF) + 'LOCAL L1 TIMESTAMP: %04X\n'%(int_x & 0xFFFF)
-                    if (((int_x & 0xE000000000000000) >> 61) == 0x7):
-                        s = 'TRAILER: ' + 'LOCAL L1  FRAMENUM [23:0]: %06X: ' % ((int_x >> 37) & 0xFFFFFF) + 'GEMROC_ID: %02X ' % ((int_x >> 32) & 0x1F) + 'TIGER_ID: %01X ' % ((int_x >> 27) & 0x7) + 'LOCAL L1 COUNT[2:0]: %01X ' % (
-                                    (int_x >> 24) & 0x7) + 'LAST COUNT WORD FROM TIGER:CH_ID[5:0]: %02X ' % ((int_x >> 18) & 0x3F) + 'LAST COUNT WORD FROM TIGER: DATA[17:0]: %05X \n' % (int_x & 0x3FFFF)
-                    if (((int_x & 0xC000000000000000) >> 62) == 0x0):
-                        LOCAL_L1_TS_minus_TIGER_COARSE_TS = LOCAL_L1_TIMESTAMP - ((int_x >> 32) & 0xFFFF)
-                        s = 'DATA   : TIGER: %01X ' % ((int_x >> 59) & 0x7) + 'L1_TS - TIGERCOARSE_TS: %d ' % (LOCAL_L1_TS_minus_TIGER_COARSE_TS) + 'LAST TIGER FRAME NUM[2:0]: %01X ' % ((int_x >> 56) & 0x7) + 'TIGER DATA: ChID: %d ' % ((int_x >> 50) & 0x3F) + 'tacID: %01X ' % (
-                                    (int_x >> 48) & 0x3) + 'Tcoarse: %04X ' % ((int_x >> 32) & 0xFFFF) + 'Ecoarse: %03X ' % ((int_x >> 20) & 0x3FF) + 'Tfine: %03X ' % ((int_x >> 10) & 0x3FF) + 'Efine: {} \n' .format(int_x & 0x3FF)
-                    if (((int_x & 0xF000000000000000) >> 60) == 0x4):
-                        s = 'UDP_SEQNO: ' + 'GEMROC_ID: %02X ' % ((int_x >> 52) & 0x1F) + 'UDP_SEQNO_U48: %012X \n\n' % (((int_x >> 32) & 0xFFFFF) + ((int_x >> 0) & 0xFFFFFFF))
-                    # if int(int_x & 0x3FF)<1000  and int(int_x & 0x3FF)>600 and int ((int_x >> 50) & 0x3F)!=10:  # (HITCOUNT > 0):
-                    out_file.write(s)
-                    out_file.write(raw)
+                ## comment this block to avoid parsing
+                ##acr 2017-11-16        if (((int_x & 0xFF00000000000000)>>56) == 0x20):
+                if (((int_x & 0xE000000000000000) >> 61) == 0x6):
+                    LOCAL_L1_COUNT_31_6 = int_x >> 32 & 0x3FFFFFF
+                    LOCAL_L1_COUNT_5_0 = int_x >> 24 & 0x3F
+                    LOCAL_L1_COUNT = (LOCAL_L1_COUNT_31_6 << 6) + LOCAL_L1_COUNT_5_0
+                    LOCAL_L1_TIMESTAMP = int_x & 0xFFFF
+                    HITCOUNT = (int_x >> 16) & 0xFF
+                    if (((int_x & 0xFFFF) - previous_L1_TS) > 0):
+                        L1_TS_abs_diff = ((int_x & 0xFFFF) - previous_L1_TS)
+                    else:
+                        L1_TS_abs_diff = 65536 + ((int_x & 0xFFFF) - previous_L1_TS)
+                    s = 'HEADER :  ' + 'STATUS BIT[2:0]: %01X: ' % ((int_x >> 58) & 0x7) + 'LOCAL L1 COUNT: %08X ' % (LOCAL_L1_COUNT) + 'HitCount: %02X ' % ((int_x >> 16) & 0xFF) + 'LOCAL L1 TIMESTAMP: %04X; ' % (int_x & 0xFFFF) + 'Diff w.r.t. previous L1_TS: %04f us\n' % (
+                                L1_TS_abs_diff * 6 / 1000)
+                    previous_L1_TS = (int_x & 0xFFFF)
+                    # s = 'HEADER :  ' + 'STATUS BIT[2:0]: %01X: '%((int_x >> 58)& 0x7) + 'LOCAL L1 COUNT: %08X '%( LOCAL_L1_COUNT ) + 'HitCount: %02X '%((int_x >> 16) & 0xFF) + 'LOCAL L1 TIMESTAMP: %04X\n'%(int_x & 0xFFFF)
+                if (((int_x & 0xE000000000000000) >> 61) == 0x7):
+                    s = 'TRAILER: ' + 'LOCAL L1  FRAMENUM [23:0]: %06X: ' % ((int_x >> 37) & 0xFFFFFF) + 'GEMROC_ID: %02X ' % ((int_x >> 32) & 0x1F) + 'TIGER_ID: %01X ' % ((int_x >> 27) & 0x7) + 'LOCAL L1 COUNT[2:0]: %01X ' % (
+                                (int_x >> 24) & 0x7) + 'LAST COUNT WORD FROM TIGER:CH_ID[5:0]: %02X ' % ((int_x >> 18) & 0x3F) + 'LAST COUNT WORD FROM TIGER: DATA[17:0]: %05X \n' % (int_x & 0x3FFFF)
+                if (((int_x & 0xC000000000000000) >> 62) == 0x0):
+                    LOCAL_L1_TS_minus_TIGER_COARSE_TS = LOCAL_L1_TIMESTAMP - ((int_x >> 32) & 0xFFFF)
+                    s = 'DATA   : TIGER: %01X ' % ((int_x >> 59) & 0x7) + 'L1_TS - TIGERCOARSE_TS: %d ' % (LOCAL_L1_TS_minus_TIGER_COARSE_TS) + 'LAST TIGER FRAME NUM[2:0]: %01X ' % ((int_x >> 56) & 0x7) + 'TIGER DATA: ChID: %d ' % ((int_x >> 50) & 0x3F) + 'tacID: %01X ' % (
+                                (int_x >> 48) & 0x3) + 'Tcoarse: %04X ' % ((int_x >> 32) & 0xFFFF) + 'Ecoarse: %03X ' % ((int_x >> 20) & 0x3FF) + 'Tfine: %03X ' % ((int_x >> 10) & 0x3FF) + 'Efine: {} \n' .format(int_x & 0x3FF)
+                if (((int_x & 0xF000000000000000) >> 60) == 0x4):
+                    s = 'UDP_SEQNO: ' + 'GEMROC_ID: %02X ' % ((int_x >> 52) & 0x1F) + 'UDP_SEQNO_U48: %012X \n\n' % (((int_x >> 32) & 0xFFFFF) + ((int_x >> 0) & 0xFFFFFFF))
+                #if int(int_x & 0x3FF)<1000  and int(int_x & 0x3FF)>600 and int ((int_x >> 50) & 0x3F)!=10:  # (HITCOUNT > 0):
+                # if((int_x & 0x3FF)>700 and (int_x & 0x3FF)<1000 and ((int_x >> 50) & 0x3F)!=10):
+                out_file.write(s)
+                out_file.write(raw)
             ##        out_file.write(s)
             ## comment this block to avoid parsing
 

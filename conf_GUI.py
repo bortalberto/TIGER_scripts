@@ -138,6 +138,8 @@ class menu():
         TROPPi_frame = LabelFrame(self.select_window, padx=5, pady=5)
         TROPPi_frame.pack(side=RIGHT)
         Button(TROPPi_frame, text="Run controller", command=self.launch_controller, activeforeground="blue").pack(side=RIGHT)
+        Button(TROPPi_frame, text="Fast configuration", command=self.fast_configuration, activeforeground="blue").pack(side=RIGHT)
+
 
         self.LED = []
         for i in range(0, len(self.GEM_to_config)):
@@ -866,7 +868,7 @@ class menu():
                 DAQ_inst.DAQ_config_dict["EXT_nINT_B3clk"] = value
                 GEMROC.GEM_COM.DAQ_set_with_dict()
 
-    def change_acquisition_mode(self, to_all=False, value=1):
+    def change_acquisition_mode(self, to_all=False, value=1): #value=1, TL
         if to_all == 0:
             GEMROC = self.GEMROC_reading_dict[self.showing_GEMROC.get()]
             DAQ_inst = GEMROC.GEM_COM.gemroc_DAQ_XX
@@ -1300,6 +1302,30 @@ class menu():
             self.main_window.after(5000, lambda: self.error_led_update(2))
         if update == 2:
             self.ERROR_LED["image"] = self.icon_off
+    def fast_configuration(self):
+        self.power_on_FEBS()
+        self.Synch_reset(1)
+        self.change_acquisition_mode(True,0)
+        self.change_trigger_mode(value=0,to_all=True)
+        self.load_thr(True,"scan",3,0,0,8)
+        self.specific_channl_fast_setting()
+        self.load_default_config()
+        self.Synch_reset(1)
+        self.Synch_reset(1)
+        self.Synch_reset(1)
+        self.set_pause_mode(True,1)
+
+    def change_trigger_mode(self,value,to_all=False):
+        if to_all==True:
+            for number, GEMROC in self.GEMROC_reading_dict.items():
+                for T in range (0,8):
+                    for ch in range (0,64):
+                        GEMROC.c_inst.Channel_cfg_list[T][ch]["TriggerMode"] = value
+
+    def specific_channl_fast_setting(self):
+        for number, GEMROC in self.GEMROC_reading_dict.items():
+            for T in range(0, 8):
+                GEMROC.c_inst.Channel_cfg_list[T][20]["TriggerMode"] = 1
 
 
 def character_limit(entry_text):
