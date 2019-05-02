@@ -413,7 +413,7 @@ class menu():
                     # self.toolbar = NavigationToolbar2Tk(self.canvas, self.corn1)
                     # self.toolbar.draw()
                     self.scatter.set_ydata(y)
-                    self.plot_rate.set_ylim(top=y+1)
+                    # self.plot_rate.set_ylim(top=y[len(y)-1]+1)
                     self.scatter.set_xdata(x)
                     self.plot_rate.set_xlim(right=len(x)+1)
 

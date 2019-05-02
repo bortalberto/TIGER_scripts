@@ -97,8 +97,9 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
     def run(self):
         Total_data_MAX_size = 2 ** 20
         Total_MAX_packets=50
-
         datapath = "." + sep + "data_folder" + sep + "Spill_{}_GEMROC_{}_TM.dat".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"), self.reader.GEMROC_ID)
+        with open(self.reader.log_path, 'ab') as f:
+            f.write("{} -- Saving data from  GEMROC {} in file {}\n".format(time.ctime(), self.reader.GEMROC_ID,datapath))
         # with open(self.reader.log_path, 'a') as log_file:
         #     log_file.write("{} --Launching acquisition on GEMROC {} for {} seconds\n".format(time.ctime(),self.reader.GEMROC_ID,self.acq_time))
         self.reader.datapath = datapath
@@ -148,8 +149,8 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
         self.reader.dataSock.close()
 
         self.reader.datapath = datapath
-
-
+        with open(self.reader.log_path, 'ab') as f:
+            f.write("{} -- Finished saving data from  GEMROC {} in file {}\n".format(time.ctime(), self.reader.GEMROC_ID, self.reader.datapath))
 
 
 class reader:
@@ -309,8 +310,8 @@ class reader:
     def dump_list(self, savefile, data_list_tmp):
         for item in data_list_tmp:
             savefile.write('%s' % item)
-        with open(self.log_path, 'ab') as f:
-            f.write("{} -- Dumping Data for GEMROC {} in file {}\n".format(time.ctime(), self.GEMROC_ID,savefile))
+        # with open(self.log_path, 'ab') as f:
+        #     f.write("{} -- Dumping Data for GEMROC {} in file {}\n".format(time.ctime(), self.GEMROC_ID,savefile))
 
     def read_bin(self, path):
         self.thr_scan_matrix = np.zeros((8, 64))  # Tiger,Channel
