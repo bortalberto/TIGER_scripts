@@ -1691,7 +1691,7 @@ class communication: ##The directory are declared here to avoid multiple declara
     def Load_VTH_fromfile(self, ChCFGReg_setting_inst, TIGER_ID_param, number_sigma, offset, save_on_LOG=False):
         file_p=self.conf_folder+sep+"thr"+ sep+"GEMROC{}_Chip{}.thr".format(self.GEMROC_ID,TIGER_ID_param)
         self.log_file.write("\n Setting VTH from file in  TIGER {}\n".format(TIGER_ID_param))
-        print "Setting VTH from file in GEMROC {}, TIGER {}, {} sigmas\n".format(self.GEMROC_ID,TIGER_ID_param,number_sigma)
+        print "Setting VTH on both VTH from file in GEMROC {}, TIGER {}, {} sigmas\n".format(self.GEMROC_ID,TIGER_ID_param,number_sigma)
 
 
         thr0=np.loadtxt(file_p,)
@@ -1707,6 +1707,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         print ("Thr={}".format(thr))
         for i in range(0, 64):
             binascii.b2a_hex(self.Set_Vth_T1(ChCFGReg_setting_inst, TIGER_ID_param, i, int(thr[i])))
+            self.Set_param_dict_channel(ChCFGReg_setting_inst,"Vth_T2",TIGER_ID_param,i,int(thr[i]))
 
 
         if save_on_LOG:
