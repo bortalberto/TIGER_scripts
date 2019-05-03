@@ -139,6 +139,8 @@ class menu():
         TROPPi_frame.pack(side=RIGHT)
         Button(TROPPi_frame, text="Run controller", command=self.launch_controller, activeforeground="blue").pack(side=RIGHT)
         Button(TROPPi_frame, text="Fast configuration", command=self.fast_configuration, activeforeground="blue").pack(side=RIGHT)
+        Button(TROPPi_frame, text="Enable double thr", command=self.double_enable, activeforeground="blue").pack(side=RIGHT)
+
 
 
         self.LED = []
@@ -246,6 +248,12 @@ class menu():
     def power_off_FEBS(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():
             GEMROC.GEM_COM.FEBPwrEnPattern_set(0)
+
+    def double_enable(self):
+        for number, GEMROC in self.GEMROC_reading_dict.items():
+            GEMROC.GEM_COM.double_enable(1,GEMROC.c_inst)
+
+
     def thr_Scan(self, GEMROC_num, TIGER_num):  # if GEMROC num=-1--> To all GEMROC, if TIGER_num=-1 --> To all TIGERs
         startT=time.time()
         self.bar_win = Toplevel(self.main_window)

@@ -1993,3 +1993,19 @@ class communication: ##The directory are declared here to avoid multiple declara
     #     COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
     #     command_echo = self.send_GEMROC_DAQ_CMD( COMMAND_STRING)
     #     return command_echo
+
+    def double_enable(self, value, reg):
+        if value==1:
+            for T in range (0,8):
+                for ch in range (0,64):
+                    self.Set_param_dict_channel(reg,"TriggerMode2B",T,ch,3)
+                    self.Set_param_dict_channel(reg,"TriggerMode2Q",T,ch,0)
+                    self.Set_param_dict_channel(reg,"TriggerMode2E",T,ch,3)
+                    self.Set_param_dict_channel(reg,"TriggerMode2T",T,ch,0)
+        if value==0:
+            for T in range (0,8):
+                for ch in range (0,64):
+                    self.Set_param_dict_channel(reg,"TriggerMode2B",T,ch,0)
+                    self.Set_param_dict_channel(reg,"TriggerMode2Q",T,ch,0)
+                    self.Set_param_dict_channel(reg,"TriggerMode2E",T,ch,0)
+                    self.Set_param_dict_channel(reg,"TriggerMode2T",T,ch,0)
