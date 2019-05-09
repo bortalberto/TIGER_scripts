@@ -756,10 +756,22 @@ class menu():
         Label(another1, text="L1_win_lower_edge_offset").grid(row=2, column=0, sticky=S, pady=0)
 
         self.L1_entry2.grid(row=2, column=3, sticky=S, pady=0)
+        Button(another1,text='Set L1 windows (all GEMROCs)',command= self.set_L1_window).grid(row=3,column=2,pady=20, sticky=E,columnspan=8)
+
         another2=Frame(another0)
         another2.grid(row=1, column=1, sticky=E, pady=2)
 
         Button(another2,text='Hard reset',width="10",command= lambda:self.hard_reset("False")).grid(row=3,column=2,pady=20, sticky=E,columnspan=8)
+    def set_L1_window(self):
+        for number,GEMROC in self.GEMROC_reading_dict.items():
+            L1_lat_TIGER_clk_param = int(self.L1_entry1.get()) * 4  # default 358 <-> 8.6us
+            TM_window_TIGER_clk_param = int(self.L1_entry2.get()) * 4  # default  66 <-> 1.6us
+            L1_win_upper_edge_offset_Tiger_clk = int(L1_lat_TIGER_clk_param - (TM_window_TIGER_clk_param / 2))
+            L1_win_lower_edge_offset_Tiger_clk = int(L1_lat_TIGER_clk_param + (TM_window_TIGER_clk_param / 2))
+            GEMROC.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["L1_scan_window_UPPER_edge"]=L1_win_upper_edge_offset_Tiger_clk
+            GEMROC.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["L1_scan_window_LOWER_edge"]=L1_win_lower_edge_offset_Tiger_clk
+            GEMROC.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["Simulated_L1_latency"]=L1_lat_TIGER_clk_param
+            GEMROC.GEM_COM.DAQ_set_with_dict()
 
     def hard_reset(self,to_all):
         if not to_all:
