@@ -345,7 +345,7 @@ class menu():
         test_c.thr_preconf()
         if TIGER == -1:
             first = 0
-            last = 1
+            last = 8
         else:
             first = TIGER
             last = TIGER + 1

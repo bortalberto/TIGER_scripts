@@ -278,7 +278,7 @@ class analisys_conf: #Analysis class used for configurations10
             self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, 64, 1, 3)
             self.GEM_COM.DAQ_set(0, 0, 0, 0, 1, 1)
 
-            for j in range (0,10):  #Channel cycle
+            for j in range (0,64):  #Channel cycle
                 self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 0)
                 for i in range(0,64):#VTH Cycle, i)
                         # with open(self.log_path, 'a') as log_file:
