@@ -22,17 +22,18 @@ else:
 
 
 class Thread_handler(Thread):
-    def __init__(self, name, acq_time, reader):
+    def __init__(self, name, acq_time, reader,sub_folder="."):
         Thread.__init__(self)
         self.name = name
         self.acq_time = acq_time
         self.reader = reader
         self.running = True
+        self.sub_folder=sub_folder
         self.isTM = False
 
     def run(self):
         Total_data_MAX_size = 2 ** 11
-        datapath = "." + sep + "data_folder" + sep + "Spill_{}_GEMROC_{}.dat".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"), self.reader.GEMROC_ID)
+        datapath = "." + sep + "data_folder" + sep+self.sub_folder+sep + "Spill_{}_GEMROC_{}.dat".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"), self.reader.GEMROC_ID)
         # with open(self.reader.log_path, 'a') as log_file:
         #     log_file.write("{} --Launching acquisition on GEMROC {} for {} seconds\n".format(time.ctime(),self.reader.GEMROC_ID,self.acq_time))
 
@@ -87,17 +88,17 @@ class Thread_handler(Thread):
 
 
 class Thread_handler_TM(Thread):  # In order to scan during configuration is mandatory to use multithreading
-    def __init__(self, name, reader):
+    def __init__(self, name, reader,sub_folder="."):
         Thread.__init__(self)
         self.name = name
         self.reader = reader
         self.running = True
         self.isTM = True
-
+        self.sub_folder=sub_folder
     def run(self):
         Total_data_MAX_size = 2 ** 20
         Total_MAX_packets=50
-        datapath = "." + sep + "data_folder" + sep + "Spill_{}_GEMROC_{}_TM.dat".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"), self.reader.GEMROC_ID)
+        datapath = "." + sep + "data_folder" + sep+self.sub_folder+sep + "Spill_{}_GEMROC_{}_TM.dat".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"), self.reader.GEMROC_ID)
         with open(self.reader.log_path, 'ab') as f:
             f.write("{} -- Saving data from  GEMROC {} in file {}\n".format(time.ctime(), self.reader.GEMROC_ID,datapath))
         # with open(self.reader.log_path, 'a') as log_file:

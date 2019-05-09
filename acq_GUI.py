@@ -1,4 +1,5 @@
 from Tkinter import *
+import ttk
 import numpy as np
 from lib import GEM_ACQ_classes as GEM_ACQ
 import datetime
@@ -28,7 +29,7 @@ class menu():
     def __init__(self, std_alone=True, main_winz=None, GEMROC_reading_dict=None,father=None):
         self.father=father
         self.restart=True
-        self.PMT=False
+        self.PMT=True
         self.std_alone = std_alone
         self.GEM_to_read = np.zeros((20))
         self.GEM_to_read_last = np.zeros((20))
@@ -44,27 +45,34 @@ class menu():
         self.plotting_TIGER = 0
         self.time = 2
         self.GEM = []
-
+        self.run_folder="."
         if std_alone:
             self.master_window = Tk()
-            self.master_window.title("GEMROC acquisition")
         else:
             self.master_window = Toplevel(main_winz)
             self.main_winz = main_winz
             self.GEMROC_reading_dict = GEMROC_reading_dict
+            self.tabControl = ttk.Notebook(self.master_window)  # Create Tab Control
+
+        self.master_window.wm_title("GEMROC acquisition")
 
         self.simple_analysis = IntVar(self.master_window)
         self.run_analysis = IntVar(self.master_window)
-
+        self.set_last_folder()
 
         Label(self.master_window, text='Acquisition setting', font=("Courier", 25)).pack()
+        if not std_alone:
+            self.master = Frame(self.tabControl)
+            self.tabControl.add(self.master, text='Acquisition')  # Add the tab
+            self.tabControl.pack(expand=1, fill="both")  # Pack to make visible
+        else:
+            self.master = Frame(self.master_window)
+            self.master.pack()
 
-        self.master = Frame(self.master_window)
-        self.master.pack()
         self.icon_on = PhotoImage(file="." + sep + 'icons' + sep + 'on.gif')
         self.icon_off = PhotoImage(file="." + sep + 'icons' + sep + 'off.gif')
         self.icon_bad = PhotoImage(file="." + sep + 'icons' + sep + 'bad.gif')
-        self.grid_frame = Frame(self.master_window)
+        self.grid_frame = Frame(self.master)
         self.grid_frame.pack()
         Button(self.grid_frame, text='ROC 00', command=lambda: self.toggle(0)).grid(row=0, column=0, sticky=NW, pady=4)
         Button(self.grid_frame, text='ROC 01', command=lambda: self.toggle(1)).grid(row=0, column=2, sticky=NW, pady=4)
@@ -87,18 +95,24 @@ class menu():
         Button(self.grid_frame, text='ROC 18', command=lambda: self.toggle(18)).grid(row=1, column=16, sticky=NW, pady=4)
         Button(self.grid_frame, text='ROC 19', command=lambda: self.toggle(19)).grid(row=1, column=18, sticky=NW, pady=4)
 
-        self.start_frame = Frame(self.master_window)
+        self.start_frame = Frame(self.master)
         self.start_frame.pack()
-        Label(self.start_frame, text="Trigger less acq time (seconds)").grid(row=0, column=0, sticky=NW, pady=4)
+        Label(self.start_frame, text="Acq time (seconds for TL, minutes for TM)").grid(row=0, column=0, sticky=NW, pady=4)
         self.time_in = Entry(self.start_frame, width=3)
         self.time_in.insert(END, '1')
         self.time_in.grid(row=0, column=1, sticky=NW, pady=4)
         Checkbutton(self.start_frame, text="Fast analysis", variable=self.simple_analysis).grid(row=0, column=2, sticky=NW, pady=4)
         Checkbutton(self.start_frame, text="On run analysis", variable=self.run_analysis).grid(row=0, column=3, sticky=NW, pady=4)
-
-
-        a_frame = Frame(self.master_window)
+        a_frame = Frame(self.master)
         a_frame.pack()
+        zero_frame=LabelFrame(a_frame)
+        zero_frame.grid(row=1, column=0, sticky=NW,padx=80)
+        self.but6 = Button(zero_frame, text='New run folder', command=self.new_run_folder)
+        self.but6.grid(row=1, column=2, sticky=NW)
+        self.but7 = Button(zero_frame, text='Test folder', command=self.set_test_folder)
+        self.but7.grid(row=1, column=3, sticky=NW)
+
+
         self.but6 = Button(a_frame, text='Start acquisition', command=self.start_acq)
         self.but6.grid(row=1, column=2, sticky=NW, pady=4)
         self.but7 = Button(a_frame, text='Trigger less acquisition', command=self.switch_mode, background='#ccffff', activebackground='#ccffff', height=1, width=18)
@@ -127,7 +141,7 @@ class menu():
             self.LED.append(Label(self.grid_frame, image=self.icon_off))
             self.LED[i].grid(row=riga, column=colonna)
 
-        self.errors = Frame(self.master_window)
+        self.errors = Frame(self.master)
         self.errors.pack()
         self.LBerror = Label(self.errors, text='Acquisition errors check', font=("Courier", 25))
         self.LBerror.grid(row=0, column=0, columnspan=8, sticky=S, pady=5)
@@ -147,8 +161,8 @@ class menu():
         self.FIELD_TIGER = Label(self.errors, text='-', background='white')
         self.FIELD_TIGER.grid(row=4, column=2)
 
-        self.plot_window = Frame(self.master_window)
-        self.plot_window.pack()
+        self.plot_window = Frame(self.master)
+        self.plot_window.pack(side=LEFT)
         # self.plot_window.geometry('900x800')
         self.corn0 = Frame(self.plot_window)
         self.corn0.pack()
@@ -169,7 +183,7 @@ class menu():
         x = np.arange(0, 64)
         v = np.zeros((64))
 
-        self.fig = Figure(figsize=(7, 7))
+        self.fig = Figure(figsize=(6, 4))
         self.plot_rate = self.fig.add_subplot(111)
         self.scatter, = self.plot_rate.plot(x, v, 'r+')
         self.plot_rate.set_title("TIGER {}, GEMROC {}".format(self.plotting_TIGER, self.plotting_gemroc))
@@ -182,47 +196,68 @@ class menu():
         self.toolbar = NavigationToolbar2Tk(self.canvas, self.corn1)
         self.toolbar.draw()
         self.switch_mode()
-        for number, GEMROC in self.GEMROC_reading_dict.items():
-            n=int(number.split()[1])
-            self.toggle(n)
+        if not std_alone:
+            for number, GEMROC in self.GEMROC_reading_dict.items():
+                n=int(number.split()[1])
+                self.toggle(n)
+    def set_last_folder(self):
+        list_folder=[name for name in os.listdir("."+sep+"data_folder") if os.path.isdir("."+sep+"data_folder"+sep+name)]
+        list_folder.sort(reverse=True)
+        for folder in list_folder:
+            if folder[0:3]=="RUN":
+                self.run_folder=folder
+                print "Data folder set: {}".format(self.run_folder)
+                break
+    def new_run_folder(self):
+        os.mkdir("."+sep+"data_folder"+sep+"RUN_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")))
+        self.set_last_folder()
+    def set_test_folder(self):
+        self.run_folder="test_folder"
+        print "Test folder set: {}".format(self.run_folder)
+
     def open_adv_acq(self):
-        self.adv_wind = Toplevel(self.main_winz)
+        self.adv_wind = Canvas(self.tabControl)
+        self.tabControl.add(self.adv_wind, text='TIGERs errors and selection')
         self.error_dict810 = {}
+        scrollbar = Scrollbar(self.adv_wind)
+        scrollbar.pack(side=RIGHT, fill=Y)
         seconfF=Frame(self.adv_wind)
         seconfF.pack()
-        firstF = Frame(self.adv_wind)
+        firstF = Canvas(self.adv_wind)
         firstF.pack()
         Label(firstF,text='Acquisiton set single TIGERs',font=("Courier", 16)).pack()
         self.button_dict={}
         for number, GEMROC in self.GEMROC_reading_dict.items():
             a = Frame(firstF)
-            a.pack()
-            Label(a, text='{} TIGERs:   '.format(number)).grid(row=0, column=0, sticky=NW, pady=4)
+            a.pack(pady=5)
+            Label(a, text='{} Err(8/10):   '.format(number),font=("Courier", 10)).grid(row=1, column=0, sticky=NW, pady=4)
             for T in range(0, 8):
-                self.button_dict["{} TIGER {}".format(number,T)]=Button(a, text='{}'.format(T),width=10,command=lambda (number,T)=(number,T): self.Change_Reading_Tigers((number,T)) )
-                self.button_dict["{} TIGER {}".format(number, T)].grid(row=0, column=T+1, sticky=NW, pady=4)
-            Label(a, text='{} Err(8/10):   '.format(number)).grid(row=1, column=0, sticky=NW, pady=4)
-            for T in range(0, 8):
-                    self.error_dict810["{} TIGER {}".format(number, T)]=Label(a,text="-------",width=11)
+                    self.error_dict810["{} TIGER {}".format(number, T)]=Label(a,text="-----",width=8,font=("Courier", 10))
                     self.error_dict810["{} TIGER {}".format(number, T)].grid(row=1, column=T+1, sticky=NW, pady=4)
+            Label(a, text='{} TIGERs:   '.format(number),font=("Courier", 10)).grid(row=0, column=0, sticky=NW, pady=4)
+            for T in range(0, 8):
+                self.button_dict["{} TIGER {}".format(number, T)] = Button(a, text='{}'.format(T), width=4,height=1,font=("Courier", 10),command=lambda (number, T)=(number, T): self.Change_Reading_Tigers((number, T)))
+                self.button_dict["{} TIGER {}".format(number, T)].grid(row=0, column=T + 1, sticky=NW, pady=4)
+            Label(a,text="___________________________________________________________________________________________________________________________").grid(row=2, column=0, sticky=NW,columnspan=12)
 
-
+        scrollbar.config(command=self.adv_wind.yview_scroll(2,"units"))
         self.refresh_but_TIGERs()
 
     def Change_Reading_Tigers(self,(number,T)):
 
-        n=(self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.EN_TM_TCAM_pattern >> T) & 0x1
+        n=(self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"] >> T) & 0x1
         if n==1:
-            self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.EN_TM_TCAM_pattern -=2**T
+            self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"] -=2**T
         else:
-            self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.EN_TM_TCAM_pattern +=2**T
+            self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"] +=2**T
+        print self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"]
         self.GEMROC_reading_dict[number].GEM_COM.DAQ_set_register()
         self.refresh_but_TIGERs()
 
     def refresh_but_TIGERs(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():
             for T in range (0,8):
-                n=(self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.EN_TM_TCAM_pattern >> T) & 0x1
+                n=(self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"] >> T) & 0x1
                 if n == 1:
                     self.button_dict["{} TIGER {}".format(number,T)]['background'] = '#0099ff'
                     self.button_dict["{} TIGER {}".format(number,T)]['activebackground'] = '#0099ff'
@@ -258,18 +293,16 @@ class menu():
         if self.restart:
 
             if self.PMT:
-                self.PMT_off()
+                self.PMT_OFF()
 
             self.father.Synch_reset()
-            self.father.power_off_FEBS()
             self.father.power_on_FEBS()
             self.father.Synch_reset()
             self.father.load_default_config()
-            self.father.load_default_config()
             self.father.Synch_reset()
             time.sleep(0.2)
-            self.father.set_pause_mode(to_all=True,value=1)
             self.father.Synch_reset()
+            self.father.set_pause_mode(to_all=True,value=1)
 
             if self.PMT:
                 self.PMT_on()
@@ -366,6 +399,8 @@ class menu():
 
         self.time = self.time_in.get()
         lista = []
+        self.logfile = "."+sep+"data_folder" + sep + self.run_folder + sep + "ACQ_log_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
+
         for i in range(0, len(self.GEM_to_read)):
             if self.GEM_to_read[i] == 1:
                 lista.append(i)
@@ -377,10 +412,10 @@ class menu():
 
         for i in range(0, len(self.GEM)):
             if self.mode == 'TL':
-                self.thread.append(GEM_ACQ.Thread_handler("GEM ".format(i), float(self.time), self.GEM[i]))
+                self.thread.append(GEM_ACQ.Thread_handler("GEM ".format(i), float(self.time), self.GEM[i],sub_folder=self.run_folder))
 
             else:
-                self.thread.append(GEM_ACQ.Thread_handler_TM("GEM ".format(i), self.GEM[i]))
+                self.thread.append(GEM_ACQ.Thread_handler_TM("GEM ".format(i), self.GEM[i],sub_folder=self.run_folder))
         if not self.std_alone:
             self.error_thread = (Thread_handler_errors(self.GEMROC_reading_dict, self.GEM, self.errors_counters_810,self))
         self.GEM_to_read_last = self.GEM_to_read
@@ -497,8 +532,11 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
         Thread.__init__(self)
         self.caller=caller
     def run(self):
+        self.start_time=time.time()
         while self.running:
-            time.sleep(30)
+            if (time.time()-self.start_time)>int(self.caller.time)*60:
+                self.caller.relaunch_acq()
+            time.sleep(10)
             if self.caller.run_analysis.get():
                 self.update_err_and_plot_onrun()
             process_list = []
@@ -563,3 +601,6 @@ def all_children(window):
             _list.extend(item.winfo_children())
 
     return _list
+
+def myfunction(event):
+    self.canvas.configure(scrollregion=self.canvas.bbox("all"),width=200,height=200)

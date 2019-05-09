@@ -258,21 +258,34 @@ class analisys_conf: #Analysis class used for configurations10
         np.savetxt(name, np.c_[self.vthr_matrix[T, :]])
 
         X = "Autotune done"
-    def thr_conf_using_GEMROC_COUNTERS_progress_bar(self,test_r, first_TIGER_to_SCAN, last_TIGER_to_SCAN,pipe_out,print_to_screen=True):
+    def thr_conf_using_GEMROC_COUNTERS_progress_bar(self, test_r, first_TIGER_to_SCAN, last_TIGER_to_SCAN, pipe_out, print_to_screen=True, branch=1):
         with open(self.log_path, 'a') as log_file:
             log_file.write("{} -- Starting thr scan\n".format(time.ctime()))
         thr_scan_matrix=np.zeros((8,64,64))
+        # self.GEM_COM.sfo
+        if branch == 1:
+            self.GEM_COM.set_sampleandhold_mode(self.c_inst)
+            self.GEM_COM.double_enable(0, self.c_inst)
+        else:
+            self.GEM_COM.set_sampleandhold_mode(self.c_inst)
+            self.GEM_COM.only_E(self.c_inst)
+            # print "E mode"
+            # print self.c_inst.Channel_cfg_list
+
         for T in range(first_TIGER_to_SCAN, last_TIGER_to_SCAN):
-            # self.GEM_COM.sfo
-            self.GEM_COM.set_ToT_mode(self.c_inst)
+
+
             self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, 64, 1, 3)
             self.GEM_COM.DAQ_set(0, 0, 0, 0, 1, 1)
 
-            for j in range (0,64):  #Channel cycle
+            for j in range (0,10):  #Channel cycle
                 self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 0)
                 for i in range(0,64):#VTH Cycle, i)
                         # with open(self.log_path, 'a') as log_file:
-                        command_sent = self.GEM_COM.Set_Vth_T1(self.c_inst, T, j, i)
+                        if branch==1:
+                            self.GEM_COM.Set_Vth_T1(self.c_inst, T, j, i)
+                        else:
+                            self.GEM_COM.Set_param_dict_channel(self.c_inst, "Vth_T2", T, j, i)
                         # with open(self.log_path, 'a') as log_file:
                         #     log_file.write("@@@@@@   {} -- Set Vth={} on channel {} \n".format(time.ctime(),i,j))
                         self.GEM_COM.set_counter(T, 0, j)
@@ -290,7 +303,6 @@ class analisys_conf: #Analysis class used for configurations10
                             sys.stdout.write(string)
 
                 self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 3)
-            self.GEM_COM.set_sampleandhold_mode(self.c_inst)
 
         return thr_scan_matrix
 
@@ -900,7 +912,9 @@ class analisys_read:
         self.bindata_path = com.Tscan_folder+sep+'thr_scan_dump_BIN.dat'
         f=open(self.bindata_path,'w')
         f.close()
-        self.scan_path = com.Tscan_folder+sep+"Scan_{}.txt".format(self.GEMROC_ID)
+        self.scan_path_T = com.Tscan_folder + sep + "Scan_{}.txt".format(self.GEMROC_ID)
+        self.scan_path_E = com.Escan_folder+sep+"Scan_{}.txt".format(self.GEMROC_ID)
+
         self.HOST_IP = self.GEM_COM.HOST_IP
         self.HOST_PORT = 58880 + self.GEMROC_ID
         self.thr_scan_matrix=np.zeros((8,64,64))#Tiger,Channel,Threshold
@@ -1086,8 +1100,12 @@ class analisys_read:
         plt.show()
         return 0
 
-    def save_scan_on_file(self):
-        f = open(self.scan_path, 'w')
+    def save_scan_on_file(self,branch=1):
+        if branch==1:
+            f = open(self.scan_path_T, 'w')
+        else:
+            f = open(self.scan_path_E, 'w')
+
         for T in range(0, 8):
             f.write("Tiger {}".format(T))
             f.write("Frames\n")
@@ -1154,9 +1172,13 @@ class analisys_read:
 
         self.close()
 
-    def global_sfit(self,first_TIGER_to_SCAN, last_TIGER_to_scan, retry=False):
+    def global_sfit(self,first_TIGER_to_SCAN, last_TIGER_to_scan, retry=False,branch=1):
         for T in range(first_TIGER_to_SCAN, last_TIGER_to_scan):
-            thr_file_path = self.GEM_COM.conf_folder + sep +"thr"+sep+"GEMROC{}_Chip{}.thr".format(self.GEMROC_ID, T)
+            if branch==1:
+                thr_file_path = self.GEM_COM.conf_folder + sep +"thr"+sep+"GEMROC{}_Chip{}_T.thr".format(self.GEMROC_ID, T)
+            else:
+                thr_file_path = self.GEM_COM.conf_folder + sep +"thr"+sep+"GEMROC{}_Chip{}_E.thr".format(self.GEMROC_ID, T)
+
             f = open(thr_file_path, 'w')
             f.close()
             for ch in range(0, 64):

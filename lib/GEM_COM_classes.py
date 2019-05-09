@@ -32,6 +32,7 @@ class communication: ##The directory are declared here to avoid multiple declara
     def __init__(self, gemroc_ID, feb_pwr_pattern, keep_cfg_log=False, keep_IVT_log=False):
         self.conf_folder = "conf"
         self.Tscan_folder="thr_scan"
+        self.Escan_folder="thr_scan_vth2"
         self.Noise_folder="noise_scan"
 
         self.GEMROC_ID=gemroc_ID
@@ -999,18 +1000,20 @@ class communication: ##The directory are declared here to avoid multiple declara
         command_echo = self.send_TIGER_GCFG_Reg_CMD_PKT(TIGER_ID, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
                                                    self.DEST_PORT_NO)
         return command_echo
-    def Set_param_dict_channel(self, ChCFGReg_setting_inst, field, TIGER_ID,channel, value):
+    def Set_param_dict_channel(self, ChCFGReg_setting_inst, field, TIGER_ID,channel, value, send_command=True):
         ChCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
         ChCFGReg_setting_inst.set_target_TIGER(TIGER_ID)
         ChCFGReg_setting_inst.set_to_ALL_param(0)  ## let's do multiple configuration under script control rather than under GEMROC NIOS2 processor control
         COMMAND_STRING = 'WR'
         ChCFGReg_setting_inst.set_command_code(COMMAND_STRING)
+        command_echo="0"
         if channel < 64:
             ChCFGReg_setting_inst.Channel_cfg_list[TIGER_ID][channel][field] = value
             ChCFGReg_setting_inst.set_target_channel(channel)
             ChCFGReg_setting_inst.update_command_words()
             array_to_send = ChCFGReg_setting_inst.command_words
-            command_echo = self.send_TIGER_Ch_CFG_Reg_CMD_PKT(TIGER_ID, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
+            if send_command:
+                command_echo = self.send_TIGER_Ch_CFG_Reg_CMD_PKT(TIGER_ID, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
                                                               self.DEST_PORT_NO)
         else:
             for i in range(0, 64):
@@ -1018,7 +1021,8 @@ class communication: ##The directory are declared here to avoid multiple declara
                 ChCFGReg_setting_inst.set_target_channel(i)
                 ChCFGReg_setting_inst.update_command_words()
                 array_to_send = ChCFGReg_setting_inst.command_words
-                command_echo = self.send_TIGER_Ch_CFG_Reg_CMD_PKT(TIGER_ID, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
+                if send_command:
+                    command_echo = self.send_TIGER_Ch_CFG_Reg_CMD_PKT(TIGER_ID, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
                                                                   self.DEST_PORT_NO)
         last_command_echo = command_echo
         return last_command_echo
@@ -1688,31 +1692,45 @@ class communication: ##The directory are declared here to avoid multiple declara
         command_echo = self.send_GEMROC_DAQ_CMD(gemroc_inst_param, COMMAND_STRING)
         return command_echo
 
-    def Load_VTH_fromfile(self, ChCFGReg_setting_inst, TIGER_ID_param, number_sigma, offset, save_on_LOG=False):
-        file_p=self.conf_folder+sep+"thr"+ sep+"GEMROC{}_Chip{}.thr".format(self.GEMROC_ID,TIGER_ID_param)
+    def Load_VTH_fromfile(self, ChCFGReg_setting_inst, TIGER_ID_param, number_sigma_T, number_sigma_E, offset, save_on_LOG=False):
+        file_T=self.conf_folder+sep+"thr"+ sep+"GEMROC{}_Chip{}_T.thr".format(self.GEMROC_ID,TIGER_ID_param)
+        file_E=self.conf_folder+sep+"thr"+ sep+"GEMROC{}_Chip{}_E.thr".format(self.GEMROC_ID,TIGER_ID_param)
+
         self.log_file.write("\n Setting VTH from file in  TIGER {}\n".format(TIGER_ID_param))
-        print "Setting VTH on both VTH from file in GEMROC {}, TIGER {}, {} sigmas\n".format(self.GEMROC_ID,TIGER_ID_param,number_sigma)
+        print "Setting VTH on both VTH from file in GEMROC {}, TIGER {}, {} and {} sigmas\n".format(self.GEMROC_ID, TIGER_ID_param, number_sigma_T,number_sigma_E)
 
 
-        thr0=np.loadtxt(file_p,)
-        thr=np.rint(thr0[:,0]) - np.rint(thr0[:,1])*number_sigma+offset
+        thr0_T=np.loadtxt(file_T,)
+        thr_T= np.rint(thr0_T[:,0]) - np.rint(thr0_T[:,1] * number_sigma_T) + offset
+
+        thr0_E=np.loadtxt(file_E,)
+        thr_E= np.rint(thr0_E[:,0]) - np.rint(thr0_E[:,1] * number_sigma_E) + offset
 
         for c in range (0,64):
-            if thr[c]<0 or thr[c]==0:
+            if thr_T[c]<=0:
+                thr_T[c]=0
+            if thr_T[c]>63:
+                thr_T[c]=63
+            if thr_E[c]<=0:
+                thr_E[c]=0
+            if thr_E[c]>63:
+                thr_E[c]=63
 
-                thr[c]=0
-            if thr[c]>63:
-                thr[c]=63
 
-        print ("Thr={}".format(thr))
+
+        print ("Thr T={}".format(thr_T))
+        print ("Thr E={}".format(thr_E))
+
         for i in range(0, 64):
-            binascii.b2a_hex(self.Set_Vth_T1(ChCFGReg_setting_inst, TIGER_ID_param, i, int(thr[i])))
-            self.Set_param_dict_channel(ChCFGReg_setting_inst,"Vth_T2",TIGER_ID_param,i,int(thr[i]))
-
+            self.Set_param_dict_channel(ChCFGReg_setting_inst,"Vth_T1",TIGER_ID_param,i,int(thr_T[i]),send_command=False)
+            if int(thr_T[i])==0:
+                self.Set_param_dict_channel(ChCFGReg_setting_inst, "TriggerMode", TIGER_ID_param, i, 3,send_command=False)
+                print "Ch {} disabled, too noisy \n".format(i)
+            self.Set_param_dict_channel(ChCFGReg_setting_inst, "Vth_T2", TIGER_ID_param, i, int(thr_E[i]))
 
         if save_on_LOG:
             name="."+sep+"log_folder"+sep+"THR_LOG{}_TIGER_{}.txt".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"),TIGER_ID_param)
-            np.savetxt(name,np.c_[thr])
+            np.savetxt(name,np.c_[thr_T])
 
         return 0
 
@@ -1998,14 +2016,22 @@ class communication: ##The directory are declared here to avoid multiple declara
         if value==1:
             for T in range (0,8):
                 for ch in range (0,64):
-                    self.Set_param_dict_channel(reg,"TriggerMode2B",T,ch,3)
-                    self.Set_param_dict_channel(reg,"TriggerMode2Q",T,ch,0)
-                    self.Set_param_dict_channel(reg,"TriggerMode2E",T,ch,3)
+                    self.Set_param_dict_channel(reg,"TriggerMode2B",T,ch,3,send_command=False)
+                    self.Set_param_dict_channel(reg,"TriggerMode2Q",T,ch,0,send_command=False)
+                    self.Set_param_dict_channel(reg,"TriggerMode2E",T,ch,3,send_command=False)
                     self.Set_param_dict_channel(reg,"TriggerMode2T",T,ch,0)
         if value==0:
             for T in range (0,8):
                 for ch in range (0,64):
-                    self.Set_param_dict_channel(reg,"TriggerMode2B",T,ch,0)
-                    self.Set_param_dict_channel(reg,"TriggerMode2Q",T,ch,0)
-                    self.Set_param_dict_channel(reg,"TriggerMode2E",T,ch,0)
+                    self.Set_param_dict_channel(reg,"TriggerMode2B",T,ch,0,send_command=False)
+                    self.Set_param_dict_channel(reg,"TriggerMode2Q",T,ch,0,send_command=False)
+                    self.Set_param_dict_channel(reg,"TriggerMode2E",T,ch,0,send_command=False)
                     self.Set_param_dict_channel(reg,"TriggerMode2T",T,ch,0)
+    def only_E(self, reg):
+        for T in range (0,8):
+            for ch in range (0,64):
+                self.Set_param_dict_channel(reg,"TriggerMode2B",T,ch,1,send_command=False)
+                self.Set_param_dict_channel(reg,"TriggerMode2Q",T,ch,1,send_command=False)
+                self.Set_param_dict_channel(reg,"TriggerMode2E",T,ch,1,send_command=False)
+                self.Set_param_dict_channel(reg,"TriggerMode2T",T,ch,1,send_command=False)
+                self.Set_param_dict_channel(reg,"Vth_T1",T,ch,63)

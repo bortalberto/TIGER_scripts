@@ -10,6 +10,7 @@ from multiprocessing import Process, Pipe
 import acq_GUI as acq_GUI
 from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
 import sys
+import os
 import array
 import time
 
@@ -32,10 +33,14 @@ class menu():
         self.configuring_gemroc = 0
         # main window
         self.main_window = Tk()
+
         self.icon_on = PhotoImage(file="." + sep + 'icons' + sep + 'on.gif')
         self.icon_off = PhotoImage(file="." + sep + 'icons' + sep + 'off.gif')
         self.icon_bad = PhotoImage(file="." + sep + 'icons' + sep + 'bad.gif')
-        self.main_window.title("GEMROC configurer")
+        self.main_window.wm_title("Configuration")
+        # self.main_window.tk.call('wm', 'iconphoto', self.main_window._w, self.icon_bad)
+        #
+        # self.main_window.title("GEMROC configurer")
         self.handler_list = []
         self.GEMROC_reading_dict = {}
         self.showing_GEMROC = StringVar(self.main_window)
@@ -62,6 +67,7 @@ class menu():
         self.ERROR_LED = Label(self.first_row_frame, image=self.icon_off)
         self.ERROR_LED.grid(row=0, column=2, sticky=W, padx=1)
         self.second_row_frame = Frame(self.conf_frame)
+        self.second_row_frame = Frame(self.conf_frame)
         self.second_row_frame.grid(row=1, column=0, sticky=NW, pady=4)
         self.label_array = []
         self.field_array = []
@@ -73,7 +79,7 @@ class menu():
         self.TP_num=IntVar(self.main_window)
         ##Select window
         self.select_window = Toplevel(self.main_window)
-
+        self.select_window.wm_title("Selection window")
         Label(self.select_window, text='GEMROC to configure', font=("Courier", 25)).pack()
         self.grid_frame = Frame(self.select_window)
         self.grid_frame.pack()
@@ -118,7 +124,9 @@ class menu():
 
         cornice=Frame(self.select_window)
         cornice.pack()
-        Button(cornice, text="THR scan on all GEMROCs", command=lambda: self.thr_Scan(-1, -1)).pack(side=LEFT)
+        Button(cornice, text="THR scan (T-branch)", command=lambda: self.thr_Scan(-1, -1,1)).pack(side=LEFT)
+        Button(cornice, text="THR scan (E-branch)", command=lambda: self.thr_Scan(-1, -1,  2)).pack(side=LEFT)
+
         Button(cornice, text="Noise measure tool", command=self.launch_noise_window).pack(side=LEFT)
 
         Label(cornice, text="Rate").pack(side=LEFT)
@@ -254,7 +262,7 @@ class menu():
             GEMROC.GEM_COM.double_enable(1,GEMROC.c_inst)
 
 
-    def thr_Scan(self, GEMROC_num, TIGER_num):  # if GEMROC num=-1--> To all GEMROC, if TIGER_num=-1 --> To all TIGERs
+    def thr_Scan(self, GEMROC_num, TIGER_num, branch=1):  # if GEMROC num=-1--> To all GEMROC, if TIGER_num=-1 --> To all TIGERs
         startT=time.time()
         self.bar_win = Toplevel(self.main_window)
         self.bar_win.focus_set()  # set focus on the ProgressWindow
@@ -262,7 +270,6 @@ class menu():
         progress_bars = []
         progress_list = []
         dict = {}
-
         Label(self.bar_win, text="Threshold Scan completition").pack()
         if GEMROC_num == -1:
             dict = self.GEMROC_reading_dict.copy()
@@ -285,38 +292,40 @@ class menu():
         i = 0
         for number, GEMROC_num in dict.items():
             pipe_in, pipe_out = Pipe()
-            p = Process(target=self.THR_scan_process, args=(number, TIGER_num, pipe_out))
+            if branch==1:
+                p = Process(target=self.THR_scan_process, args=(number, TIGER_num, pipe_out))
+            else:
+                p = Process(target=self.THR_scan_process, args=(number, TIGER_num, pipe_out,2))
             # pipe_in.send(progress_bars[i])
             process_list.append(p)
             pipe_list.append(pipe_in)
             p.start()
             i += 1
         while True:
-            alive_list = []
-            for process in process_list:
-                alive_list.append(process.is_alive())
-            if all(v == False for v in alive_list):
-                print "ABUBU"
-                break
-            else:
-                for progress, pipe in zip(progress_list, pipe_list):
+
+            for progress, pipe , process in zip(progress_list, pipe_list,process_list):
+                if process.is_alive():
                     try:
-                        progress.set(pipe.recv())
+                        if pipe.poll(0.05):
+                            ric = pipe.recv()
+                            progress.set(ric)
+                            self.bar_win.update()
+                    except  Exception as Err:
+                        print ("Can't acquire status: {}".format(Err))
+                        progress.set(maxim)
+            if all (process.is_alive() is False for process in process_list):
+                print "All finished"
+                break
 
-                        self.bar_win.update()
-                        time.sleep(0.0001)
-                    except:
-                        print ("Can't acquire status")
 
 
-                    # print progress.get()
-
-        for process in process_list:
-            if process.is_alive():
-                process.join()
+        #
+        # for process in process_list:
+        #     if process.is_alive():
+        #         process.terminate()
 
         stopT=time.time()
-        print (stopT-startT)
+        print ("Execution time: {}".format(stopT-startT))
         self.bar_win.destroy()
 
         # else:
@@ -326,7 +335,7 @@ class menu():
         #     g_inst = GEMROC.g_inst
         #     test_r = (AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst))
 
-    def THR_scan_process(self, number, TIGER, pipe_out):
+    def THR_scan_process(self, number, TIGER, pipe_out, branch=1):
         GEMROC = self.GEMROC_reading_dict[number]
         GEM_COM = GEMROC.GEM_COM
         c_inst = GEMROC.c_inst
@@ -336,23 +345,34 @@ class menu():
         test_c.thr_preconf()
         if TIGER == -1:
             first = 0
-            last = 8
+            last = 1
         else:
             first = TIGER
             last = TIGER + 1
         GEMROC_ID = GEM_COM.GEMROC_ID
-        test_r.thr_scan_matrix = test_c.thr_conf_using_GEMROC_COUNTERS_progress_bar(test_r, first, last, pipe_out, False)
+        if branch==1:
+            test_r.thr_scan_matrix = test_c.thr_conf_using_GEMROC_COUNTERS_progress_bar(test_r, first, last,pipe_out,print_to_screen=False)
+        else:
+            test_r.thr_scan_matrix = test_c.thr_conf_using_GEMROC_COUNTERS_progress_bar(test_r, first, last, pipe_out,print_to_screen=False, branch=2)
 
         test_r.make_rate()
         test_r.normalize_rate(first, last)
-        test_r.save_scan_on_file()
-        test_r.colorPlot(GEM_COM.Tscan_folder + sep + "GEMROC{}".format(GEMROC_ID) + sep + "GEMROC {}".format(GEMROC_ID) + "rate", first, last, True)
-        test_r.colorPlot(GEM_COM.Tscan_folder + sep + "GEMROC{}".format(GEMROC_ID) + sep + "GEMROC {}".format(GEMROC_ID) + "conteggi", first, last)
+
+        if branch==1:
+            test_r.colorPlot(GEM_COM.Tscan_folder + sep + "GEMROC{}".format(GEMROC_ID) + sep + "GEMROC{}".format(GEMROC_ID) + "rate", first, last, True)
+            test_r.colorPlot(GEM_COM.Tscan_folder + sep + "GEMROC{}".format(GEMROC_ID) + sep + "GEMROC{}".format(GEMROC_ID) + "conteggi", first, last)
+            test_r.save_scan_on_file(branch=1)
+
+        else:
+            test_r.colorPlot(GEM_COM.Escan_folder + sep + "GEMROC{}".format(GEMROC_ID) + sep + "GEMROC{}".format(GEMROC_ID) + "rate", first, last, True)
+            test_r.colorPlot(GEM_COM.Escan_folder + sep + "GEMROC{}".format(GEMROC_ID) + sep + "GEMROC{}".format(GEMROC_ID) + "conteggi", first, last)
+            test_r.save_scan_on_file(branch=2)
 
         # test_r.normalize_rate( first,int(input_array[2]))
-        test_r.global_sfit(first, last)
+        test_r.global_sfit(first, last,branch=2)
         print ("GEMROC {} done".format(GEMROC_ID))
-        pipe_out.send(1)
+        pipe_out.send(0)
+
 
     def auto_tune(self, GEMROC_num, TIGER_num,iter):  # if GEMROC num=-1--> To all GEMROC, if TIGER_num=-1 --> To all TIGERs
         self.bar_win = Toplevel(self.main_window)
@@ -430,7 +450,7 @@ class menu():
             test_r = AN_CLASS.analisys_read(GEM_COM, c_inst)
 
             auto_tune_C = AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst)
-            GEM_COM.Load_VTH_fromfile(c_inst, TIGER, 2, 0)
+            GEM_COM.Load_VTH_fromfile(c_inst, TIGER, 2,1, 0)
             print ("\nVth Loaded on TIGER {}".format(TIGER))
             auto_tune_C.fill_VTHR_matrix(3, 0, TIGER)
 
@@ -446,7 +466,7 @@ class menu():
                 test_r = AN_CLASS.analisys_read(GEM_COM, c_inst)
 
                 auto_tune_C = AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst)
-                GEM_COM.Load_VTH_fromfile(c_inst, T, 2, 0)
+                GEM_COM.Load_VTH_fromfile(c_inst, T, 2,1, 0)
                 print ("\nVth Loaded on TIGER {}".format(T))
                 auto_tune_C.fill_VTHR_matrix(3, 0, T)
 
@@ -848,9 +868,11 @@ class menu():
                     DAQ_inst.DAQ_config_dict["DAQPause_Set"] = 0
                     GEMROC.GEM_COM.DAQ_set_with_dict()
             else:
-                DAQ_inst.DAQ_config_dict["Enable_DAQPause_Until_First_Trigger"] = 0
-                DAQ_inst.DAQ_config_dict["DAQPause_Set"] = 0
-                GEMROC.GEM_COM.DAQ_set_with_dict()
+                for number, GEMROC in self.GEMROC_reading_dict.items():
+                    DAQ_inst = GEMROC.GEM_COM.gemroc_DAQ_XX
+                    DAQ_inst.DAQ_config_dict["Enable_DAQPause_Until_First_Trigger"] = 0
+                    DAQ_inst.DAQ_config_dict["DAQPause_Set"] = 0
+                    GEMROC.GEM_COM.DAQ_set_with_dict()
 
 
 
@@ -1270,7 +1292,7 @@ class menu():
                 if source == "auto":
                     GEMROC.GEM_COM.Load_VTH_fromfile_autotuned(GEMROC.c_inst, T)
                 if source == "scan":
-                    GEMROC.GEM_COM.Load_VTH_fromfile(GEMROC.c_inst, T, sigma, offset)
+                    GEMROC.GEM_COM.Load_VTH_fromfile(GEMROC.c_inst, T, sigma,sigma-1, offset)
                 self.write_CHANNEL(GEMROC, T, 64, False)
         else:
             for number, GEMROC in self.GEMROC_reading_dict.items():
@@ -1278,7 +1300,7 @@ class menu():
                     if source == "auto":
                         GEMROC.GEM_COM.Load_VTH_fromfile_autotuned(GEMROC.c_inst, T)
                     if source == "scan":
-                        GEMROC.GEM_COM.Load_VTH_fromfile(GEMROC.c_inst, T, sigma, offset)
+                        GEMROC.GEM_COM.Load_VTH_fromfile(GEMROC.c_inst, T, sigma,sigma-1, offset)
                     self.write_CHANNEL(GEMROC, T, 64, False)
 
     def load_default_config(self):
