@@ -369,7 +369,12 @@ class menu():
             test_r.save_scan_on_file(branch=2)
 
         # test_r.normalize_rate( first,int(input_array[2]))
-        test_r.global_sfit(first, last,branch=2)
+        if branch==1:
+            test_r.global_sfit(first, last,branch=1)
+        else:
+            test_r.global_sfit(first, last,branch=2)
+
+
         print ("GEMROC {} done".format(GEMROC_ID))
         pipe_out.send(0)
 
