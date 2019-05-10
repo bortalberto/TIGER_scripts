@@ -99,7 +99,7 @@ class menu():
         self.start_frame.pack()
         Label(self.start_frame, text="Acq time (seconds for TL, minutes for TM)").grid(row=0, column=0, sticky=NW, pady=4)
         self.time_in = Entry(self.start_frame, width=3)
-        self.time_in.insert(END, '1')
+        self.time_in.insert(END, '30')
         self.time_in.grid(row=0, column=1, sticky=NW, pady=4)
         Checkbutton(self.start_frame, text="Fast analysis", variable=self.simple_analysis).grid(row=0, column=2, sticky=NW, pady=4)
         Checkbutton(self.start_frame, text="On run analysis", variable=self.run_analysis).grid(row=0, column=3, sticky=NW, pady=4)
@@ -286,7 +286,7 @@ class menu():
         os.system("./HVWrappdemo ttyUSB0 VSet 2000")
 
     def PMT_OFF(self):
-        os.system("./HVWrappdemo ttyUSB0 VSet 500")
+        os.system("./HVWrappdemo ttyUSB0 VSet 1000")
 
     def relaunch_acq(self):
         self.stop_acq(True)
@@ -301,11 +301,13 @@ class menu():
             self.father.load_default_config()
             self.father.Synch_reset()
             time.sleep(0.2)
+
             self.father.Synch_reset()
             self.father.set_pause_mode(to_all=True,value=1)
 
             if self.PMT:
                 self.PMT_on()
+            time.sleep(10)
 
             self.start_acq()
 
@@ -532,9 +534,10 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
         Thread.__init__(self)
         self.caller=caller
     def run(self):
+        print float(self.caller.time)*60
         self.start_time=time.time()
         while self.running:
-            if (time.time()-self.start_time)>int(self.caller.time)*60:
+            if (time.time()-self.start_time)>float(self.caller.time)*60:
                 self.caller.relaunch_acq()
             time.sleep(10)
             if self.caller.run_analysis.get():

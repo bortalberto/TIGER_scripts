@@ -550,9 +550,12 @@ class menu():
             self.LOAD_ON.pack(side=LEFT)
             thr_frame = Frame(self.third_row_frame)
             thr_frame.grid(row=3, column=0, sticky=W, pady=2)
-            Label(thr_frame, text="Sigma").pack(side=LEFT)
-            self.thr_sigma = Entry(thr_frame, width=2)
-            self.thr_sigma.pack(side=LEFT)
+            Label(thr_frame, text="Sigma T").pack(side=LEFT)
+            self.thr_sigma_T = Entry(thr_frame, width=2)
+            self.thr_sigma_T.pack(side=LEFT)
+            Label(thr_frame, text="Sigma E").pack(side=LEFT)
+            self.thr_sigma_E = Entry(thr_frame, width=2)
+            self.thr_sigma_E.pack(side=LEFT)
             OptionMenu(thr_frame, thr_target, *["This TIGER", "All TIGERs", "All TIGERs in all GEMROCs"]).pack(side=LEFT)
             Button(thr_frame, text="Load scan threshold", command=lambda: self.load_thr_Handling(thr_target, "scan")).pack(side=LEFT)
             Button(thr_frame, text="Load auto threshold", command=lambda: self.load_thr_Handling(thr_target, "auto")).pack(side=LEFT)
@@ -1295,13 +1298,13 @@ class menu():
         thr_target = thr_target_entry.get()
         if thr_target == "This TIGER":
             TIGER = int(self.showing_TIGER.get())
-            self.load_thr(source=mode, sigma=int(self.thr_sigma.get()), first=TIGER, last=TIGER + 1)
+            self.load_thr(source=mode, sigma_T=int(self.thr_sigma_T.get()),sigma_E=int(self.thr_sigma_E.get()), first=TIGER, last=TIGER + 1)
         if thr_target == "All TIGERs":
-            self.load_thr(source=mode, sigma=int(self.thr_sigma.get()))
+            self.load_thr(source=mode, sigma_T=int(self.thr_sigma_T.get()),sigma_E=int(self.thr_sigma_E.get()))
         if thr_target == "All TIGERs in all GEMROCs":
-            self.load_thr(source=mode, sigma=int(self.thr_sigma.get()), to_all=True)
+            self.load_thr(source=mode, sigma_T=int(self.thr_sigma_T.get()),sigma_E=int(self.thr_sigma_E.get()), to_all=True)
 
-    def load_thr(self, to_all=False, source="auto", sigma=3, offset=0, first=0, last=8):
+    def load_thr(self, to_all=False, source="auto", sigma_T=3,sigma_E=2, offset=0, first=0, last=8):
         if not to_all:
             GEMROC = self.GEMROC_reading_dict[self.showing_GEMROC.get()]
             print (GEMROC)
@@ -1309,7 +1312,7 @@ class menu():
                 if source == "auto":
                     GEMROC.GEM_COM.Load_VTH_fromfile_autotuned(GEMROC.c_inst, T)
                 if source == "scan":
-                    GEMROC.GEM_COM.Load_VTH_fromfile(GEMROC.c_inst, T, sigma,sigma-1, offset)
+                    GEMROC.GEM_COM.Load_VTH_fromfile(GEMROC.c_inst, T, sigma_T, sigma_E, offset)
                 self.write_CHANNEL(GEMROC, T, 64, False)
         else:
             for number, GEMROC in self.GEMROC_reading_dict.items():
@@ -1317,7 +1320,7 @@ class menu():
                     if source == "auto":
                         GEMROC.GEM_COM.Load_VTH_fromfile_autotuned(GEMROC.c_inst, T)
                     if source == "scan":
-                        GEMROC.GEM_COM.Load_VTH_fromfile(GEMROC.c_inst, T, sigma,sigma-1, offset)
+                        GEMROC.GEM_COM.Load_VTH_fromfile(GEMROC.c_inst, T, sigma_T, sigma_E , offset)
                     self.write_CHANNEL(GEMROC, T, 64, False)
 
     def load_default_config(self):
@@ -1355,7 +1358,7 @@ class menu():
         self.change_acquisition_mode(True,0)
         self.change_trigger_mode(value=0,to_all=True)
         self.load_thr(True,"scan",3,0,0,8)
-        self.specific_channl_fast_setting()
+        self.specific_channel_fast_setting()
         self.load_default_config()
         self.Synch_reset(1)
         self.Synch_reset(1)
@@ -1369,7 +1372,7 @@ class menu():
                     for ch in range (0,64):
                         GEMROC.c_inst.Channel_cfg_list[T][ch]["TriggerMode"] = value
 
-    def specific_channl_fast_setting(self):
+    def specific_channel_fast_setting(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():
             for T in range(0, 8):
                 GEMROC.c_inst.Channel_cfg_list[T][20]["TriggerMode"] = 1

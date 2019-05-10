@@ -287,7 +287,7 @@ class menu():
         #     test_r = (AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst))
     def sampling_time_scan(self):
         self.sampling_scan=True
-        GEMROC=self.GEMROC_reading_dict["GEMROC {}".format(self.plotting_gemroc)]
+        GEMROC=self.GEMROC_reading_dict["{}".format(self.GEMROC_num.get())]
         GEM_COM = GEMROC.GEM_COM
         c_inst = GEMROC.c_inst
         test_r = AN_CLASS.analisys_read(GEM_COM, c_inst)

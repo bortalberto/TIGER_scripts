@@ -120,16 +120,15 @@ class reader:
             for i in range(0, statinfo.st_size / 8):
                 data = f.read(8)
                 hexdata = binascii.hexlify(data)
-                for x in range(0, len(hexdata) - 1, 16):
-                    int_x = 0
-                    for b in range(7, 0, -1):
-                        hex_to_int = (int(hexdata[x + b * 2], 16)) * 16 + int(hexdata[x + b * 2 + 1], 16)
-                        int_x = (int_x + hex_to_int) << 8
-                    hex_to_int = (int(hexdata[x], 16)) * 16 + int(hexdata[x + 1], 16)  # acr 2017-11-17 this should fix the problem
-                    int_x = (int_x + hex_to_int)
-                    raw = "{:54b}  ".format(int_x)
+                string = "{:064b}".format(int(hexdata, 16))
+                inverted = []
+                for i in range(8, 0, -1):
+                    inverted.append(string[(i - 1) * 8:i * 8])
+                string_inv = "".join(inverted)
+                int_x = int(string_inv, 2)
+                raw = "{:064b}  ".format(int_x)
 
-                    s = '%016X \n' % int_x
+                s = '%016X \n' % int_x
                     # acr 2018-06-25 out_file.write(s)
 
                 ## comment this block to avoid parsing

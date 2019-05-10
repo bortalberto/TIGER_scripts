@@ -96,6 +96,7 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
         self.isTM = True
         self.sub_folder=sub_folder
     def run(self):
+        Totallissimi_packets=0
         Total_data_MAX_size = 2 ** 20
         Total_MAX_packets=50
         datapath = "." + sep + "data_folder" + sep+self.sub_folder+sep + "Spill_{}_GEMROC_{}_TM.dat".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"), self.reader.GEMROC_ID)
@@ -116,6 +117,7 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
                     x = self.reader.fast_acquisition(data_list)  # self.reader.fast_acquisition(data_list)
                     Total_Data += x
                     Total_packets+=1
+                    Totallissimi_packets+=1
                     #print ("Packet from GEMROC {}".format(self.reader.GEMROC_ID))
                 except Exception as e:
                     print e
@@ -125,6 +127,9 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
                     print ("\n---GEMROC {} - {}\n".format(self.reader.GEMROC_ID, e))
                     self.reader.TIMED_out = True
                     Exception("GEMROC {} TIMED_OUT".format(self.reader.GEMROC_ID))
+                    with open(self.reader.log_path, 'ab') as f:
+                        f.write("{} -- Finished saving data from  GEMROC {} in file {}, total events= {}\n".format(time.ctime(), self.reader.GEMROC_ID, self.reader.datapath, Totallissimi_packets))
+                    print ("Finished saving data from  GEMROC {} in file {}, total events= {}\n".format(self.reader.GEMROC_ID, self.reader.datapath, Totallissimi_packets))
 
                     self.reader.dataSock.close()
                     self.running=False
@@ -151,8 +156,8 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
 
         self.reader.datapath = datapath
         with open(self.reader.log_path, 'ab') as f:
-            f.write("{} -- Finished saving data from  GEMROC {} in file {}\n".format(time.ctime(), self.reader.GEMROC_ID, self.reader.datapath))
-
+            f.write("{} -- Finished saving data from  GEMROC {} in file {}, total events= {}\n".format(time.ctime(), self.reader.GEMROC_ID, self.reader.datapath,Totallissimi_packets ))
+        print ("Finished saving data from  GEMROC {} in file {}, total events= {}\n".format( self.reader.GEMROC_ID, self.reader.datapath,Totallissimi_packets ))
 
 class reader:
     def __init__(self, GEMROC_ID,logfile="ACQ_log"):
