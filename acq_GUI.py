@@ -9,7 +9,7 @@ import communication_error_GUI as error_GUI
 import time
 from threading import Thread
 from multiprocessing import Process, Pipe
-
+import json
 import os
 
 OS = sys.platform
@@ -37,6 +37,8 @@ class menu():
         # for i in range (0,20):
         #     self.errors_counters_810[i]=i*20
         self.logfile = "." + sep + "log_folder" + sep + "ACQ_log_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
+        self.conffile = "." + sep + "log_folder" + sep + "CONF_log{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
+
         self.mode = 'TL'
         self.LED = []
         self.FIELD_TIGER = []
@@ -202,14 +204,22 @@ class menu():
                 self.toggle(n)
     def set_last_folder(self):
         list_folder=[name for name in os.listdir("."+sep+"data_folder") if os.path.isdir("."+sep+"data_folder"+sep+name)]
-        list_folder.sort(reverse=True)
-        for folder in list_folder:
-            if folder[0:3]=="RUN":
-                self.run_folder=folder
-                print "Data folder set: {}".format(self.run_folder)
-                break
+        list_number=[int(folder [4:]) for folder in list_folder if folder[0:3]=="RUN" ]
+        if len(list_number)!=0:
+            list_number.sort()
+            self.run_folder="RUN_{}".format(list_number[-1])
+        else:
+            os.mkdir("." + sep + "data_folder" + sep + "RUN_0")
+
+            self.run_folder="RUN_0"
+
+        print "Data folder set: {}".format(self.run_folder)
     def new_run_folder(self):
-        os.mkdir("."+sep+"data_folder"+sep+"RUN_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")))
+        list_folder=[name for name in os.listdir("."+sep+"data_folder") if os.path.isdir("."+sep+"data_folder"+sep+name)]
+        list_number=[int(folder [4:]) for folder in list_folder if folder[0:3]=="RUN" ]
+        list_number.sort()
+        last_run_number=list_number[-1]
+        os.mkdir("."+sep+"data_folder"+sep+"RUN_{}".format(last_run_number+1))
         self.set_last_folder()
     def set_test_folder(self):
         self.run_folder="test_folder"
@@ -317,6 +327,21 @@ class menu():
             item.pack_forget()
         self.refresh_but_TIGERs()
 
+    def save_conf_registers(self,save_txt=True, save_pickle=False):
+        with open (self.conffile,'a+') as f:
+            print self.GEMROC_reading_dict.items()
+            for number, GEMROC in self.GEMROC_reading_dict.items():
+                f.write ("\n\n ---  {} configurations   ---\n\n".format(number))
+                f.write ("\n\n ---  DAQ configurations  ---\n\n".format(number))
+                f.write(json.dumps(GEMROC.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict))
+                for T in range (0,8):
+                    f.write("\n\n ---  GEMROC {} TIGER {} global configurations  ---\n\n".format(number,T))
+                    f.write(json.dumps(GEMROC.g_inst.Global_cfg_list[T]))
+                    f.write("\n\n ---  GEMROC {} TIGER {} Channel configurations  ---\n\n".format(number,T))
+                    for ch in range(0, 64):
+                        f.write("\n\n GEMROC {} TIGER {} Channel {} ---\n\n".format(number,T,ch))
+
+                        f.write(json.dumps(GEMROC.c_inst.Channel_cfg_list[T][ch]))
 
     def plotta(self):
         if self.simple_analysis.get() or self.run_analysis.get():
@@ -388,7 +413,11 @@ class menu():
         mainloop()
 
     def start_acq(self):
+        self.logfile = "."+sep+"data_folder" + sep + self.run_folder + sep + "ACQ_log_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
+        self.conffile = "."+sep+"data_folder" + sep + self.run_folder + sep +  "CONF_log{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
+
         self.restart=True
+        self.save_conf_registers()
         self.but7.config(state='disabled')
         self.but6.config(state='disabled')
         for i in range(0, len(self.GEM)):
@@ -401,13 +430,12 @@ class menu():
 
         self.time = self.time_in.get()
         lista = []
-        self.logfile = "."+sep+"data_folder" + sep + self.run_folder + sep + "ACQ_log_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
 
         for i in range(0, len(self.GEM_to_read)):
             if self.GEM_to_read[i] == 1:
                 lista.append(i)
                 self.GEM.append(GEM_ACQ.reader(i, self.logfile))
-                with open(self.logfile, 'a') as f:
+                with open(self.logfile, 'a+') as f:
                     f.write("{} -- Acquiring from GEMROC {} in {} mode\n".format(time.ctime(), i, self.mode))
                 print ("Acquiring from GEMROC {} in {} mode".format(i, self.mode))
         # self.Launch_error_check['text']="Acquiring from GEMROCs: {} in {} mode\n".format(lista,self.mode)
