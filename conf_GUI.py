@@ -1357,7 +1357,7 @@ class menu():
         self.Synch_reset(1)
         self.change_acquisition_mode(True,0)
         self.change_trigger_mode(value=0,to_all=True)
-        self.load_thr(True,"scan",3,0,0,8)
+        self.load_thr(True,"scan",3,2,0,0,8)
         self.specific_channel_fast_setting()
         self.load_default_config()
         self.Synch_reset(1)

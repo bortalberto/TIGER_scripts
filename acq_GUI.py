@@ -11,7 +11,7 @@ from threading import Thread
 from multiprocessing import Process, Pipe
 import json
 import os
-
+import glob
 OS = sys.platform
 if OS == 'win32':
     sep = '\\'
@@ -27,6 +27,7 @@ else:
 
 class menu():
     def __init__(self, std_alone=True, main_winz=None, GEMROC_reading_dict=None,father=None):
+
         self.father=father
         self.restart=True
         self.PMT=True
@@ -37,8 +38,8 @@ class menu():
         # for i in range (0,20):
         #     self.errors_counters_810[i]=i*20
         self.logfile = "." + sep + "log_folder" + sep + "ACQ_log_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
-        self.conffile = "." + sep + "log_folder" + sep + "CONF_log{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
-
+        self.conffile = "." + sep + "log_folder" + sep + "CONF_log_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
+        self.sub_run_number=0
         self.mode = 'TL'
         self.LED = []
         self.FIELD_TIGER = []
@@ -203,6 +204,9 @@ class menu():
                 n=int(number.split()[1])
                 self.toggle(n)
     def set_last_folder(self):
+        """
+        Funzione per andare all'ultima cartella
+        """
         list_folder=[name for name in os.listdir("."+sep+"data_folder") if os.path.isdir("."+sep+"data_folder"+sep+name)]
         list_number=[int(folder [4:]) for folder in list_folder if folder[0:3]=="RUN" ]
         if len(list_number)!=0:
@@ -329,7 +333,7 @@ class menu():
 
     def save_conf_registers(self,save_txt=True, save_pickle=False):
         with open (self.conffile,'a+') as f:
-            print self.GEMROC_reading_dict.items()
+            # print self.GEMROC_reading_dict.items()
             for number, GEMROC in self.GEMROC_reading_dict.items():
                 f.write ("\n\n ---  {} configurations   ---\n\n".format(number))
                 f.write ("\n\n ---  DAQ configurations  ---\n\n".format(number))
@@ -411,11 +415,19 @@ class menu():
 
     def runna(self):
         mainloop()
+    def check_sub_run(self):
+        if glob.glob("."+sep+"data_folder"+sep+self.run_folder+sep+"ACQ_log*"):
+            numbers = [int(name.split("ACQ_log")[1].split("_")[1]) for name in glob.glob("."+sep+"data_folder"+sep+self.run_folder+sep+"ACQ_log*")]
+            max=np.max(numbers)
+            self.sub_run_number=max+1
+        else:
+            self.sub_run_number=0
 
+        print "Sub_run={}".format(self.sub_run_number)
     def start_acq(self):
-        self.logfile = "."+sep+"data_folder" + sep + self.run_folder + sep + "ACQ_log_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
-        self.conffile = "."+sep+"data_folder" + sep + self.run_folder + sep +  "CONF_log{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
-
+        self.check_sub_run()
+        self.logfile = "."+sep+"data_folder" + sep + self.run_folder + sep + "ACQ_log_{}".format(self.sub_run_number)
+        self.conffile = "."+sep+"data_folder" + sep + self.run_folder + sep +  "CONF_log_{}".format(self.sub_run_number)
         self.restart=True
         self.save_conf_registers()
         self.but7.config(state='disabled')
@@ -442,10 +454,10 @@ class menu():
 
         for i in range(0, len(self.GEM)):
             if self.mode == 'TL':
-                self.thread.append(GEM_ACQ.Thread_handler("GEM ".format(i), float(self.time), self.GEM[i],sub_folder=self.run_folder))
+                self.thread.append(GEM_ACQ.Thread_handler("GEM ".format(i), float(self.time), self.GEM[i],sub_folder=self.run_folder,sub_run_number=self.sub_run_number))
 
             else:
-                self.thread.append(GEM_ACQ.Thread_handler_TM("GEM ".format(i), self.GEM[i],sub_folder=self.run_folder))
+                self.thread.append(GEM_ACQ.Thread_handler_TM("GEM ".format(i), self.GEM[i],sub_folder=self.run_folder,sub_run_number=self.sub_run_number))
         if not self.std_alone:
             self.error_thread = (Thread_handler_errors(self.GEMROC_reading_dict, self.GEM, self.errors_counters_810,self))
         self.GEM_to_read_last = self.GEM_to_read
@@ -562,7 +574,7 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
         Thread.__init__(self)
         self.caller=caller
     def run(self):
-        print float(self.caller.time)*60
+        print "Acquiring for {:.2f} seconds".format(float(self.caller.time)*60)
         self.start_time=time.time()
         while self.running:
             if (time.time()-self.start_time)>float(self.caller.time)*60:

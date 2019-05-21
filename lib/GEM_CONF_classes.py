@@ -400,6 +400,23 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
             self.Global_cfg_list=pickle.load(f)
         print self.Global_cfg_list
         return 0
+
+   def load_TP_cal(self,config_dict, TP_amplitude= "low"):
+       for T in range(0,8):
+           if config_dict[self.TARGET_GEMROC_ID][T]["TP_Vcal_ref"] != 'NA':
+               self.Global_cfg_list[T]["TP_Vcal_ref"] = config_dict[self.TARGET_GEMROC_ID][T]["TP_Vcal_ref"]
+               self.Global_cfg_list[T]["TP_Vcal"] = config_dict[self.TARGET_GEMROC_ID][T]["TP_Vcal"]
+               self.Global_cfg_list[T]["IBiasTPcal"] = config_dict[self.TARGET_GEMROC_ID][T]["Ibias_TP_cal_diff"]
+               if TP_amplitude == "low":
+                   self.Global_cfg_list[T]["TP_Vcal_ref"] = config_dict[self.TARGET_GEMROC_ID][T]["start"]+3
+               if TP_amplitude == "high":
+                   self.Global_cfg_list[T]["TP_Vcal_ref"] = config_dict[self.TARGET_GEMROC_ID][T]["stop"]-4
+           else:
+               if TP_amplitude == "low":
+                   self.Global_cfg_list[T]["TP_Vcal_ref"] = 4
+               if TP_amplitude == "high":
+                   self.Global_cfg_list[T]["TP_Vcal_ref"] = 13
+
 ###CCCCCCCCCCCCCCCC###     CLASS ch_reg_settings BEGIN  ###CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC###
 class ch_reg_settings: # purpose: organize the Channel Configuration Register Settings in an array format which can be sent over Ethernet or optical link
    def __init__(self,

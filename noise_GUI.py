@@ -116,6 +116,8 @@ class menu():
         Button(self.third_row, text="Load", command=self.LOAD).pack(side=LEFT,padx=2)
         Button(self.third_row, text="Fit", command=self.fit).pack(side=LEFT,padx=2)
         Button(self.third_row, text="Save noise levels", command=self.SAVE_noise).pack(side=LEFT,padx=2)
+        Button(self.third_row, text="Load TP settings", command=self.load_TP_settings).pack(side=LEFT,padx=2)
+
         #Button(self.third_row, text="Switch to TP distribution measurment", command=self.switch_to_tp_distr).pack(side=LEFT, padx=25)
         Button(self.third_row, text="Sampling time scan", command=self.sampling_time_scan).pack(side=LEFT,padx=25)
 
@@ -386,6 +388,11 @@ class menu():
     def start_TP(self):
         for number, GEMROC_number in self.GEMROC_reading_dict.items():
             GEMROC_number.GEM_COM.Soft_TP_generate()
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TP_period'] = 500
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['Periodic_TP_EN_pattern'] = 15
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['number_of_repetitions'] = 1012
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TP_width'] = 8
+            GEMROC_number.GEM_COM.DAQ_set_with_dict()
     def plotta(self):
         if self.sampling_scan==True:
             for number, GEMROC_number in self.GEMROC_reading_dict.items():
@@ -472,7 +479,14 @@ class menu():
         filename = tkFileDialog.askopenfilename(initialdir="." + sep + "noise_scan" + sep + "saves", title="Select file", filetypes=(("Noise scan files", "*.ns"), ("all files", "*.*")))
         with  open(filename, 'rb') as f:
             self.scan_matrixs=pickle.load(f)
-
+    def load_TP_settings(self):
+        filename = "." + sep + "conf" + sep + "TP_conf.pickle"
+        with open(filename, 'rb') as f:
+           TP_cof_dict = pickle.load(f)
+        for number,GEMROC in self.GEMROC_reading_dict.items():
+            GEMROC.g_inst.load_TP_cal(TP_cof_dict)
+            for T in range (0,8):
+                GEMROC.GEM_COM.Set_param_dict_global(GEMROC.g_inst, "FE_TPEnable", T, 1)
     def fit(self):
         for GEMROC,matrix in self.scan_matrixs.items():
             for TIG in range (0,8):

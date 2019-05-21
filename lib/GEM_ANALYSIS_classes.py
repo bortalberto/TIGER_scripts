@@ -921,6 +921,7 @@ class analisys_read:
         self.thr_scan_frames=np.ones((8,64,64))
         self.vthr_matrix=np.ones((8,64))
         self.thr_scan_rate = np.zeros((8, 64, 64))
+        self.thr_scan_rate_norm = np.zeros((8, 64, 64))
         self.thresholds = np.zeros((8, 64, 2))
 
     def start_socket(self):
@@ -1160,17 +1161,17 @@ class analisys_read:
         for T in range(first_TIGER_to_SCAN, last_TIGER_to_scan):
             for z in range(0, 64):
                 max = np.max(self.thr_scan_rate[T, z, :])
-                self.thr_scan_rate[T, z, :] = self.thr_scan_rate[T, z, :] / max
+                self.thr_scan_rate_norm[T, z, :] = self.thr_scan_rate[T, z, :] / max
                 # for i in range (0,64):
                 #     if self.thr_scan_rate[T,z,i]==1:
                 #         for j in range (i,64):
                 #             if self.thr_scan_rate[T, z, j] <0.9: #Force to 1 all the values after the max, necessary for convergence
                 #                 self.thr_scan_rate[T, z, j]=1
 
-    def global_sfit_noise(self, scan_matrix):
-        TP_rate=10000 #Set accordingly with the test pulse generator
-
-        self.close()
+    # def global_sfit_noise(self, scan_matrix):
+    #     TP_rate=10000 #Set accordingly with the test pulse generator
+    #
+    #     self.close()
 
     def global_sfit(self,first_TIGER_to_SCAN, last_TIGER_to_scan, retry=False,branch=1):
         for T in range(first_TIGER_to_SCAN, last_TIGER_to_scan):
@@ -1184,24 +1185,39 @@ class analisys_read:
             for ch in range(0, 64):
                 try:
                     # (x,k)=self.sfit(self.thr_scan_rate[T,i,:])
-                    print ("Fitting channel {}, TIGER {}".format(ch,T))
-                    (x, k, c) = self.errfit_thr(self.thr_scan_rate[T, ch, :], T, ch,branch )
+                    (x, k, c) = self.errfit_thr(self.thr_scan_rate_norm[T, ch, :], T, ch,branch )
                 except:
                     if retry:
-                        print("Not converged, launching VTH scan on channel\n")
-
-                        try:
-                            (x, k) = self.sfit(self.thr_scan_rate[T, ch, :])
-                            # (x, k) = self.errfit(self.thr_scan_rate[T, i, :])
-                        except:
-                            print ("Can't converge \n")
-                            (x, k) = (0, 0)
+                        pass
+                        # print("Not converged, launching VTH scan on channel\n")
+                        #
+                        # try:
+                        #     (x, k) = self.sfit(self.thr_scan_rate[T, ch, :])
+                        #     # (x, k) = self.errfit(self.thr_scan_rate[T, i, :])
+                        # except:
+                        #     print ("Can't converge \n")
+                        #     (x, k) = (0, 0)
 
 
 
                     else:
-                        (x, k) = (0, 0)
 
+                        (x, k) = (np.argmax (self.thr_scan_rate[T, ch, :]>1000), 1)
+                        print ("Can't fit ch {}, TIGER {}, set: mu  {} and sigma {}".format(ch, T,x,k))
+                        # xdata = np.arange(0, 64)
+                        # plt.plot(xdata, self.thr_scan_rate_norm[T, ch, :], 'o', label='Data')
+                        # plt.ylim(0, 1.05)
+                        # plt.legend(loc='best')
+                        # plt.title("TIGER_{}_channel {}".format(T, ch))
+                        # if branch == 1:
+                        #     plt.savefig(self.GEM_COM.Tscan_folder + sep + "GEMROC{}".format(self.GEMROC_ID) + sep + "channel_fits" + sep + "TIGER_{}_channel {}.png".format(T, ch))
+                        # else:
+                        #     plt.savefig(self.GEM_COM.Escan_folder + sep + "GEMROC{}".format(self.GEMROC_ID) + sep + "channel_fits" + sep + "TIGER_{}_channel {}.png".format(T, ch))
+                        # plt.clf()
+
+            if x<0 or x>64:
+                (x, k) = (np.argmax(self.thr_scan_rate[T, ch, :] > 1000), 1)
+                print ("Invalid value on ch {}, TIGER {}, set: mu  {} and sigma {}".format(ch, T, x, k))
                 # if x>63:
                 #     if retry:
                 #         print("Not converged, launching VTH scan on channel\n")
@@ -1228,7 +1244,7 @@ class analisys_read:
                 self.thresholds[T, ch, 0] = x
                 self.thresholds[T, ch, 1] = k
 
-                print("\n CHANNEL ={} x={} k={}".format(ch, x, k))
+                #print("\n CHANNEL ={} x={} k={}".format(ch, x, k))
 
                 with open(thr_file_path, 'a') as f:
                     f.write("{}     {}\n".format(self.thresholds[T, ch, 0], self.thresholds[T, ch, 1]))
@@ -1258,7 +1274,6 @@ class analisys_read:
         for i, ytest in enumerate(ydata):
             if ytest ==1:
                 max_reach=1
-                print i
             if max_reach==1:
                 ydata[i]=1
 
@@ -1268,8 +1283,8 @@ class analisys_read:
         except:
             if showplot:
                 xdata = np.arange(0, 64)
-                plt.plot(xdata, ydataorg, 'o', label='original data', color='r')
-                plt.plot(xdata, ydata, 'o', label='data')
+                plt.plot(xdata, ydataorg, 'o', label='Original data', color='r')
+                plt.plot(xdata, ydata, 'x', label='Data')
                 plt.ylim(0, 1.05)
                 plt.legend(loc='best')
                 plt.title("TIGER_{}_channel {}".format(Tiger, Channel))
@@ -1280,8 +1295,7 @@ class analisys_read:
                 plt.clf()
             pass
 
-        print ("\n")
-        print popt
+        print "GEMROC {} TIGER {}, ch {}, fit: {}".format(self.GEMROC_ID,Tiger,Channel,popt)
 
         x = np.arange(0, 64)
         y = errorfunc(x, *popt)
@@ -1289,14 +1303,16 @@ class analisys_read:
         if showplot:
             xdata = np.arange(0, 64)
             plt.plot(xdata, ydataorg, 'o', label='original data',color='r')
-            plt.plot(xdata, ydata, 'o', label='data')
+            plt.plot(xdata, ydata, 'x', label='data')
             plt.plot(x, y, label='fit')
             plt.ylim(0, 1.05)
             plt.legend(loc='best')
             plt.title("TIGER_{}_channel {}".format(Tiger,Channel))
-            plt.savefig(self.GEM_COM.Tscan_folder+sep+"GEMROC{}".format(self.GEMROC_ID)+sep+"channel_fits"+sep+"TIGER_{}_channel {}.png".format(Tiger,Channel))
+            if branch == 1:
+                plt.savefig(self.GEM_COM.Tscan_folder + sep + "GEMROC{}".format(self.GEMROC_ID) + sep + "channel_fits" + sep + "TIGER_{}_channel {}.png".format(Tiger, Channel))
+            else:
+                plt.savefig(self.GEM_COM.Escan_folder + sep + "GEMROC{}".format(self.GEMROC_ID) + sep + "channel_fits" + sep + "TIGER_{}_channel {}.png".format(Tiger, Channel))
             plt.clf()
-
         return (popt)
 
     def errfit_noise(self, ydata, showplot=True):

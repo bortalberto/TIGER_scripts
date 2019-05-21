@@ -38,6 +38,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.GEMROC_ID=gemroc_ID
         self.FEB_PWR_EN_pattern=feb_pwr_pattern
 
+
         self.keep_cfg_log=keep_cfg_log
         self.keep_IVT_log=keep_IVT_log
 
@@ -1701,10 +1702,25 @@ class communication: ##The directory are declared here to avoid multiple declara
 
 
         thr0_T=np.loadtxt(file_T,)
-        thr_T= np.rint(thr0_T[:,0]) - np.rint(thr0_T[:,1] * number_sigma_T) + offset
+        thr_T=np.zeros(64)
+        for ch in range (0,64):
+            med, sigma = thr0_T[ch,:]
+            if (sigma*number_sigma_T)<1:
+                print ("Sigma on ch {} to low, setting 1 instead".format(ch))
+                shift =1
+            else:
+                shift = sigma * number_sigma_T
+            thr_T[ch] = np.rint(med-shift) + offset
 
-        thr0_E=np.loadtxt(file_E,)
-        thr_E= np.rint(thr0_E[:,0]) - np.rint(thr0_E[:,1] * number_sigma_E) + offset
+        thr0_E = np.loadtxt(file_E, )
+        thr_E = np.zeros(64)
+        for ch in range(0, 64):
+            med, sigma = thr0_E[ch, :]
+            if (sigma * number_sigma_E) < 1:
+                shift = 1
+            else:
+                shift = sigma * number_sigma_E
+            thr_E[ch] = np.rint(med - shift) + offset
 
         for c in range (0,64):
             if thr_T[c]<=0:
