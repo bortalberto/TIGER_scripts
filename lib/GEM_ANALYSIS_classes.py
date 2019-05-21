@@ -3,7 +3,6 @@
 import socket
 import binascii
 import numpy as np
-import time
 import sys
 import os
 import matplotlib
@@ -15,9 +14,7 @@ from scipy import special
 from threading import Thread
 import datetime
 import multiprocessing
-import random
-import array
-import fileinput
+import time
 OS = sys.platform
 if OS == 'win32':
 	sep = '\\'
@@ -177,20 +174,20 @@ class analisys_conf: #Analysis class used for configurations10
                 self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 0, 0)
                 for i in range(0,64):#VTH Cycle, i)**
                         # with open(self.log_path, 'a') as log_file:
-                        command_sent = self.GEM_COM.Set_Vth_T1(self.c_inst, T, j, i)
+                        self.GEM_COM.Set_Vth_T1(self.c_inst, T, j, i)
                         # with open(self.log_path, 'a') as log_file:
                         #     log_file.write("@@@@@@   {} -- Set Vth={} on channel {} \n".format(time.ctime(),i,j))
                         self.GEM_COM.set_counter(T, 0, j)
                         self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
-                        self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
+                        #self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
                         self.GEM_COM.reset_counter()
                         time.sleep(0.03)
                         thr_scan_matrix[T, j, i] = self.GEM_COM.GEMROC_counter_get()
                         # print ("Events: {}".format(thr_scan_matrix[T, j, i]))
                         if print_to_screen:
-                            os.system('clear')
+                            #os.system('clear')
                             string="SCANNING [TIGER={}, VTh={}, CH={}]\n".format(T,i,j)
-                            sys.stdout.write(string)
+                            print(string)
 
                 self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 3)
 
@@ -246,9 +243,9 @@ class analisys_conf: #Analysis class used for configurations10
                 self.GEM_COM.Load_VTH_fromMatrix(self.c_inst, T, self.vthr_matrix)
             pipe_out.send(T*iter+iter)
             if print_to_screen:
-                print(" \n Scan matrix TIGER {}".format(T))
+                print(" \n Scan matrix GEMROC {} TIGER {}".format(self.GEMROC_ID,T))
                 print autotune_scan_matrix[T, :]
-                print(" \n Threshold matrix TIGER {}".format(T))
+                print(" \n Threshold matrix GEMROC {} TIGER {}".format(self.GEMROC_ID,T))
                 print(self.vthr_matrix[T, :])
                 # self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, self.GEMROC_ID, T, 64, 1, 3)
         # for T in range (first_TIGER_to_SCAN,last_TIGER_to_scan):
@@ -261,26 +258,39 @@ class analisys_conf: #Analysis class used for configurations10
         np.savetxt(name, np.c_[self.vthr_matrix[T, :]])
 
         X = "Autotune done"
-    def thr_conf_using_GEMROC_COUNTERS_progress_bar(self,test_r, first_TIGER_to_SCAN, last_TIGER_to_SCAN,pipe_out,print_to_screen=True):
-#TODO change TP enable with proper command
+    def thr_conf_using_GEMROC_COUNTERS_progress_bar(self, test_r, first_TIGER_to_SCAN, last_TIGER_to_SCAN, pipe_out, print_to_screen=True, branch=1):
         with open(self.log_path, 'a') as log_file:
             log_file.write("{} -- Starting thr scan\n".format(time.ctime()))
         thr_scan_matrix=np.zeros((8,64,64))
+        # self.GEM_COM.sfo
+        if branch == 1:
+            self.GEM_COM.set_sampleandhold_mode(self.c_inst)
+            self.GEM_COM.double_enable(0, self.c_inst)
+        else:
+            self.GEM_COM.set_sampleandhold_mode(self.c_inst)
+            self.GEM_COM.only_E(self.c_inst)
+            # print "E mode"
+            # print self.c_inst.Channel_cfg_list
+
         for T in range(first_TIGER_to_SCAN, last_TIGER_to_SCAN):
-            self.GEM_COM.sfo
+
+
             self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, 64, 1, 3)
             self.GEM_COM.DAQ_set(0, 0, 0, 0, 1, 1)
 
             for j in range (0,64):  #Channel cycle
                 self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 0)
-                for i in range(0,64):#VTH Cycle, i)**
+                for i in range(0,64):#VTH Cycle, i)
                         # with open(self.log_path, 'a') as log_file:
-                        command_sent = self.GEM_COM.Set_Vth_T1(self.c_inst, T, j, i)
+                        if branch==1:
+                            self.GEM_COM.Set_Vth_T1(self.c_inst, T, j, i)
+                        else:
+                            self.GEM_COM.Set_param_dict_channel(self.c_inst, "Vth_T2", T, j, i)
                         # with open(self.log_path, 'a') as log_file:
                         #     log_file.write("@@@@@@   {} -- Set Vth={} on channel {} \n".format(time.ctime(),i,j))
                         self.GEM_COM.set_counter(T, 0, j)
                         self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
-                        self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
+                        #self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
                         self.GEM_COM.reset_counter()
                         time.sleep(0.03)
                         thr_scan_matrix[T, j, i] = self.GEM_COM.GEMROC_counter_get()
@@ -296,14 +306,18 @@ class analisys_conf: #Analysis class used for configurations10
 
         return thr_scan_matrix
 
-
-    def noise_scan_using_GEMROC_COUNTERS_progress_bar(self, T,j,i, print_to_screen=True):
+    def noise_scan_using_GEMROC_COUNTERS_progress_bar(self, T,j,i, print_to_screen=True,vth2=False):
 
         self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode", T, j, 0)
-        self.GEM_COM.Set_param_dict_channel(self.c_inst, "Vth_T1", T, j, i)
+        self.GEM_COM.Set_param_dict_channel(self.c_inst,"TP_disable_FE", T, j, 0)
+        if vth2==True:
+            self.GEM_COM.Set_param_dict_channel(self.c_inst, "Vth_T2", T, j, i)
+        else:
+            self.GEM_COM.Set_param_dict_channel(self.c_inst, "Vth_T1", T, j, i)
         self.GEM_COM.set_counter(T, 0, j)
         self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
-        #self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
+        # self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
+        # self.GEM_COM.Access_diagn_DPRAM_read_and_log(1,0)
         self.GEM_COM.reset_counter()
         time.sleep(0.1)
         value = self.GEM_COM.GEMROC_counter_get()
@@ -314,9 +328,51 @@ class analisys_conf: #Analysis class used for configurations10
             sys.stdout.write(string)
 
         self.GEM_COM.Set_param_dict_channel(self.c_inst, "TriggerMode", T, j, 3)
+        self.GEM_COM.Set_param_dict_channel(self.c_inst,"TP_disable_FE", T, j, 1)
 
         return value
 
+    def thr_conf_progress_bar(self,test_r, first_TIGER_to_SCAN, last_TIGER_to_SCAN,pipe_out,print_to_screen=True):
+        # with open(self.log_path, 'a') as log_file:
+        #     log_file.write("{} -- Starting thr scan\n".format(time.ctime()))
+        thr_scan_matrix=np.zeros((8,64,64))
+        for T in range(first_TIGER_to_SCAN, last_TIGER_to_SCAN):
+            # self.GEM_COM.sfo
+            self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, 64, 1, 3)
+            self.GEM_COM.DAQ_set(2 ** T, 0, 0, 0, 1, 0)
+
+            for j in range (0,64):  #Channel cycle
+                self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 0)
+                for i in range(0,64):#VTH Cycle, i)
+                        # with open(self.log_path, 'a') as log_file:
+                        command_sent = self.GEM_COM.Set_Vth_T1(self.c_inst, T, j, i)
+                        word_count=0
+                        self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
+                        self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
+                        test_r.start_socket()
+                        while word_count < 60:
+                            # print word_count
+                            try:
+                                word_count = test_r.data_save_thr_scan(j, i, T, word_count, save_binout=False, save_txt=False)
+                            # print "after word count {}".format(word_count)
+                            except:
+                                with open(self.log_path, 'a') as log_file:
+                                    log_file.write("{} -- Timed out \n".format(time.ctime(), i, j))
+                                    print ("\nTIMED OUT\n")
+                                    time.sleep(0.1)
+                                    break
+                        test_r.dataSock.close()
+                        position=(T*64*64)+(j*64)+(i)
+                        pipe_out.send(position)
+                        if print_to_screen:
+                            os.system('clear')
+                            string="SCANNING [TIGER={}, VTh={}, CH={}]\n".format(T,i,j)
+                            sys.stdout.write(string)
+
+                self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 3)
+        thr_scan_matrix=test_r.thr_scan_matrix
+
+        return thr_scan_matrix
     def acquire_rate(self, frame_count, rate_matrix,test_r):
         try:
             data, addr = test_r.dataSock.recvfrom(BUFSIZE)
@@ -734,9 +790,9 @@ class analisys_conf: #Analysis class used for configurations10
         self.check_sync()
     def TIGER_delay_tuning(self):
         for T in range (0,8):
-            self.GEM_COM.Set_param_dict_global(self.g_inst, "FE_TPEnable",T,1)
+            self.GEM_COM.Set_param_dict_global(self.g_inst, "FE_TPEnable",T,0)
             for ch in range (0,64):
-                self.GEM_COM.Set_param_dict_channel(self.c_inst, "TP_disable_FE", T, ch, 0)
+                self.GEM_COM.Set_param_dict_channel(self.c_inst, "TP_disable_FE", T, ch, 1)
                 self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode",T,ch,1)
 
         error_matrix = np.zeros((8,64))
@@ -856,13 +912,16 @@ class analisys_read:
         self.bindata_path = com.Tscan_folder+sep+'thr_scan_dump_BIN.dat'
         f=open(self.bindata_path,'w')
         f.close()
-        self.scan_path = com.Tscan_folder+sep+"Scan_{}.txt".format(self.GEMROC_ID)
+        self.scan_path_T = com.Tscan_folder + sep + "Scan_{}.txt".format(self.GEMROC_ID)
+        self.scan_path_E = com.Escan_folder+sep+"Scan_{}.txt".format(self.GEMROC_ID)
+
         self.HOST_IP = self.GEM_COM.HOST_IP
         self.HOST_PORT = 58880 + self.GEMROC_ID
         self.thr_scan_matrix=np.zeros((8,64,64))#Tiger,Channel,Threshold
         self.thr_scan_frames=np.ones((8,64,64))
         self.vthr_matrix=np.ones((8,64))
         self.thr_scan_rate = np.zeros((8, 64, 64))
+        self.thr_scan_rate_norm = np.zeros((8, 64, 64))
         self.thresholds = np.zeros((8, 64, 2))
 
     def start_socket(self):
@@ -929,6 +988,55 @@ class analisys_read:
             out_file.write(return_string)
         return frame_count
 
+    def acquire_Efine (self, ch, TIG, run_time):
+        self.start_socket()
+        start_time=time.time()
+        efine=[]
+        while True:
+            data, addr = self.dataSock.recvfrom(BUFSIZE)
+            hexdata = binascii.hexlify(data)
+            for x in range(0, len(hexdata) - 1, 16):
+                int_x = 0
+                for b in range(7, 0, -1):
+                    hex_to_int = (int(hexdata[x + b * 2], 16)) * 16 + int(hexdata[x + b * 2 + 1], 16)
+                    int_x = (int_x + hex_to_int) << 8
+                hex_to_int = (int(hexdata[x], 16)) * 16 + int(hexdata[x + 1], 16)  # acr 2017-11-17 this should fix the problem
+                int_x = (int_x + hex_to_int)
+
+                if (((int_x & 0xFF00000000000000) >> 59) == 0x00):
+                    s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'EW: ' + 'ChID: %02X ' % (
+                            (int_x >> 48) & 0x3F) + 'tacID: %01X ' % ((int_x >> 46) & 0x3) + 'Tcoarse: %04X ' % (
+                                (int_x >> 30) & 0xFFFF) + 'Ecoarse: %03X ' % (
+                                (int_x >> 20) & 0x3FF) + 'Tfine: %03X ' % ((int_x >> 10) & 0x3FF) + 'Efine: %03X \n' % (
+                                int_x & 0x3FF)
+                    if ((ch & 0x3F)==(int(int_x >> 48) & 0x3F) and (TIG == (int_x >> 56) & 0x7)):
+                        efine.append(int(int_x & 0x3FF))
+                raw = "{}".format(bin((int_x & 0xFFFFFFFFFFFFFFFF)))
+
+                if (((int_x & 0xFF00000000000000) >> 59) == 0x04):  # It's a frameword
+                    s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'HB: ' + 'Framecount: %08X ' % (
+                            (int_x >> 15) & 0xFFFF) + 'SEUcount: %08X\n' % (int_x & 0x7FFF)
+
+                if (((int_x & 0xFF00000000000000) >> 59) == 0x08):
+                    s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'CW: ' + 'ChID: %02X ' % (
+                            (int_x >> 24) & 0x3F) + ' CounterWord: %016X\n' % (int_x & 0x00FFFFFF)
+                if (((int_x & 0xFF00000000000000) >> 59) == 0x00):
+                    s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'EW: ' + 'ChID: %02X ' % (
+                            (int_x >> 48) & 0x3F) + 'tacID: %01X ' % ((int_x >> 46) & 0x3) + 'Tcoarse: %04X ' % (
+                                (int_x >> 30) & 0xFFFF) + 'Ecoarse: %03X ' % (
+                                (int_x >> 20) & 0x3FF) + 'Tfine: %03X ' % ((int_x >> 10) & 0x3FF) + 'Efine: %03X \n' % (
+                                int_x & 0x3FF)
+                # print "RAW: {}".format(raw)
+                # print "Data: {}".format(s)
+
+            if (time.time()-start_time) >run_time:
+                break
+        average=np.mean(efine)
+        sigma=np.std(efine)
+        total=len(efine)
+        self.dataSock.close()
+        print (average, sigma,total)
+        return (average,sigma,total)
 
     def data_save_thr_scan_with_counter(self, ch, vth, TIG, frame_count, save_binout=False, save_txt=False):
         #print 'count_frame {}'.format(frame_count)
@@ -993,8 +1101,12 @@ class analisys_read:
         plt.show()
         return 0
 
-    def save_scan_on_file(self):
-        f = open(self.scan_path, 'w')
+    def save_scan_on_file(self,branch=1):
+        if branch==1:
+            f = open(self.scan_path_T, 'w')
+        else:
+            f = open(self.scan_path_E, 'w')
+
         for T in range(0, 8):
             f.write("Tiger {}".format(T))
             f.write("Frames\n")
@@ -1049,44 +1161,63 @@ class analisys_read:
         for T in range(first_TIGER_to_SCAN, last_TIGER_to_scan):
             for z in range(0, 64):
                 max = np.max(self.thr_scan_rate[T, z, :])
-                self.thr_scan_rate[T, z, :] = self.thr_scan_rate[T, z, :] / max
+                self.thr_scan_rate_norm[T, z, :] = self.thr_scan_rate[T, z, :] / max
                 # for i in range (0,64):
                 #     if self.thr_scan_rate[T,z,i]==1:
                 #         for j in range (i,64):
                 #             if self.thr_scan_rate[T, z, j] <0.9: #Force to 1 all the values after the max, necessary for convergence
                 #                 self.thr_scan_rate[T, z, j]=1
 
-    def global_sfit_noise(self, scan_matrix):
-        TP_rate=10000 #Set accordingly with the test pulse generator
+    # def global_sfit_noise(self, scan_matrix):
+    #     TP_rate=10000 #Set accordingly with the test pulse generator
+    #
+    #     self.close()
 
-        self.close()
-
-    def global_sfit(self,first_TIGER_to_SCAN, last_TIGER_to_scan, retry=False):
+    def global_sfit(self,first_TIGER_to_SCAN, last_TIGER_to_scan, retry=False,branch=1):
         for T in range(first_TIGER_to_SCAN, last_TIGER_to_scan):
-            thr_file_path = self.GEM_COM.conf_folder + sep +"thr"+sep+"GEMROC{}_Chip{}.thr".format(self.GEMROC_ID, T)
+            if branch==1:
+                thr_file_path = self.GEM_COM.conf_folder + sep +"thr"+sep+"GEMROC{}_Chip{}_T.thr".format(self.GEMROC_ID, T)
+            else:
+                thr_file_path = self.GEM_COM.conf_folder + sep +"thr"+sep+"GEMROC{}_Chip{}_E.thr".format(self.GEMROC_ID, T)
+
             f = open(thr_file_path, 'w')
             f.close()
             for ch in range(0, 64):
                 try:
                     # (x,k)=self.sfit(self.thr_scan_rate[T,i,:])
-                    print ("Showing fit channel {}".format(ch))
-                    (x, k, c) = self.errfit_thr(self.thr_scan_rate[T, ch, :], T,ch )
+                    (x, k, c) = self.errfit_thr(self.thr_scan_rate_norm[T, ch, :], T, ch,branch )
                 except:
                     if retry:
-                        print("Not converged, launching VTH scan on channel\n")
-
-                        try:
-                            (x, k) = self.sfit(self.thr_scan_rate[T, ch, :])
-                            # (x, k) = self.errfit(self.thr_scan_rate[T, i, :])
-                        except:
-                            print ("Can't converge \n")
-                            (x, k) = (0, 0)
+                        pass
+                        # print("Not converged, launching VTH scan on channel\n")
+                        #
+                        # try:
+                        #     (x, k) = self.sfit(self.thr_scan_rate[T, ch, :])
+                        #     # (x, k) = self.errfit(self.thr_scan_rate[T, i, :])
+                        # except:
+                        #     print ("Can't converge \n")
+                        #     (x, k) = (0, 0)
 
 
 
                     else:
-                        (x, k) = (0, 0)
 
+                        (x, k) = (np.argmax (self.thr_scan_rate[T, ch, :]>1000), 1)
+                        print ("Can't fit ch {}, TIGER {}, set: mu  {} and sigma {}".format(ch, T,x,k))
+                        # xdata = np.arange(0, 64)
+                        # plt.plot(xdata, self.thr_scan_rate_norm[T, ch, :], 'o', label='Data')
+                        # plt.ylim(0, 1.05)
+                        # plt.legend(loc='best')
+                        # plt.title("TIGER_{}_channel {}".format(T, ch))
+                        # if branch == 1:
+                        #     plt.savefig(self.GEM_COM.Tscan_folder + sep + "GEMROC{}".format(self.GEMROC_ID) + sep + "channel_fits" + sep + "TIGER_{}_channel {}.png".format(T, ch))
+                        # else:
+                        #     plt.savefig(self.GEM_COM.Escan_folder + sep + "GEMROC{}".format(self.GEMROC_ID) + sep + "channel_fits" + sep + "TIGER_{}_channel {}.png".format(T, ch))
+                        # plt.clf()
+
+            if x<0 or x>64:
+                (x, k) = (np.argmax(self.thr_scan_rate[T, ch, :] > 1000), 1)
+                print ("Invalid value on ch {}, TIGER {}, set: mu  {} and sigma {}".format(ch, T, x, k))
                 # if x>63:
                 #     if retry:
                 #         print("Not converged, launching VTH scan on channel\n")
@@ -1113,7 +1244,7 @@ class analisys_read:
                 self.thresholds[T, ch, 0] = x
                 self.thresholds[T, ch, 1] = k
 
-                print("\n CHANNEL ={} x={} k={}".format(ch, x, k))
+                #print("\n CHANNEL ={} x={} k={}".format(ch, x, k))
 
                 with open(thr_file_path, 'a') as f:
                     f.write("{}     {}\n".format(self.thresholds[T, ch, 0], self.thresholds[T, ch, 1]))
@@ -1134,7 +1265,7 @@ class analisys_read:
             plt.show()
         return popt
 
-    def errfit_thr(self, ydata, Tiger, Channel):
+    def errfit_thr(self, ydata, Tiger, Channel, branch=1):
         showplot = True
         max_reach=0
         ydataorg=[]
@@ -1143,7 +1274,6 @@ class analisys_read:
         for i, ytest in enumerate(ydata):
             if ytest ==1:
                 max_reach=1
-                print i
             if max_reach==1:
                 ydata[i]=1
 
@@ -1151,10 +1281,21 @@ class analisys_read:
         try:
             popt, pcov = curve_fit(errorfunc, xdata, ydata, p0=(32,2,1),method='lm', maxfev=5000)
         except:
+            if showplot:
+                xdata = np.arange(0, 64)
+                plt.plot(xdata, ydataorg, 'o', label='Original data', color='r')
+                plt.plot(xdata, ydata, 'x', label='Data')
+                plt.ylim(0, 1.05)
+                plt.legend(loc='best')
+                plt.title("TIGER_{}_channel {}".format(Tiger, Channel))
+                if branch==1:
+                    plt.savefig(self.GEM_COM.Tscan_folder + sep + "GEMROC{}".format(self.GEMROC_ID) + sep + "channel_fits" + sep + "TIGER_{}_channel {}.png".format(Tiger, Channel))
+                else:
+                    plt.savefig(self.GEM_COM.Escan_folder + sep + "GEMROC{}".format(self.GEMROC_ID) + sep + "channel_fits" + sep + "TIGER_{}_channel {}.png".format(Tiger, Channel))
+                plt.clf()
             pass
 
-        print ("\n")
-        print popt
+        print "GEMROC {} TIGER {}, ch {}, fit: {}".format(self.GEMROC_ID,Tiger,Channel,popt)
 
         x = np.arange(0, 64)
         y = errorfunc(x, *popt)
@@ -1162,14 +1303,16 @@ class analisys_read:
         if showplot:
             xdata = np.arange(0, 64)
             plt.plot(xdata, ydataorg, 'o', label='original data',color='r')
-            plt.plot(xdata, ydata, 'o', label='data')
+            plt.plot(xdata, ydata, 'x', label='data')
             plt.plot(x, y, label='fit')
             plt.ylim(0, 1.05)
             plt.legend(loc='best')
             plt.title("TIGER_{}_channel {}".format(Tiger,Channel))
-            plt.savefig(self.GEM_COM.Tscan_folder+sep+"GEMROC{}".format(self.GEMROC_ID)+sep+"channel_fits"+sep+"TIGER_{}_channel {}.png".format(Tiger,Channel))
+            if branch == 1:
+                plt.savefig(self.GEM_COM.Tscan_folder + sep + "GEMROC{}".format(self.GEMROC_ID) + sep + "channel_fits" + sep + "TIGER_{}_channel {}.png".format(Tiger, Channel))
+            else:
+                plt.savefig(self.GEM_COM.Escan_folder + sep + "GEMROC{}".format(self.GEMROC_ID) + sep + "channel_fits" + sep + "TIGER_{}_channel {}.png".format(Tiger, Channel))
             plt.clf()
-
         return (popt)
 
     def errfit_noise(self, ydata, showplot=True):

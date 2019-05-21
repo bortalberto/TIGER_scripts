@@ -400,6 +400,23 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
             self.Global_cfg_list=pickle.load(f)
         print self.Global_cfg_list
         return 0
+
+   def load_TP_cal(self,config_dict, TP_amplitude= "low"):
+       for T in range(0,8):
+           if config_dict[self.TARGET_GEMROC_ID][T]["TP_Vcal_ref"] != 'NA':
+               self.Global_cfg_list[T]["TP_Vcal_ref"] = config_dict[self.TARGET_GEMROC_ID][T]["TP_Vcal_ref"]
+               self.Global_cfg_list[T]["TP_Vcal"] = config_dict[self.TARGET_GEMROC_ID][T]["TP_Vcal"]
+               self.Global_cfg_list[T]["IBiasTPcal"] = config_dict[self.TARGET_GEMROC_ID][T]["Ibias_TP_cal_diff"]
+               if TP_amplitude == "low":
+                   self.Global_cfg_list[T]["TP_Vcal_ref"] = config_dict[self.TARGET_GEMROC_ID][T]["start"]+3
+               if TP_amplitude == "high":
+                   self.Global_cfg_list[T]["TP_Vcal_ref"] = config_dict[self.TARGET_GEMROC_ID][T]["stop"]-4
+           else:
+               if TP_amplitude == "low":
+                   self.Global_cfg_list[T]["TP_Vcal_ref"] = 4
+               if TP_amplitude == "high":
+                   self.Global_cfg_list[T]["TP_Vcal_ref"] = 13
+
 ###CCCCCCCCCCCCCCCC###     CLASS ch_reg_settings BEGIN  ###CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC###
 class ch_reg_settings: # purpose: organize the Channel Configuration Register Settings in an array format which can be sent over Ethernet or optical link
    def __init__(self,
@@ -456,7 +473,9 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
       "TriggerMode2T": self.parameter_array[22],  ## TriggerMode2T_param
       "QdcMode": self.parameter_array [16],  ## QdcMode_param
       "CounterMode": self.parameter_array [25],  ## CounterMode_param
-      "TriggerMode": self.parameter_array [29]  ## TriggerMode_param
+      "TriggerMode": self.parameter_array [29],  ## TriggerMode_param
+      "MaxIntegTime": self.parameter_array [13] ,
+      "MinIntegTime":self.parameter_array [14]
       }
       sav_channel_chlist=[]
       for ch in range (0,64):
@@ -627,10 +646,13 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
           QdcMode= self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["QdcMode"] & 0x1
           CounterMode= self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["CounterMode"]  & 0xF
           TriggerMode= self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["TriggerMode"]  & 0x3
+          MaxIntegTime= self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["MaxIntegTime"] & 0x7F
+          MinIntegTime= self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["MinIntegTime"] & 0X7F
+
           self.cmd_word8 = ((self.DisableHyst & 0x1) << 24) + ((self.T2Hyst & 0x7) << 16) + ((self.T1Hyst & 0x7) << 8) + ((self.Ch63ObufMSB & 0x1))
           self.cmd_word7 = (TP_disable_FE << 24) + ((self.TDC_IB_E & 0xF) << 16) + ((self.TDC_IB_T & 0xF) << 8) + (Integ )
           self.cmd_word6 = ((self.PostAmpGain & 0x3) << 24) + ((self.FE_delay & 0x1F) << 16) + (Vth_T2 << 8) + (Vth_T1 )
-          self.cmd_word5 = ((self.QTx2Enable & 0x1) << 24) + ((self.MaxIntegTime & 0x7F) << 16) + ((self.MinIntegTime & 0x7F) << 8) + ((TriggerBLatched))
+          self.cmd_word5 = ((self.QTx2Enable & 0x1) << 24) + ((MaxIntegTime) << 16) + ((MinIntegTime) << 8) + ((TriggerBLatched))
           self.cmd_word4 = (QdcMode << 24) + ((self.BranchEnableT & 0x1) << 16) + ((self.BranchEnableEQ & 0x1) << 8) + (TriggerMode2B )
           self.cmd_word3 = (TriggerMode2Q << 24) + (TriggerMode2E << 16) + (TriggerMode2T << 8) + ((self.TACMinAge & 0x1F))
           self.cmd_word2 = ((self.TACMaxAge & 0x1F) << 24) + (CounterMode << 16) + ((self.DeadTime & 0x3F) << 8) + ((self.SyncChainLen & 0x3))
@@ -746,7 +768,8 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
                             'CMD_GEMROC_LV_CFG_RD',
                             'CMD_GEMROC_LV_IVT_UPDATE',
                             'CMD_GEMROC_LV_IVT_READ',
-                            'CMD_GEMROC_TIMING_DELAYS_UPDATE'
+                            'CMD_GEMROC_TIMING_DELAYS_UPDATE',
+                            'CMD_GEMROC_LV_REMOTE_HARD_RESET'
                        ]
       self.is_a_write = 0x1
       for i in range (0, len(self.command_list)):
@@ -912,7 +935,7 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
       self.Dbg_functions_ctrl_bits_HiNibble = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-15] # Enable simulated L1 (periodic) Trigger Generation for TCAM[3..0]
       self.UDP_DATA_DESTINATION_IPADDR = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-14] # latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
       self.UDP_DATA_DESTINATION_IPPORT = int(TARGET_GEMROC_ID_param) # latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
-      self.L1_latency_OBSOLETE = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-12] # acr 2018-07-11 IT IS OBSOLETE!!! latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
+      self.L1_TM_xtrct_start_latency = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-12] # acr 2018-07-11 IT IS OBSOLETE!!! latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
       self.L1_period = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-11] # period (in units of BES-III clk cycles) of periodic simulated L1 triggers; range: 0..1023
       self.TP_width = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-10] # acr 2017-09-28 width (in units of BES-III clk cycles) of periodic Test Pulses; range: 0..15
       self.L1_win_upper_edge_offset = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-9] # offset, w.r.t. to current write pointer, at which to stop reading data from the TIGER data ring buffers; range: 16 bits
@@ -938,14 +961,19 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
                             'CMD_GEMROC_DAQ_TP_GEN',
                             'CMD_GEMROC_DAQ_L1_GEN',
                             'CMD_GEMROC_DAQ_ACK_SEQ_ERROR',
-                            'CMD_GEMROC_DAQ_XCVR_LPBCK_TEST'
+                            'CMD_GEMROC_DAQ_XCVR_LPBCK_TEST',
+                            'CMD_GEMROC_DAQ_DIAGN_DPRAM_ACCESS'
                        ]
       self.is_a_write = 0x1
+      if self.TARGET_GEMROC_ID in (0,4,11):
+          B3Clk_sim_en_param=1
+      else:
+          B3Clk_sim_en_param=0
 
       self.DAQ_config_dict = {
         "GEMROC":                                   self.TARGET_GEMROC_ID,
         "UDP_DATA_DESTINATION_IPADDR":              self.UDP_DATA_DESTINATION_IPADDR,
-        "Simulated_L1_latency":                     self.L1_latency_OBSOLETE,
+        "Simulated_L1_latency":                     self.L1_TM_xtrct_start_latency,
         "TP_width":                                 self.TP_width,
         "L1_scan_window_UPPER_edge":                self.L1_win_upper_edge_offset,
         "L1_period_simulated":                      self.L1_period,
@@ -966,7 +994,10 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
         "UDP_DATA_DESTINATION_IPPORT":              self.UDP_DATA_DESTINATION_IPPORT,
         "number_of_repetitions":                    self.number_of_repetitions,
         "target_TCAM_ID":                           self.target_TCAM_ID,
-        "TO_ALL_TCAM_EN":                           self.to_ALL_TCAM_enable
+        "TO_ALL_TCAM_EN":                           self.to_ALL_TCAM_enable,
+        "B3Clk_sim_en":                             B3Clk_sim_en_param,
+        "DAQPause_Flag":                            0,
+        "top_daq_pll_unlocked_sticky_flag":         0
       }
       for i in range (0, len(self.command_list)):
          if (self.command_string == self.command_list[i]):
@@ -984,7 +1015,7 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
       ## ACR 2018-03-15 AT IHEP: END ADDED UDP_DATA_DESTINATION_IPADDR AND UDP_DATA_DESTINATION_IPPORT; GEMROC_CMD_DAQ_Num_of_params = 13 # acr 2018-01-15
 
       #self.cmd_word3 = ((self.L1_latency & 0x3FF) << 20) + ((self.Periodic_TP_EN_pattern & 0xF) << 16) + (self.L1_win_upper_edge_offset & 0xFFFF)
-      self.cmd_word3 = ((self.L1_latency_OBSOLETE & 0x3FF) << 20) + ((self.TP_width & 0xF) << 16) + (self.L1_win_upper_edge_offset & 0xFFFF)
+      self.cmd_word3 = ((self.L1_TM_xtrct_start_latency & 0x3FF) << 20) + ((self.TP_width & 0xF) << 16) + (self.L1_win_upper_edge_offset & 0xFFFF)
       #self.cmd_word2 = ((self.L1_period  & 0x3FF) << 20) + ((self.Periodic_TP_EN_pattern  & 0xF) << 16) + (self.L1_win_lower_edge_offset & 0xFFFF)
       self.cmd_word2 = ((self.L1_period  & 0x3FF) << 20) + ((self.Dbg_functions_ctrl_bits_HiNibble  & 0xF) << 16) + (self.L1_win_lower_edge_offset & 0xFFFF)
       # acr 2018-04-24 self.cmd_word1 = ((self.TP_period & 0x3FF) << 20) + ((self.Periodic_TP_EN_pattern & 0xF) << 16) + ((self.TL_nTM_ACQ & 0x1) << 11) + ((self.AUTO_L1_EN_pattern & 0x1) << 10) + ((self.AUTO_TP_EN_pattern & 0x1) << 9) + ((self.TP_Pos_nNeg & 0x1) << 8)  + (self.EN_TM_TCAM_pattern & 0xFF)
@@ -1064,7 +1095,7 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
        L1_win_lower_edge_offset_Tiger_clk = int( L1_lat_TIGER_clk_param + (TM_window_TIGER_clk_param / 2) )
        self.L1_win_upper_edge_offset = L1_win_upper_edge_offset_Tiger_clk
        self.L1_win_lower_edge_offset = L1_win_lower_edge_offset_Tiger_clk
-       self.L1_latency_OBSOLETE = L1_lat_B3clk_param
+       self.L1_TM_xtrct_start_latency = L1_lat_B3clk_param
    # acr 2018-07-11 END new functions added
 
    def set_TL_nTM_ACQ(self, TL_nTM_ACQ_param): # acr 2017-10-03
@@ -1076,8 +1107,9 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
    def set_TP_Pos_nNeg(self, TP_Pos_nNeg_param): # acr 2017-10-03
       self.TP_Pos_nNeg = TP_Pos_nNeg_param & 0x1
 
-   def set_gemroc_cmd_code(self, command_string_param, no_of_executions_param):
-      self.number_of_repetitions = no_of_executions_param
+   def set_gemroc_cmd_code(self, command_string_param,num_of_rep="Default"):
+      if num_of_rep!="Default":
+         self.DAQ_config_dict["number_of_repetitions"]=num_of_rep
       self.command_string = command_string_param
       for i in range (0, len(self.command_list)):
          if (self.command_string == self.command_list[i]):
@@ -1092,13 +1124,12 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
            self.cmd_word1  = 0
            self.cmd_word0 = ((self.DAQ_config_dict["number_of_repetitions"] & 0x3FF) << 16) + ((self.gemroc_cmd_code & 0xF) << 11) + ((self.DAQ_config_dict["target_TCAM_ID"] & 0x3) << 8) + ((self.DAQ_config_dict["TO_ALL_TCAM_EN"] & 0x1) << 6)
        else:
-           Dbg_functions_ctrl_bits_HiNibble= ((self.DAQ_config_dict["Tpulse_generation_w_L1Chk_enable"] &0x1 )<<1) +((self.DAQ_config_dict["Periodic_L1En"] &0x1 )<<0)
+           Dbg_functions_ctrl_bits_HiNibble= ((self.DAQ_config_dict["B3Clk_sim_en"]& 0x1) << 2)+ ((self.DAQ_config_dict["Tpulse_generation_w_L1Chk_enable"] &0x1 )<<1) +((self.DAQ_config_dict["Periodic_L1En"] &0x1 )<<0)
            Dbg_functions_ctrl_bits_LoNibble=((self.DAQ_config_dict["Enable_DAQPause_Until_First_Trigger"] &0x1)<<3 ) +((self.DAQ_config_dict["DAQPause_Set"] &0x1 )<<2)+((self.DAQ_config_dict["Tpulse_generation_w_ext_trigger_enable"] &0x1 )<<1) +((self.DAQ_config_dict["EXT_nINT_B3clk"] & 0x1 )<<0)
-           print self.DAQ_config_dict["Tpulse_generation_w_ext_trigger_enable"]
            self.cmd_header &= ~(0xFF << 8)
            self.cmd_header += ((self.DAQ_config_dict["UDP_DATA_DESTINATION_IPADDR"] & 0xFF)<<8)
            self.cmd_word3 = ((self.DAQ_config_dict["Simulated_L1_latency"] & 0x3FF) << 20) + ((self.DAQ_config_dict["TP_width"] & 0xF) << 16) + (self.DAQ_config_dict["L1_scan_window_UPPER_edge"] & 0xFFFF)
-           self.cmd_word2 = ((self.DAQ_config_dict["L1_period_simulated"]  & 0x3FF) << 20) + ((self.DAQ_config_dict["Tpulse_generation_w_L1Chk_enable"] &0x1 )<<17) +((self.DAQ_config_dict["Periodic_L1En"] &0x1 )<<16) + (self.DAQ_config_dict["L1_scan_window_LOWER_edge"] & 0xFFFF)
+           self.cmd_word2 = ((self.DAQ_config_dict["L1_period_simulated"]  & 0x3FF) << 20) + ((self.DAQ_config_dict["B3Clk_sim_en"]& 0x1) << 18)+((self.DAQ_config_dict["Tpulse_generation_w_L1Chk_enable"] &0x1 )<<17) +((self.DAQ_config_dict["Periodic_L1En"] &0x1 )<<16) + (self.DAQ_config_dict["L1_scan_window_LOWER_edge"] & 0xFFFF)
            self.cmd_word1 = ((self.DAQ_config_dict["TP_period"] & 0x3FF) << 20) + ((self.DAQ_config_dict["Periodic_TP_EN_pattern"] & 0xF) << 16) +((self.DAQ_config_dict["Enable_DAQPause_Until_First_Trigger"] &0x1)<<15 ) +((self.DAQ_config_dict["DAQPause_Set"] &0x1 )<<14)+((self.DAQ_config_dict["Tpulse_generation_w_ext_trigger_enable"] &0x1 )<<13) +((self.DAQ_config_dict["EXT_nINT_B3clk"] & 0x1 )<<12)+ ((self.DAQ_config_dict["TL_nTM_ACQ"] & 0x1) << 11) + ((self.DAQ_config_dict["AUTO_L1_EN"] & 0x1) << 10) + ((self.DAQ_config_dict["AUTO_TP_EN"] & 0x1) << 9) + ((self.DAQ_config_dict["TP_Pos_nNeg"] & 0x1) << 8)  + (self.DAQ_config_dict["EN_TM_TCAM_pattern"] & 0xFF)
            self.cmd_word0 = ((self.DAQ_config_dict["UDP_DATA_DESTINATION_IPPORT"] & 0xF)<<26) + ((self.DAQ_config_dict["number_of_repetitions"] & 0x3FF) << 16) + ((self.gemroc_cmd_code & 0xF) << 11) + ((self.DAQ_config_dict["target_TCAM_ID"] & 0x3) << 8 )+ ((self.DAQ_config_dict["TO_ALL_TCAM_EN"] & 0x1) << 6)
            # self.cmd_word0 = ((self.UDP_DATA_DESTINATION_IPPORT & 0xF) << 26) + ((self.number_of_repetitions & 0x3FF) << 16) + ((self.gemroc_cmd_code & 0xF) << 11) + ((self.target_TCAM_ID & 0x3) << 8) + ((self.to_ALL_TCAM_enable & 0x1) << 6)
@@ -1121,7 +1152,7 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
        else:
            self.cmd_header &= ~(0xFF << 8)
            self.cmd_header += ((self.UDP_DATA_DESTINATION_IPADDR & 0xFF)<<8)
-           self.cmd_word3 = ((self.L1_latency_OBSOLETE & 0x3FF) << 20) + ((self.TP_width & 0xF) << 16) + (self.L1_win_upper_edge_offset & 0xFFFF)
+           self.cmd_word3 = ((self.L1_TM_xtrct_start_latency & 0x3FF) << 20) + ((self.TP_width & 0xF) << 16) + (self.L1_win_upper_edge_offset & 0xFFFF)
 
            # acr 2018-07-11 BEGIN
            # self.cmd_word2 = ((self.L1_period  & 0x3FF) << 20) + ((self.Dbg_functions_ctrl_bits_HiNibble  & 0xF) << 16) + (self.L1_win_lower_edge_offset & 0xFFFF)
@@ -1140,7 +1171,7 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
    def extract_parameters_from_UDP_packet(self):
       print ( "\n DATA_DESTINATION_IPadr  = %X %d")     % ( ((self.cmd_header >>  8) &  0xFF) , ((self.cmd_header >>  8) &  0xFF) )
       print ( "\n DATA_DESTINATION_IPport = %X %d")     % ( ((self.cmd_word0 >> 26) &  0xF)   , ((self.cmd_word0 >> 26) &  0xF) )
-      print ( "\n L1_latency_OBSOLETE = %X %d")                  % ( ((self.cmd_word3 >> 20) &  0x3FF) , ((self.cmd_word3 >> 20) &  0x3FF) )
+      print ( "\n L1_TM_xtrct_start_latency = %X %d")                  % ( ((self.cmd_word3 >> 20) &  0x3FF) , ((self.cmd_word3 >> 20) &  0x3FF) )
       print ( "\n L1_win_upper_edge_offset = %X %d")   % ( ((self.cmd_word3 >> 0)  &  0xFFFF), ((self.cmd_word3 >> 0)  &  0xFFFF) )
       print ( "\n L1_win_lower_edge_offset = %X %d")   % ( ((self.cmd_word2 >> 0)  &  0xFFFF), ((self.cmd_word2 >> 0)  &  0xFFFF) )
       print ( "\n L1_period = %X %d")                   % ( ((self.cmd_word2 >> 20) &  0x3FF) , ((self.cmd_word2 >> 20) &  0x3FF) )

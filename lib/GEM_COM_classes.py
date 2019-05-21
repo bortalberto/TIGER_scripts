@@ -32,10 +32,12 @@ class communication: ##The directory are declared here to avoid multiple declara
     def __init__(self, gemroc_ID, feb_pwr_pattern, keep_cfg_log=False, keep_IVT_log=False):
         self.conf_folder = "conf"
         self.Tscan_folder="thr_scan"
+        self.Escan_folder="thr_scan_vth2"
         self.Noise_folder="noise_scan"
 
         self.GEMROC_ID=gemroc_ID
         self.FEB_PWR_EN_pattern=feb_pwr_pattern
+
 
         self.keep_cfg_log=keep_cfg_log
         self.keep_IVT_log=keep_IVT_log
@@ -45,10 +47,10 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.log_file.write("Tiger configuration log file")
         self.IVT_log_fname = "."+sep+"log_folder"+sep+"GEMROC{}_IVT_log_{}.txt".format(self.GEMROC_ID,datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         self.IVT_log_file = open(self.IVT_log_fname, 'w')
-
+        self.DiagnDPRAM_data_log_fname="."+sep+"log_folder"+sep+"GEMROC{}_Diagn_log_{}.txt".format(self.GEMROC_ID,datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         self.success_counter=0
         self.fail_counter=0
-        local_test=True
+        local_test=False
 
         if local_test:
             # HOST_DYNAMIC_IP_ADDRESS = "192.168.1.%d" %(GEMROC_ID)
@@ -79,9 +81,9 @@ class communication: ##The directory are declared here to avoid multiple declara
 
 
         self.receiveSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1   )
         self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 106496 )
-        self.receiveSock.settimeout(12)
+        self.receiveSock.settimeout(6)
         #self.receiveSock.setblocking(False)
         self.receiveSock.bind((self.HOST_IP, self.HOST_PORT_RECEIVE))
         self.remote_IP_Address = '192.168.1.%d' % (self.GEMROC_ID + 16)
@@ -98,20 +100,25 @@ class communication: ##The directory are declared here to avoid multiple declara
         cfg_filename =self.conf_folder+sep+ 'GEMROC_ALL_def_cfg_LV_2018_v2.txt'
         self.time_delay_path= self.conf_folder+sep+ 'time_delay_save'
         self.gemroc_LV_XX = GEM_CONF_classes.gemroc_cmd_LV_settings(self.GEMROC_ID, 'NONE', 1, cfg_filename,self.time_delay_path)
+
+        cfg_filename = self.conf_folder + sep + 'GEMROC_ALL_def_cfg_DAQ_2018_v6.txt'
+        self.gemroc_DAQ_XX = GEM_CONF_classes.gemroc_cmd_DAQ_settings(self.GEMROC_ID, 'NONE', 0, 1, 0, cfg_filename)
+
+
         self.gemroc_LV_XX.set_FEB_PWR_EN_pattern(self.FEB_PWR_EN_pattern)
 
-        self.test_GEMROC_communication()
 
-        COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
-        self.gemroc_LV_XX.set_gemroc_cmd_code(COMMAND_STRING, 1)
         self.gemroc_LV_XX.update_command_words()
         # keep gemroc_LV_XX.print_command_words()
         # keep gemroc_LV_XX.extract_parameters_from_UDP_packet()
         array_to_send = self.gemroc_LV_XX.command_words
 
+        COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
+        self.gemroc_LV_XX.set_gemroc_cmd_code(COMMAND_STRING, 1)
+
 
         command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
-                                                    self.DEST_PORT_NO)
+                                                    self.DEST_PORT_NO,retry=False)
         ##print 'CMD_GEMROC_LV_CFG_WR'
 
         ## creating an instance of the GEMROC DAQ configuration settings object
@@ -123,9 +130,6 @@ class communication: ##The directory are declared here to avoid multiple declara
         ##  to_ALL_TCAM_enable_param = 0,
 
         #cfg_filename =self.conf_folder+sep+ 'GEMROC_%d_def_cfg_DAQ_2018v5.txt' % self.GEMROC_ID
-        cfg_filename = self.conf_folder + sep + 'GEMROC_ALL_def_cfg_DAQ_2018_v6.txt'
-        self.gemroc_DAQ_XX = GEM_CONF_classes.gemroc_cmd_DAQ_settings(self.GEMROC_ID, 'NONE', 0, 1, 0, cfg_filename)
-
 
 
         ##acr 2018-03-16 added yesterday while debugging DAQ_CFG readback, removed today: gemroc_DAQ_XX.extract_parameters_from_UDP_packet()
@@ -136,9 +140,12 @@ class communication: ##The directory are declared here to avoid multiple declara
         command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
         COMMAND_STRING = 'CMD_GEMROC_TIMING_DELAYS_UPDATE'
         command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
-
+        #self.flush_socket()
+        self.test_GEMROC_communication()
 
         #Communication errors acquisition
+        #self.receiveSock.settimeout(1)
+
         self.good_com=0
         self.bad_com=0
     def __del__(self):
@@ -159,12 +166,11 @@ class communication: ##The directory are declared here to avoid multiple declara
 
     def flush_socket(self):
         self.receiveSock.close()
-        self.receiveSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 106496 )
-        self.receiveSock.settimeout(12)
-
-        self.receiveSock.bind((self.HOST_IP, self.HOST_PORT_RECEIVE))
+        # self.receiveSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 106496 )
+        self.receiveSock.settimeout(1)
+        # self.receiveSock.bind((self.HOST_IP, self.HOST_PORT_RECEIVE))
     def test_GEMROC_communication (self):
         self.gemroc_LV_XX.set_target_GEMROC(self.GEMROC_ID)
         COMMAND_STRING = 'CMD_GEMROC_LV_IVT_READ'
@@ -172,7 +178,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.gemroc_LV_XX.update_command_words()
         array_to_send = self.gemroc_LV_XX.command_words
         command_echo_ivt = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
-                                                        self.DEST_PORT_NO)
+                                                        self.DEST_PORT_NO,retry=False)
 
         # print '\nGEMROC_ID: %d: CMD_GEMROC_LV_IVT_READ' %self.GEMROC_ID
 
@@ -203,7 +209,7 @@ class communication: ##The directory are declared here to avoid multiple declara
                 break
             except:
                     if not retry:
-                        raise Exception("GEMROC {} communication timed out for 5 times".format(self.GEMROC_ID))
+                        raise Exception("GEMROC {} communication timed out".format(self.GEMROC_ID))
                         break
                     self.fail_counter+=1
                     time.sleep(1)
@@ -605,7 +611,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         cmd_message = '\nTIGER%d Global Cfg Reg CMD %s sent:\n' % (TIGER_ID_param, COMMAND_STRING_PARAM)
         i=0
 
-        while i<5:
+        while i<3:
             try:
                 self.clientSock.sendto(buffer_to_send, (DEST_IP_ADDRESS_PARAM, DEST_PORT_NO_PARAM))
 
@@ -628,8 +634,8 @@ class communication: ##The directory are declared here to avoid multiple declara
                         self.log_file.write(binascii.b2a_hex(buffer_to_send))
                     i+=1
 
-        if i==5:
-            raise Exception("GEMROC {} communication timed out for 5 times".format(self.GEMROC_ID))
+        if i==3:
+            raise Exception("GEMROC {} communication timed out for 3 times".format(self.GEMROC_ID))
 
 
         if log_save:
@@ -704,11 +710,17 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.display_and_log_IVT(command_echo_ivt, display_enable_param, log_enable_param, log_filename_param)
         return
     def GEMROC_counter_get(self):
-
         command_echo_ivt = self.Read_GEMROC_LV_CfgReg(False)
         L_array = array.array('I')  # L is an array of unsigned long, I for some systems, L for others
         L_array.fromstring(command_echo_ivt)
         L_array.byteswap()
+        # print L_array
+        while len(L_array)<8:
+            command_echo_ivt = self.Read_GEMROC_LV_CfgReg(False)
+            L_array = array.array('I')  # L is an array of unsigned long, I for some systems, L for others
+            L_array.fromstring(command_echo_ivt)
+            L_array.byteswap()
+
         counter1 =((L_array[8]) >> 22) & 0xff
         counter2 =((L_array[7]) >> 22) & 0xff
         counter3 =((L_array[6]) >> 22) & 0xff
@@ -794,8 +806,8 @@ class communication: ##The directory are declared here to avoid multiple declara
     # acr 2018-03-06 changed order of parameters of send_GEMROC_DAQ_CMD
     def send_GEMROC_DAQ_CMD(self, gemroc_DAQ_inst_param, COMMAND_STRING_PARAM):
         gemroc_DAQ_inst_param.set_target_GEMROC(self.GEMROC_ID)
-        gemroc_DAQ_inst_param.set_gemroc_cmd_code(COMMAND_STRING_PARAM, 1)
-        gemroc_DAQ_inst_param.update_command_words()
+        gemroc_DAQ_inst_param.set_gemroc_cmd_code(COMMAND_STRING_PARAM)
+        gemroc_DAQ_inst_param.update_command_words_dict()
 
         array_to_send = gemroc_DAQ_inst_param.command_words
         command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING_PARAM, array_to_send, self.DEST_IP_ADDRESS,
@@ -804,13 +816,10 @@ class communication: ##The directory are declared here to avoid multiple declara
 
     # acr 2018-04-23
 
-    def Soft_TP_generate(self,TP_Num_in_burst_param):
+    def Soft_TP_generate(self):
         # acr 2018-11-02 updated paradigm definition END
-        self.gemroc_DAQ_XX.set_target_GEMROC(self.GEMROC_ID)
-        self.gemroc_DAQ_XX.set_TP_period(10)
-        number_of_repetitions = TP_Num_in_burst_param
         COMMAND_STRING = 'CMD_GEMROC_DAQ_TP_GEN'
-        command_echo = self.send_GEMROC_DAQ_CMD_num_rep( COMMAND_STRING, number_of_repetitions)
+        command_echo = self.send_GEMROC_DAQ_CMD(self.gemroc_DAQ_XX,COMMAND_STRING)
         return command_echo
 
 
@@ -888,8 +897,8 @@ class communication: ##The directory are declared here to avoid multiple declara
         GCFGReg_setting_inst.set_command_code(COMMAND_STRING)
         GCFGReg_setting_inst.update_command_words()
         array_to_send = GCFGReg_setting_inst.command_words
-        command_echo = self.send_TIGER_GCFG_Reg_CMD_PKT(TIGER_ID_param, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
-                                                   self.DEST_PORT_NO) #Leggo due volte, la prima mi ritorna cio che ho mandato, la seconda la lettura vera.
+        # command_echo = self.send_TIGER_GCFG_Reg_CMD_PKT(TIGER_ID_param, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
+        #                                            self.DEST_PORT_NO) #Leggo due volte, la prima mi ritorna cio che ho mandato, la seconda la lettura vera.
         command_echo = self.send_TIGER_GCFG_Reg_CMD_PKT(TIGER_ID_param, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
                                                    self.DEST_PORT_NO)
         return command_echo
@@ -992,18 +1001,20 @@ class communication: ##The directory are declared here to avoid multiple declara
         command_echo = self.send_TIGER_GCFG_Reg_CMD_PKT(TIGER_ID, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
                                                    self.DEST_PORT_NO)
         return command_echo
-    def Set_param_dict_channel(self, ChCFGReg_setting_inst, field, TIGER_ID,channel, value):
+    def Set_param_dict_channel(self, ChCFGReg_setting_inst, field, TIGER_ID,channel, value, send_command=True):
         ChCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
         ChCFGReg_setting_inst.set_target_TIGER(TIGER_ID)
         ChCFGReg_setting_inst.set_to_ALL_param(0)  ## let's do multiple configuration under script control rather than under GEMROC NIOS2 processor control
         COMMAND_STRING = 'WR'
         ChCFGReg_setting_inst.set_command_code(COMMAND_STRING)
+        command_echo="0"
         if channel < 64:
             ChCFGReg_setting_inst.Channel_cfg_list[TIGER_ID][channel][field] = value
             ChCFGReg_setting_inst.set_target_channel(channel)
             ChCFGReg_setting_inst.update_command_words()
             array_to_send = ChCFGReg_setting_inst.command_words
-            command_echo = self.send_TIGER_Ch_CFG_Reg_CMD_PKT(TIGER_ID, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
+            if send_command:
+                command_echo = self.send_TIGER_Ch_CFG_Reg_CMD_PKT(TIGER_ID, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
                                                               self.DEST_PORT_NO)
         else:
             for i in range(0, 64):
@@ -1011,7 +1022,8 @@ class communication: ##The directory are declared here to avoid multiple declara
                 ChCFGReg_setting_inst.set_target_channel(i)
                 ChCFGReg_setting_inst.update_command_words()
                 array_to_send = ChCFGReg_setting_inst.command_words
-                command_echo = self.send_TIGER_Ch_CFG_Reg_CMD_PKT(TIGER_ID, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
+                if send_command:
+                    command_echo = self.send_TIGER_Ch_CFG_Reg_CMD_PKT(TIGER_ID, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
                                                                   self.DEST_PORT_NO)
         last_command_echo = command_echo
         return last_command_echo
@@ -1191,25 +1203,21 @@ class communication: ##The directory are declared here to avoid multiple declara
             print '\n number_of_repetitions = %d' % number_of_repetitions
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
         # acr 2018-04-023 command_echo = send_GEMROC_DAQ_CMD(self.GEMROC_ID, gemroc_DAQ_inst, COMMAND_STRING)
-        command_echo = self.send_GEMROC_DAQ_CMD_num_rep(gemroc_DAQ_inst, COMMAND_STRING, number_of_repetitions)
+        command_echo = self.send_GEMROC_DAQ_CMD_num_rep(COMMAND_STRING, number_of_repetitions)
         return command_echo
     #NEW DAQ SET
-    def DAQ_set(self, TCAM_Enable_pattern_param, Per_FEB_TP_Enable_pattern_param, TP_repeat_burst_param, TP_Num_in_burst_param, TL_nTM_ACQ_param, Per_L1_En_bit_param, Enab_Auto_L1_from_TP_bit_param=0, print_mode=False):
+    def DAQ_set(self, TCAM_Enable_pattern_param, Per_FEB_TP_Enable_pattern_param, TP_repeat_burst_param, TP_Num_in_burst_param, TL_nTM_ACQ_param, Per_L1_En_bit_param, Enab_Auto_L1_from_TP_bit_param=0):
         self.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"]=(TCAM_Enable_pattern_param)
         self.gemroc_DAQ_XX.DAQ_config_dict["Periodic_TP_EN_pattern"]=(Per_FEB_TP_Enable_pattern_param)
         self.gemroc_DAQ_XX.DAQ_config_dict["Periodic_L1En"]=Per_L1_En_bit_param
         self.gemroc_DAQ_XX.DAQ_config_dict["AUTO_L1_EN"]=Enab_Auto_L1_from_TP_bit_param
         self.gemroc_DAQ_XX.DAQ_config_dict["TL_nTM_ACQ"]=(TL_nTM_ACQ_param)
-        self.gemroc_DAQ_XX.DAQ_config_dict["number_of_repetitions"] = ((TP_repeat_burst_param & 0X1) << 9) + TP_Num_in_burst_param
         self.DAQ_set_with_dict()
 
 
     def DAQ_set_with_dict(self):
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
-        number_of_repetitions = self.gemroc_DAQ_XX.DAQ_config_dict["number_of_repetitions"]
-        self.gemroc_DAQ_XX.set_gemroc_cmd_code(COMMAND_STRING, number_of_repetitions)
-        self.gemroc_DAQ_XX.update_command_words()
-
+        self.gemroc_DAQ_XX.set_gemroc_cmd_code(COMMAND_STRING)
         self.gemroc_DAQ_XX.update_command_words_dict()
         array_to_send = self.gemroc_DAQ_XX.command_words
         command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
@@ -1579,6 +1587,13 @@ class communication: ##The directory are declared here to avoid multiple declara
                 self.Set_param_dict_channel(ChCFGReg_setting_inst, "Integ", T, ch, 1)
         return 0
 
+    def set_ToT_mode(self, ChCFGReg_setting_inst):
+        for T in range(0, 8):
+            for ch in range(0, 64):
+                self.Set_param_dict_channel(ChCFGReg_setting_inst, "QdcMode", T, ch, 0)
+                self.Set_param_dict_channel(ChCFGReg_setting_inst, "Integ", T, ch, 0)
+        return 0
+
         # ChCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
         # ChCFGReg_setting_inst.set_target_TIGER(TIGER_ID_param)
         # ChCFGReg_setting_inst.set_to_ALL_param(0)  ## let's do multiple configuration under script control rather than under GEMROC NIOS2 processor control
@@ -1619,6 +1634,10 @@ class communication: ##The directory are declared here to avoid multiple declara
             print ('L1_period: %d' % ((L_array[2] >> 20) & 0x3FF))
             print ('Debug_Funct_Ctl_patt_Hi4bit: %X' % ((L_array[2] >> 16) & 0xF))
             print ('Debug_Funct_Ctl_patt_Lo4bit: %X' % ((L_array[3] >> 12) & 0xF))  # acr 2018-11-02
+            print ('Dbg_functions_ctrl_bits_HiNibble[3].unused = %d' % ((L_array[2] >> 19) & 0x1) )
+            print ('Dbg_functions_ctrl_bits_HiNibble[2].simul_besiii_clk_gen_en = %d' % ((L_array[2] >> 18) & 0x1) )
+            print ('Dbg_functions_ctrl_bits_HiNibble[1].Tpulse_generation_w_L1Chk_enable = %d' % ((L_array[2] >> 17) & 0x1) )
+            print ('Dbg_functions_ctrl_bits_HiNibble[0].Periodic_L1En = %d' % ((L_array[2] >> 16) & 0x1) )
             print ('Debug_Fun_Ctl_Lo4bit[3] = Enable_DAQPause_Until_First_Trigger: %X' % ((L_array[3] >> 15) & 0x1))  # acr 2018-11-02
             print ('Debug_Fun_Ctl_Lo4bit[2] = DAQPause_Set                       : %X' % ((L_array[3] >> 14) & 0x1))  # acr 2018-11-02
             print ('Debug_Fun_Ctl_Lo4bit[1] = Tpulse_gen_w_ext_trigger_enable    : %X' % ((L_array[3] >> 13) & 0x1))  # acr 2018-11-02
@@ -1634,6 +1653,8 @@ class communication: ##The directory are declared here to avoid multiple declara
             print ('number_of_repetitions: %d' % ((L_array[4] >> 16) & 0x3FF))
             print ('target_TCAM_ID: %d' % ((L_array[4] >> 8) & 0x3))
             print ('to_ALL_TCAM_enable: %d' % ((L_array[4] >> 6) & 0x1))
+            print ('DAQPause_Flag: %d' % ((L_array[4] >> 1) & 0x1))  # acr 2019-03-14
+            print ('top_daq_pll_unlocked_sticky_flag: %d' % ((L_array[4] >> 0) & 0x1))  # acr 2019-03-14
         if (log_enable_param == 1):
             self.log_file.write(
                 '\nList of DAQ related GEMROC Config Register parameters read back RESPONDING GEMROC%d:' % (
@@ -1661,6 +1682,9 @@ class communication: ##The directory are declared here to avoid multiple declara
             self.log_file.write('\nnumber_of_repetitions: %d' % ((L_array[4] >> 16) & 0x3FF))
             self.log_file.write('\ntarget_TCAM_ID: %d' % ((L_array[4] >> 8) & 0x3))
             self.log_file.write('\nto_ALL_TCAM_enable: %d' % ((L_array[4] >> 6) & 0x1))
+            self.log_file.write('\nDAQPause_Flag: %d' % ((L_array[4] >> 1) & 0x1))
+            self.log_file.write('\ntop_daq_pll_unlocked_sticky_flag: %d' % ((L_array[4] >> 0) & 0x1))
+
 
 
     def Read_GEMROC_DAQ_CfgReg(self):
@@ -1669,30 +1693,60 @@ class communication: ##The directory are declared here to avoid multiple declara
         command_echo = self.send_GEMROC_DAQ_CMD(gemroc_inst_param, COMMAND_STRING)
         return command_echo
 
-    def Load_VTH_fromfile(self, ChCFGReg_setting_inst, TIGER_ID_param, number_sigma, offset, save_on_LOG=False):
-        file_p=self.conf_folder+sep+"thr"+ sep+"GEMROC{}_Chip{}.thr".format(self.GEMROC_ID,TIGER_ID_param)
+    def Load_VTH_fromfile(self, ChCFGReg_setting_inst, TIGER_ID_param, number_sigma_T, number_sigma_E, offset, save_on_LOG=False):
+        file_T=self.conf_folder+sep+"thr"+ sep+"GEMROC{}_Chip{}_T.thr".format(self.GEMROC_ID,TIGER_ID_param)
+        file_E=self.conf_folder+sep+"thr"+ sep+"GEMROC{}_Chip{}_E.thr".format(self.GEMROC_ID,TIGER_ID_param)
+
         self.log_file.write("\n Setting VTH from file in  TIGER {}\n".format(TIGER_ID_param))
-        print "Setting VTH from file in GEMROC {}, TIGER {}, {} sigmas\n".format(self.GEMROC_ID,TIGER_ID_param,number_sigma)
+        print "Setting VTH on both VTH from file in GEMROC {}, TIGER {}, {} and {} sigmas\n".format(self.GEMROC_ID, TIGER_ID_param, number_sigma_T,number_sigma_E)
 
 
-        thr0=np.loadtxt(file_p,)
-        thr=np.rint(thr0[:,0]) - np.rint(thr0[:,1])*number_sigma+offset
+        thr0_T=np.loadtxt(file_T,)
+        thr_T=np.zeros(64)
+        for ch in range (0,64):
+            med, sigma = thr0_T[ch,:]
+            if (sigma*number_sigma_T)<1:
+                print ("Sigma on ch {} to low, setting 1 instead".format(ch))
+                shift =1
+            else:
+                shift = sigma * number_sigma_T
+            thr_T[ch] = np.rint(med-shift) + offset
+
+        thr0_E = np.loadtxt(file_E, )
+        thr_E = np.zeros(64)
+        for ch in range(0, 64):
+            med, sigma = thr0_E[ch, :]
+            if (sigma * number_sigma_E) < 1:
+                shift = 1
+            else:
+                shift = sigma * number_sigma_E
+            thr_E[ch] = np.rint(med - shift) + offset
 
         for c in range (0,64):
-            if thr[c]<0 or thr[c]==0:
+            if thr_T[c]<=0:
+                thr_T[c]=0
+            if thr_T[c]>63:
+                thr_T[c]=63
+            if thr_E[c]<=0:
+                thr_E[c]=0
+            if thr_E[c]>63:
+                thr_E[c]=63
 
-                thr[c]=0
-            if thr[c]>63:
-                thr[c]=63
 
-        print ("Thr={}".format(thr))
+
+        print ("Thr T={}".format(thr_T))
+        print ("Thr E={}".format(thr_E))
+
         for i in range(0, 64):
-            binascii.b2a_hex(self.Set_Vth_T1(ChCFGReg_setting_inst, TIGER_ID_param, i, int(thr[i])))
-
+            self.Set_param_dict_channel(ChCFGReg_setting_inst,"Vth_T1",TIGER_ID_param,i,int(thr_T[i]),send_command=False)
+            if int(thr_T[i])==0:
+                self.Set_param_dict_channel(ChCFGReg_setting_inst, "TriggerMode", TIGER_ID_param, i, 3,send_command=False)
+                print "Ch {} disabled, too noisy \n".format(i)
+            self.Set_param_dict_channel(ChCFGReg_setting_inst, "Vth_T2", TIGER_ID_param, i, int(thr_E[i]))
 
         if save_on_LOG:
             name="."+sep+"log_folder"+sep+"THR_LOG{}_TIGER_{}.txt".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"),TIGER_ID_param)
-            np.savetxt(name,np.c_[thr])
+            np.savetxt(name,np.c_[thr_T])
 
         return 0
 
@@ -1848,3 +1902,152 @@ class communication: ##The directory are declared here to avoid multiple declara
                     break
 
         return command_echo_f
+
+    # acr 2019-02-19 BEGIN
+    def Access_diagn_DPRAM_read_and_log(self, display_enable_param, log_enable_param):  # acr 2019-02-19
+        # acr 2019-02-19 not foreseen for the moment resources to send the auxiliary configuration word to be writtern to the diagn_dpram address 0 (a new word in the DAQ CMD packet would be needed)
+        COMMAND_STRING = 'CMD_GEMROC_DAQ_DIAGN_DPRAM_ACCESS'
+        self.gemroc_DAQ_XX.set_gemroc_cmd_code(COMMAND_STRING)
+        self.gemroc_DAQ_XX.update_command_words_dict()
+        array_to_send = self.gemroc_DAQ_XX.command_words
+        command_echo_diagn_dpram_data_rdback = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING, array_to_send,
+                                                                       self.DEST_IP_ADDRESS,self.DEST_PORT_NO)
+        self.display_and_log_diagn_dpram_data(command_echo_diagn_dpram_data_rdback, display_enable_param, log_enable_param)  # acr 2018-11-27 log_file mode updated*
+
+    def display_and_log_diagn_dpram_data(self,command_echo_param, display_enable_param, log_enable_param):
+        L_array = array.array('I')  # L is an array of unsigned long
+        L_array.fromstring(command_echo_param)
+        L_array.byteswap()
+        L_array_size = len(L_array)
+        print '\n L_array_size: %d' % L_array_size
+        # for i in range(0, L_array_size, 1):
+        #     print '\nL_array[%d]: %08X' % (i, L_array[i])
+        GEMROC_CMD_DAQ_Num_PktWords = GEM_CONF_classes.GEMROC_CMD_DAQ_Num_Of_PktWords  # acr 2019-02-19
+        # print '\n GEMROC_CMD_DAQ_Num_PktWords = %d' % GEMROC_CMD_DAQ_Num_PktWords
+        # print L_array
+        TL_in_buf_full_feb0_t0_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 0]
+        TL_in_buf_full_feb0_t1_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 1]
+        TL_in_buf_full_feb1_t0_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 2]
+        TL_in_buf_full_feb1_t1_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 3]
+        TL_in_buf_full_feb2_t0_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 4]
+        TL_in_buf_full_feb2_t1_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 5]
+        TL_in_buf_full_feb3_t0_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 6]
+        TL_in_buf_full_feb3_t1_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 7]
+        #
+        TM_in_buf_full_feb0_t0_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 8 + 0]
+        TM_in_buf_full_feb0_t1_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 8 + 1]
+        TM_in_buf_full_feb1_t0_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 8 + 2]
+        TM_in_buf_full_feb1_t1_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 8 + 3]
+        TM_in_buf_full_feb2_t0_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 8 + 4]
+        TM_in_buf_full_feb2_t1_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 8 + 5]
+        TM_in_buf_full_feb3_t0_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 8 + 6]
+        TM_in_buf_full_feb3_t1_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 8 + 7]
+        #
+        TL_mrgr_buf_full_feb0_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 16 + 0]
+        TL_mrgr_buf_full_feb1_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 16 + 1]
+        TL_mrgr_buf_full_feb2_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 16 + 2]
+        TL_mrgr_buf_full_feb3_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 16 + 3]
+        #
+        TM_evnt_fifo_full_feb0_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 16 + 4]
+        TM_evnt_fifo_full_feb1_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 16 + 5]
+        TM_evnt_fifo_full_feb2_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 16 + 6]
+        TM_evnt_fifo_full_feb3_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 16 + 7]
+        #
+        TL_AB_merger_fifo_full_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 24]
+        TL_CD_merger_fifo_full_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 25]
+        TM_AB_merger_fifo_full_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 26]
+        TM_CD_merger_fifo_full_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 27]
+        TM_OUT_fifo_full_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 28]
+        #
+        top_pll_unlocked_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 29]
+        top_daq_pll_unlocked_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 30]
+        # acr 2019-03-06
+        L1_choke_req_from_top_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 31]  # acr 2019-03-06
+        XCVR_TX_pll_unlocked_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 32]  # acr 2019-03-06
+        XCVR_Input_link_rx_err_cntr = L_array[GEMROC_CMD_DAQ_Num_PktWords + 33]  # acr 2019-03-06
+        #
+        del L_array
+        if (display_enable_param == 1):
+            print '\n' + 'TL_in_buf_full_feb0_t0_cntr: ' + '%d; ' % TL_in_buf_full_feb0_t0_cntr + 'TL_in_buf_full_feb0_t1_cntr: ' + '%d; ' % TL_in_buf_full_feb0_t1_cntr
+            print '\n' + 'TL_in_buf_full_feb1_t0_cntr: ' + '%d; ' % TL_in_buf_full_feb1_t0_cntr + 'TL_in_buf_full_feb1_t1_cntr: ' + '%d; ' % TL_in_buf_full_feb1_t1_cntr
+            print '\n' + 'TL_in_buf_full_feb2_t0_cntr: ' + '%d; ' % TL_in_buf_full_feb2_t0_cntr + 'TL_in_buf_full_feb2_t1_cntr: ' + '%d; ' % TL_in_buf_full_feb2_t1_cntr
+            print '\n' + 'TL_in_buf_full_feb3_t0_cntr: ' + '%d; ' % TL_in_buf_full_feb3_t0_cntr + 'TL_in_buf_full_feb3_t1_cntr: ' + '%d; ' % TL_in_buf_full_feb3_t1_cntr
+            print '\n' + 'TM_in_buf_full_feb0_t0_cntr: ' + '%d; ' % TM_in_buf_full_feb0_t0_cntr + 'TM_in_buf_full_feb0_t1_cntr: ' + '%d; ' % TM_in_buf_full_feb0_t1_cntr
+            print '\n' + 'TM_in_buf_full_feb1_t0_cntr: ' + '%d; ' % TM_in_buf_full_feb1_t0_cntr + 'TM_in_buf_full_feb1_t1_cntr: ' + '%d; ' % TM_in_buf_full_feb1_t1_cntr
+            print '\n' + 'TM_in_buf_full_feb2_t0_cntr: ' + '%d; ' % TM_in_buf_full_feb2_t0_cntr + 'TM_in_buf_full_feb2_t1_cntr: ' + '%d; ' % TM_in_buf_full_feb2_t1_cntr
+            print '\n' + 'TM_in_buf_full_feb3_t0_cntr: ' + '%d; ' % TM_in_buf_full_feb3_t0_cntr + 'TM_in_buf_full_feb3_t1_cntr: ' + '%d; ' % TM_in_buf_full_feb3_t1_cntr
+            print '\n' + 'TL_mrgr_buf_full_feb0_cntr: ' + '%d; ' % TL_mrgr_buf_full_feb0_cntr + 'TL_mrgr_buf_full_feb1_cntr: ' + '%d; ' % TL_mrgr_buf_full_feb1_cntr
+            print '\n' + 'TL_mrgr_buf_full_feb2_cntr: ' + '%d; ' % TL_mrgr_buf_full_feb2_cntr + 'TL_mrgr_buf_full_feb3_cntr: ' + '%d; ' % TL_mrgr_buf_full_feb3_cntr
+            print '\n' + 'TM_evnt_fifo_full_feb0_cntr: ' + '%d; ' % TM_evnt_fifo_full_feb0_cntr + 'TM_evnt_fifo_full_feb1_cntr: ' + '%d; ' % TM_evnt_fifo_full_feb1_cntr
+            print '\n' + 'TM_evnt_fifo_full_feb2_cntr: ' + '%d; ' % TM_evnt_fifo_full_feb2_cntr + 'TM_evnt_fifo_full_feb3_cntr: ' + '%d; ' % TM_evnt_fifo_full_feb3_cntr
+            print '\n' + 'TL_AB_merger_fifo_full_cntr: ' + '%d; ' % TL_AB_merger_fifo_full_cntr + 'TL_CD_merger_fifo_full_cntr: ' + '%d; ' % TL_CD_merger_fifo_full_cntr
+            print '\n' + 'TM_AB_merger_fifo_full_cntr: ' + '%d; ' % TM_AB_merger_fifo_full_cntr + 'TM_CD_merger_fifo_full_cntr: ' + '%d; ' % TM_CD_merger_fifo_full_cntr
+            print '\n' + 'TM_OUT_fifo_full_cntr: ' + '%d; ' % TM_OUT_fifo_full_cntr
+            print '\n' + 'top_pll_unlocked_cntr: ' + '%d; ' % top_pll_unlocked_cntr + 'top_daq_pll_unlocked_cntr: ' + '%d; ' % top_daq_pll_unlocked_cntr
+            print '\n' + 'L1_choke_req_from_top_cntr: ' + '%d; ' % L1_choke_req_from_top_cntr
+            print '\n' + 'XCVR_TX_pll_unlocked_cntr: ' + '%d; ' % XCVR_TX_pll_unlocked_cntr
+            print '\n' + 'XCVR_Input_link_rx_err_cntr: ' + '%d; ' % XCVR_Input_link_rx_err_cntr
+
+        if (log_enable_param == 1):
+            with open(self.DiagnDPRAM_data_log_fname, 'a') as DiagnDPRAM_data_log_file:
+                DiagnDPRAM_data_log_file.write('\n%s' % datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
+                DiagnDPRAM_data_log_file.write('\n' + 'TL_in_buf_full_feb0_t0_cntr: ' + '%d; ' % TL_in_buf_full_feb0_t0_cntr + 'TL_in_buf_full_feb0_t1_cntr: ' + '%d; ' % TL_in_buf_full_feb0_t1_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TL_in_buf_full_feb1_t0_cntr: ' + '%d; ' % TL_in_buf_full_feb1_t0_cntr + 'TL_in_buf_full_feb1_t1_cntr: ' + '%d; ' % TL_in_buf_full_feb1_t1_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TL_in_buf_full_feb2_t0_cntr: ' + '%d; ' % TL_in_buf_full_feb2_t0_cntr + 'TL_in_buf_full_feb2_t1_cntr: ' + '%d; ' % TL_in_buf_full_feb2_t1_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TL_in_buf_full_feb3_t0_cntr: ' + '%d; ' % TL_in_buf_full_feb3_t0_cntr + 'TL_in_buf_full_feb3_t1_cntr: ' + '%d; ' % TL_in_buf_full_feb3_t1_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TM_in_buf_full_feb0_t0_cntr: ' + '%d; ' % TM_in_buf_full_feb0_t0_cntr + 'TM_in_buf_full_feb0_t1_cntr: ' + '%d; ' % TM_in_buf_full_feb0_t1_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TM_in_buf_full_feb1_t0_cntr: ' + '%d; ' % TM_in_buf_full_feb1_t0_cntr + 'TM_in_buf_full_feb1_t1_cntr: ' + '%d; ' % TM_in_buf_full_feb1_t1_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TM_in_buf_full_feb2_t0_cntr: ' + '%d; ' % TM_in_buf_full_feb2_t0_cntr + 'TM_in_buf_full_feb2_t1_cntr: ' + '%d; ' % TM_in_buf_full_feb2_t1_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TM_in_buf_full_feb3_t0_cntr: ' + '%d; ' % TM_in_buf_full_feb3_t0_cntr + 'TM_in_buf_full_feb3_t1_cntr: ' + '%d; ' % TM_in_buf_full_feb3_t1_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TL_mrgr_buf_full_feb0_cntr: ' + '%d; ' % TL_mrgr_buf_full_feb0_cntr + 'TL_mrgr_buf_full_feb1_cntr: ' + '%d; ' % TL_mrgr_buf_full_feb1_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TL_mrgr_buf_full_feb2_cntr: ' + '%d; ' % TL_mrgr_buf_full_feb2_cntr + 'TL_mrgr_buf_full_feb3_cntr: ' + '%d; ' % TL_mrgr_buf_full_feb3_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TM_evnt_fifo_full_feb0_cntr: ' + '%d; ' % TM_evnt_fifo_full_feb0_cntr + 'TM_evnt_fifo_full_feb1_cntr: ' + '%d; ' % TM_evnt_fifo_full_feb1_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TM_evnt_fifo_full_feb2_cntr: ' + '%d; ' % TM_evnt_fifo_full_feb2_cntr + 'TM_evnt_fifo_full_feb3_cntr: ' + '%d; ' % TM_evnt_fifo_full_feb3_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TL_AB_merger_fifo_full_cntr: ' + '%d; ' % TL_AB_merger_fifo_full_cntr + 'TL_CD_merger_fifo_full_cntr: ' + '%d; ' % TL_CD_merger_fifo_full_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TM_AB_merger_fifo_full_cntr: ' + '%d; ' % TM_AB_merger_fifo_full_cntr + 'TM_CD_merger_fifo_full_cntr: ' + '%d; ' % TM_CD_merger_fifo_full_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'TM_OUT_fifo_full_cntr: ' + '%d; ' % TM_OUT_fifo_full_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'top_pll_unlocked_cntr: ' + '%d; ' % top_pll_unlocked_cntr + 'top_daq_pll_unlocked_cntr: ' + '%d; ' % top_daq_pll_unlocked_cntr)
+                DiagnDPRAM_data_log_file.write('\n' + 'L1_choke_req_from_top_cntr: ' + '%d; ' % L1_choke_req_from_top_cntr)  # acr 2019-04-03
+                DiagnDPRAM_data_log_file.write('\n' + 'XCVR_TX_pll_unlocked_cntr: ' + '%d; ' % XCVR_TX_pll_unlocked_cntr)  # acr 2019-04-03
+                DiagnDPRAM_data_log_file.write('\n' + 'XCVR_Input_link_rx_err_cntr: ' + '%d; ' % XCVR_Input_link_rx_err_cntr)  # acr 2019-04-03
+
+    # acr 2019-02-19 END
+
+    # acr 2019-03-06 BEGIN
+    def HARDReset_Send(self):
+        COMMAND_STRING = 'CMD_GEMROC_LV_REMOTE_HARD_RESET'
+
+        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
+        return command_echo
+    # acr 2019-03-06 END
+    # def Change_B3Clk_sim_mode(self, B3Clk_sim_en_param):
+    #     Dbg_funct_ctrl_bits_U4_HI_localcopy |= ((B3Clk_sim_en_param & 0x1) << 2)
+    #     # print '\n Dbg_funct_ctrl_bits_U4_HI_localcopy = %x' % Dbg_funct_ctrl_bits_U4_HI_localcopy
+    #     gemroc_DAQ_inst.set_Dbg_functions_ctrl_bits_HiNibble(Dbg_funct_ctrl_bits_U4_HI_localcopy)
+    #     COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
+    #     command_echo = self.send_GEMROC_DAQ_CMD( COMMAND_STRING)
+    #     return command_echo
+
+    def double_enable(self, value, reg):
+        if value==1:
+            for T in range (0,8):
+                for ch in range (0,64):
+                    self.Set_param_dict_channel(reg,"TriggerMode2B",T,ch,3,send_command=False)
+                    self.Set_param_dict_channel(reg,"TriggerMode2Q",T,ch,0,send_command=False)
+                    self.Set_param_dict_channel(reg,"TriggerMode2E",T,ch,3,send_command=False)
+                    self.Set_param_dict_channel(reg,"TriggerMode2T",T,ch,0)
+        if value==0:
+            for T in range (0,8):
+                for ch in range (0,64):
+                    self.Set_param_dict_channel(reg,"TriggerMode2B",T,ch,0,send_command=False)
+                    self.Set_param_dict_channel(reg,"TriggerMode2Q",T,ch,0,send_command=False)
+                    self.Set_param_dict_channel(reg,"TriggerMode2E",T,ch,0,send_command=False)
+                    self.Set_param_dict_channel(reg,"TriggerMode2T",T,ch,0)
+    def only_E(self, reg):
+        for T in range (0,8):
+            for ch in range (0,64):
+                self.Set_param_dict_channel(reg,"TriggerMode2B",T,ch,1,send_command=False)
+                self.Set_param_dict_channel(reg,"TriggerMode2Q",T,ch,1,send_command=False)
+                self.Set_param_dict_channel(reg,"TriggerMode2E",T,ch,1,send_command=False)
+                self.Set_param_dict_channel(reg,"TriggerMode2T",T,ch,1,send_command=False)
+                self.Set_param_dict_channel(reg,"Vth_T1",T,ch,63)
