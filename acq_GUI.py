@@ -230,20 +230,25 @@ class menu():
         print "Test folder set: {}".format(self.run_folder)
 
     def open_adv_acq(self):
-        self.adv_wind = Canvas(self.tabControl)
-        self.tabControl.add(self.adv_wind, text='TIGERs errors and selection')
+        self.adv_frame = Frame(self.tabControl)
+        # self.adv_self.canvas = Canvas(self.adv_frame,scrollregion=(0,0,500,500))
+        self.tabControl.add(self.adv_frame, text='TIGERs errors and selection')
         self.error_dict810 = {}
-        scrollbar = Scrollbar(self.adv_wind)
+        scrollbar = Scrollbar(self.adv_frame,orient=VERTICAL)
+
+        self.canvas2 = Canvas(self.adv_frame)
+        frame = Frame(self.canvas2,bd=1)
         scrollbar.pack(side=RIGHT, fill=Y)
-        seconfF=Frame(self.adv_wind)
-        seconfF.pack()
-        firstF = Canvas(self.adv_wind)
-        firstF.pack()
-        Label(firstF,text='Acquisiton set single TIGERs',font=("Courier", 16)).pack()
+        scrollbar.config(command=self.canvas2.yview)
+        self.canvas2.config(yscrollcommand=scrollbar.set)
+        self.canvas2.create_window((0, 0), window=frame, anchor='nw')
+        frame.bind("<Configure>", self.myfunction)
+        self.canvas2.pack(side=LEFT,fill=BOTH)
+        Label(frame,text='Acquisiton set single TIGERs',font=("Courier", 16)).pack()
         self.button_dict={}
         for number, GEMROC in self.GEMROC_reading_dict.items():
-            a = Frame(firstF)
-            a.pack(pady=5)
+            a = Frame(frame)
+            a.pack(pady=5,fill=BOTH)
             Label(a, text='{} Err(8/10):   '.format(number),font=("Courier", 10)).grid(row=1, column=0, sticky=NW, pady=4)
             for T in range(0, 8):
                     self.error_dict810["{} TIGER {}".format(number, T)]=Label(a,text="-----",width=8,font=("Courier", 10))
@@ -254,8 +259,10 @@ class menu():
                 self.button_dict["{} TIGER {}".format(number, T)].grid(row=0, column=T + 1, sticky=NW, pady=4)
             Label(a,text="___________________________________________________________________________________________________________________________").grid(row=2, column=0, sticky=NW,columnspan=12)
 
-        scrollbar.config(command=self.adv_wind.yview_scroll(2,"units"))
         self.refresh_but_TIGERs()
+
+    def myfunction(self, event):
+        self.canvas2.configure(scrollregion=self.canvas2.bbox("all"), width=1000, height=700)
 
     def Change_Reading_Tigers(self,(number,T)):
 
@@ -326,7 +333,7 @@ class menu():
             self.start_acq()
 
     def ref_adv_acq(self):
-        widget_list = all_children(self.adv_wind)
+        widget_list = all_children(self.adv_self.canvas)
         for item in widget_list:
             item.pack_forget()
         self.refresh_but_TIGERs()
@@ -645,5 +652,4 @@ def all_children(window):
 
     return _list
 
-def myfunction(event):
-    self.canvas.configure(scrollregion=self.canvas.bbox("all"),width=200,height=200)
+

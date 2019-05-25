@@ -1204,20 +1204,10 @@ class analisys_read:
 
                         (x, k) = (np.argmax (self.thr_scan_rate[T, ch, :]>1000), 1)
                         print ("Can't fit ch {}, TIGER {}, set: mu  {} and sigma {}".format(ch, T,x,k))
-                        # xdata = np.arange(0, 64)
-                        # plt.plot(xdata, self.thr_scan_rate_norm[T, ch, :], 'o', label='Data')
-                        # plt.ylim(0, 1.05)
-                        # plt.legend(loc='best')
-                        # plt.title("TIGER_{}_channel {}".format(T, ch))
-                        # if branch == 1:
-                        #     plt.savefig(self.GEM_COM.Tscan_folder + sep + "GEMROC{}".format(self.GEMROC_ID) + sep + "channel_fits" + sep + "TIGER_{}_channel {}.png".format(T, ch))
-                        # else:
-                        #     plt.savefig(self.GEM_COM.Escan_folder + sep + "GEMROC{}".format(self.GEMROC_ID) + sep + "channel_fits" + sep + "TIGER_{}_channel {}.png".format(T, ch))
-                        # plt.clf()
 
-            if x<0 or x>64:
-                (x, k) = (np.argmax(self.thr_scan_rate[T, ch, :] > 1000), 1)
-                print ("Invalid value on ch {}, TIGER {}, set: mu  {} and sigma {}".format(ch, T, x, k))
+                if x<0 or x>64:
+                    (x, k) = (np.argmax(self.thr_scan_rate[T, ch, :] > 1000), 1)
+                    print ("Invalid value on ch {}, TIGER {}, set: mu  {} and sigma {}".format(ch, T, x, k))
                 # if x>63:
                 #     if retry:
                 #         print("Not converged, launching VTH scan on channel\n")

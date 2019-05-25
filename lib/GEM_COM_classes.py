@@ -50,7 +50,7 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.DiagnDPRAM_data_log_fname="."+sep+"log_folder"+sep+"GEMROC{}_Diagn_log_{}.txt".format(self.GEMROC_ID,datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         self.success_counter=0
         self.fail_counter=0
-        local_test=False
+        local_test=True
 
         if local_test:
             # HOST_DYNAMIC_IP_ADDRESS = "192.168.1.%d" %(GEMROC_ID)
@@ -675,9 +675,6 @@ class communication: ##The directory are declared here to avoid multiple declara
                 self.SynchReset_to_TgtTCAM()
                 self.SynchReset_to_TgtFEB()
                 i+=1
-
-
-
         if i==5:
             raise Exception("GEMROC {} communication timed out for 5 times".format(self.GEMROC_ID))
         if log_write:

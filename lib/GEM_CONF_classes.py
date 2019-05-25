@@ -408,15 +408,26 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
                self.Global_cfg_list[T]["TP_Vcal"] = config_dict[self.TARGET_GEMROC_ID][T]["TP_Vcal"]
                self.Global_cfg_list[T]["IBiasTPcal"] = config_dict[self.TARGET_GEMROC_ID][T]["Ibias_TP_cal_diff"]
                if TP_amplitude == "low":
-                   self.Global_cfg_list[T]["TP_Vcal_ref"] = config_dict[self.TARGET_GEMROC_ID][T]["start"]+3
+                   self.Global_cfg_list[T]["TP_Vcal_ref"] = config_dict[self.TARGET_GEMROC_ID][T]["start"]+self.search_for_Q( config_dict[self.TARGET_GEMROC_ID][T],7)
                if TP_amplitude == "high":
-                   self.Global_cfg_list[T]["TP_Vcal_ref"] = config_dict[self.TARGET_GEMROC_ID][T]["stop"]-4
+                   self.Global_cfg_list[T]["TP_Vcal_ref"] = config_dict[self.TARGET_GEMROC_ID][T]["start"]+self.search_for_Q( config_dict[self.TARGET_GEMROC_ID][T],20)
            else:
                if TP_amplitude == "low":
                    self.Global_cfg_list[T]["TP_Vcal_ref"] = 4
                if TP_amplitude == "high":
                    self.Global_cfg_list[T]["TP_Vcal_ref"] = 13
 
+   def search_for_Q(self,conf_dict, Q):
+       if conf_dict["TP_calib"] != 'NA':
+           distance = 1000
+           for key in conf_dict["TP_calib"]:
+               new_dist = abs((conf_dict["TP_calib"][key]['Q']) - Q)
+               if new_dist > distance:
+                   print (distance)
+                   return key - 1
+               distance = new_dist
+       else:
+           return 2
 ###CCCCCCCCCCCCCCCC###     CLASS ch_reg_settings BEGIN  ###CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC###
 class ch_reg_settings: # purpose: organize the Channel Configuration Register Settings in an array format which can be sent over Ethernet or optical link
    def __init__(self,

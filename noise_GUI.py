@@ -2,18 +2,16 @@ from Tkinter import *
 from ttk import Progressbar
 import Tkinter, Tkconstants, tkFileDialog
 from scipy.optimize import curve_fit
-from scipy import special
+from scipy import special,interpolate
 import math
 import numpy as np
 from multiprocessing import Process,Pipe
 import time
 from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
 import sys
-import array
 import pickle
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
-import matplotlib.pyplot as plt
 
 OS = sys.platform
 if OS == 'win32':
@@ -34,6 +32,12 @@ def double_error_func(x,x0,x1,sig0,sig1,c0,c1):
     y=errorfunc(x,x0,sig0,c0)+errorfunc(x,x1,sig1,c1)
     return y
 
+
+def gaus(x,a,x0,sigma):
+    y = a*np.exp((-(x-x0)**2/(2*sigma**2)))
+    return y
+
+
 def gaussian(x, mu, sig,c,norm ):
     if len(x)==1:
         y=norm/(sig*math.pi**(1/2))*math.exp((-(x - mu)**2) / (2 * sig**2))+c
@@ -52,8 +56,9 @@ class menu():
         self.TPfits={}
         self.covs={}
         self.TPcovs={}
-        self.chi = {}
-        self.TPchi= {}
+        self.baseline = {}
+        self.baseline_pos = {}
+        self.TPbaseline= {}
         self.gaussians={}
         self.efine_average={}
         self.efine_stdv={}
@@ -154,10 +159,8 @@ class menu():
 
         self.fig = Figure(figsize=(6,6))
         self.plot_rate = self.fig.add_subplot(111)
-        self.scatter, = self.plot_rate.plot(x, v, 'r+')
-        self.line, = self.plot_rate.plot(x, v, '-')
-        self.line2, = self.plot_rate.plot(x, v, 'r-')
-        self.line3, = self.plot_rate.plot(x, v, 'g-')
+        self.scatter, = self.plot_rate.plot(x, v, 'r+',label = "data")
+
 
 
         self.plot_rate.set_title("TIGER {}, GEMROC {}".format(self.plotting_TIGER, self.plotting_gemroc))
@@ -171,7 +174,7 @@ class menu():
         self.canvas.flush_events()
         self.toolbar = NavigationToolbar2Tk(self.canvas, self.corn1)
         self.toolbar.draw()
-        #
+        self.line_list=[]
         # for number, GEMROC_number in self.GEMROC_reading_dict.items():
         #     print number
         for i in range (0,21):
@@ -183,10 +186,11 @@ class menu():
             self.covs[number]={}
             self.TPcovs[number]={}
 
-            self.chi[number]={}
-            self.TPchi[number]={}
+            self.baseline[number]={}
             self.TP_settings={}
-            # self.gaussians[number]={}
+
+            self.baseline_pos[number]={}
+
             self.efine_average[number]={}
             self.efine_stdv[number]={}
             for T in range (0,8):
@@ -195,11 +199,11 @@ class menu():
                 self.TPcovs[number]["TIG{}".format(T)]={}
                 self.TPfits[number]["TIG{}".format(T)]={}
 
-                self.chi[number]["TIG{}".format(T)]={}
-                self.TPchi[number]["TIG{}".format(T)]={}
+                self.baseline[number]["TIG{}".format(T)]={}
 
                 self.TP_settings["TIG{}".format(T)]={}
-                # self.gaussians[number]["TIG{}".format(T)] = {}
+                self.baseline_pos[number]["TIG{}".format(T)] = {}
+
                 self.efine_average[number]["TIG{}".format(T)]={}
                 self.efine_stdv[number]["TIG{}".format(T)]={}
                 for ch in range (0,64):
@@ -209,9 +213,8 @@ class menu():
                     self.TPcovs[number]["TIG{}".format(T)]["CH{}".format(ch)] = np.zeros((3,3))
                     self.TPfits[number]["TIG{}".format(T)]["CH{}".format(ch)] = ("Fail","Fail","Fail")
 
-                    self.chi[number]["TIG{}".format(T)]["CH{}".format(ch)] = np.zeros((6,6))
-                    self.TPchi[number]["TIG{}".format(T)]["CH{}".format(ch)] = np.zeros((3,3))
-                    #self.TP_settings[number]["TIG{}".format(T)]["CH{}".format(ch)] = (25    )
+                    self.baseline[number]["TIG{}".format(T)]["CH{}".format(ch)] = ("Fail","Fail","Fail")
+                    self.baseline_pos[number]["TIG{}".format(T)]["CH{}".format(ch)] = (0,0,0)
                     self.efine_average[number]["TIG{}".format(T)]["CH{}".format(ch)] = []
                     self.efine_stdv[number]["TIG{}".format(T)]["CH{}".format(ch)] = []
 
@@ -434,35 +437,42 @@ class menu():
         else:
             for number, GEMROC_number in self.GEMROC_reading_dict.items():
                 if int(number.split()[1]) == int(self.plotting_gemroc):
-
-
+                    for line in self.line_list:
+                        try:
+                            line.pop(0).remove()
+                        except Exception as E:
+                            pass
+                    data = self.scan_matrixs[number][self.plotting_TIGER,self.plotting_Channel]
                     self.plot_rate.set_title("ROC {},TIG {}, CH {} ".format(self.plotting_gemroc, self.plotting_TIGER,self.plotting_Channel))
                     self.scatter.set_ydata(self.scan_matrixs[number][self.plotting_TIGER,self.plotting_Channel])
                     self.plot_rate.set_ylim(top=np.max(self.scan_matrixs[number][self.plotting_TIGER,self.plotting_Channel])+ np.max(self.scan_matrixs[number][self.plotting_TIGER,self.plotting_Channel])*0.2)
                     self.plot_rate.set_xlim(right=65)
                     parameters=self.fits[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)]
                     TPparameters=self.TPfits[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)]
-                    # base_parameters=self.gaussians[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)][0]
-                    # print "Chi1 {}".format(self.chi[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)])
-                    # print "Chi2 {}".format(self.TPchi[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)])
-                    y=np.zeros((64))
-                    TPy=np.zeros((64))
-                    gauspnts=np.zeros((64))
+                    Bas_parameters_fit = self.baseline[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)]
+                    bas_parameters_not_fit = self.baseline_pos[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)]
+                    self.line_list.append (self.plot_rate.plot(bas_parameters_not_fit,(data.max(),data.max(),data.max()),'o'))
+                    if parameters[0]!="Fail":
+                        self.line_list.append( self.plot_rate.plot(np.arange(0,64), double_error_func(np.arange(0,64),*parameters), '-.',label= "Preliminary fit",linewidth=1))
 
-                    for x in range (0,64):
-                        y[x]=double_error_func(x,*parameters)
-                        if TPparameters[0]!="Fail":
-                            noise = round(convert_to_fC(TPparameters[1], 55),2)
-                        else:
-                            noise= "Canno't fit"
+                    if TPparameters[0]!="Fail":
+                        noise = round(convert_to_fC(TPparameters[1], 55), 2)
 
-                    self.line.set_ydata(y)
-                    self.line2.set_ydata(TPy)
-                    self.line3.set_ydata(gauspnts)
+                        self.line_list.append( self.plot_rate.plot(np.arange(0,64,1.0), errorfunc(np.arange(0,64,1.0),*TPparameters), '-',label= "TP fit"))
+
+                    else:
+                        noise= "Canno't fit"
+                    if Bas_parameters_fit[0]!="Fail" and TPparameters[0]!="Fail":
+                        translated_gas=gaus(np.arange(TPparameters[0],64,1.0),*Bas_parameters_fit)+TPparameters[2]
+                        self.line_list.append( self.plot_rate.plot(np.arange(TPparameters[0],64,1.0),translated_gas , '--',label= "Gaussian baseline estimation"))
+
+                    # self.line2.set_ydata(errorfunc(range(0,64),*TPparameters))
+                    # self.line.set_ydata(double_error_func(range(0,64),*parameters))
+
                     # print "First fit {}".format(parameters[2])
                     # print "Second fit {}".format(TPparameters[1])
                     self.plot_rate.set_title("ROC {},TIG {}, CH {} , Sigma Noise={} fC".format(self.plotting_gemroc, self.plotting_TIGER,self.plotting_Channel,noise))
-
+                    self.plot_rate.legend()
                     break
                 else:
                     self.plot_rate.set_title("GEMROC not active")
@@ -492,14 +502,17 @@ class menu():
             for TIG in range (0,8):
                 for channel in range (0,64):
                     if any(matrix[TIG][channel]) != 0:
-                        values=error_fit(matrix[TIG][channel])
+                        print ("TIG%s CH%s"%(TIG,channel))
+                        self.baseline_pos[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)] = find_baseline(matrix[TIG][channel])
+                        values = error_fit(matrix[TIG][channel])
 
                         self.fits[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[0]
                         self.covs[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[1]
                         self.TPfits[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[2]
                         self.TPcovs[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[3]
-                        self.chi[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[4]
-                        self.TPchi[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[5]
+                        self.baseline[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[4]
+                        # self.chi[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[4]
+                        # self.TPchi[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[5]
                         # if values[2][2]!="Fail":
                             # gauss_values=gauss_fit_baseline(matrix[TIG][channel],values[0][1],values[0][3],values[2][2])
                             # self.gaussians[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=gauss_values
@@ -522,8 +535,12 @@ class menu():
                         f.write("{} {} {} Noise: {} Variance: {}\n".format(GEMROC,TIGER,CH,noise,cov))
     def switch_to_tp_distr(self):
         self.strart_button["text"]="Acquire test pulses"
-
-
+def find_baseline(data):
+    max = np.max(data)
+    first = np.argmax(data>0.9*max)
+    last = 63 - np.argmax(np.flip(data)>0.9*max)
+    print round((last-first)/2+first)
+    return first,last,round((last-first)/2+first)
 def error_fit(data):
     # for i, ytest in enumerate(ydata):
     #     if ytest == np.max(ydata):
@@ -547,7 +564,7 @@ def error_fit(data):
     # boundsd = ((0,0,0,0,TP_rate*0.7,200000),(64,64,20,20,TP_rate*1.3,500000))
     # popt1, pcov1 = curve_fit(double_error_func, xdata, ydata, method='trf', maxfev=20000,p0=guess,bounds=boundsd)
 
-
+    baseline_restults = [0,0]
 
     #fit with double error function + single fit on TP
 
@@ -560,7 +577,6 @@ def error_fit(data):
         for i in range (0,len(ydata)):
             y[i]=double_error_func(i,*popt1)
 
-        chi1=squared_sum(ydata,y)/64
         end=int(round(popt1[1]-5*popt1[3]))
         if end>5:
             xdata=xdata[:end]
@@ -571,39 +587,46 @@ def error_fit(data):
                 popt2, pcov2 = curve_fit(errorfunc, xdata, ydata, method='trf', maxfev=20000,p0=guess,bounds=boundsd)
                 for i in range(0, len(ydata)):
                     y[i] = errorfunc(i, *popt2)
-                chi2 = squared_sum(ydata, y[:end]) / end
+
             except:
                 popt2 = ("Fail", "Fail", "Fail")
                 pcov2 = np.zeros((3, 3))
-                chi2 = 0
-
-
-
         else:
             popt2=("Fail","Fail","Fail")
             pcov2=np.zeros((3,3))
-            chi2=0
     except:
         popt1 = (2, 50, 600)
         pcov1 = np.zeros((6, 6))
         popt2 = ("Fail", "Fail", "Fail")
         pcov2 = np.zeros((3, 3))
-        chi1 = 0
-        chi2 = 0
-    return (popt1,pcov1,popt2,pcov2,chi1,chi2)
-def gauss_fit_baseline(data,mu_s1, sigma_s1,norm_tp):
-    print mu_s1, sigma_s1,norm_tp
-    M=int(np.argmax(data))
-    first=int(round(mu_s1-3*sigma_s1))
-    second=int(round(M+4*sigma_s1))
-    if first>=0 and second <64:
-        print first
-        print second
-        ydata = np.copy(data)[first:second]
-        xdata = np.arange(first, second)
-
-        result=curve_fit(gaussian,xdata,ydata,method='trf', maxfev=20000)
-        return result
+    if popt2[0]!="Fail":
+        baseline_restults = gaus_fit_baseline(data, popt2[0], popt2[1], popt2[2])
+    else:
+        baseline_restults = ("Fail","Fail")
+    return (popt1,pcov1,popt2,pcov2,baseline_restults[0],baseline_restults[1])
+# def gauss_fit_baseline(data,mu_s1, sigma_s1,norm_tp):
+#     print mu_s1, sigma_s1,norm_tp
+#     M=int(np.argmax(data))
+#     first=int(round(mu_s1-3*sigma_s1))
+#     second=int(round(M+4*sigma_s1))
+#     if first>=0 and second <64:
+#         print first
+#         print second
+#         ydata = np.copy(data)[first:second]
+#         xdata = np.arange(first, second)
+#
+#         result=curve_fit(gaussian,xdata,ydata,method='trf', maxfev=20000)
+#         return result
+def gaus_fit_baseline(data, TP_bas, sigma_TP, tp_norm):
+    first = int(round(TP_bas + 3 * sigma_TP))
+    translated_data=data-tp_norm
+    try:
+        popt, pcov = curve_fit(gaus,np.arange(first,64,1.0),translated_data[first:],p0=[250000,50,4])
+        print popt[1]
+    except:
+        popt=["Fail"]
+        pcov=["Fail"]
+    return popt, pcov
 def convert_to_fC(sigma,VcaspVth):
     guadagno=12.25
     fC=(VcaspVth*-0.621+39.224)/guadagno*sigma
