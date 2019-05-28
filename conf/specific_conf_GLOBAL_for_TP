@@ -1,0 +1,3 @@
+#Possible commands are ADD and SET
+#Command GEMROC TIGER FIELD value
+ADD 8 5 IPostamp 1

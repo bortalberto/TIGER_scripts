@@ -8,7 +8,7 @@ import os
 import matplotlib
 matplotlib.use('pdf',warn=False, force=True)
 import matplotlib.pyplot as plt
-import pylab
+import math
 from scipy.optimize import curve_fit
 from scipy import special
 from threading import Thread
@@ -31,9 +31,28 @@ int_time=0.2 #working at 0.5
 def sigmoid(x, x0, k):  #Used for S-fit
     y =  1 / (1 + np.exp(-k * (x - x0)))
     return y
+def errorfunc(x, x0, sig, c):
+    y = (special.erf((x - x0) / (1.4142 * sig))) * c / 2 + 0.5 * c
+    return y
+def double_error_func(x,x0,x1,sig0,sig1,c0,c1):
+    y=errorfunc(x,x0,sig0,c0)+errorfunc(x,x1,sig1,c1)
+    return y
 
-def errorfunc(x,x0,sig,c):
-    y=(special.erf((x-x0)/(1.4142*sig)))*c/2+0.5*c
+
+def gaus(x,a,x0,sigma):
+    y = a*np.exp((-(x-x0)**2/(2*sigma**2)))
+    return y
+
+
+def gaussian(x, mu, sig,c,norm ):
+    if len(x)==1:
+        y=norm/(sig*math.pi**(1/2))*math.exp((-(x - mu)**2) / (2 * sig**2))+c
+    else:
+        i=0
+        y = np.zeros((len(x)))
+        for xi in x:
+            y[i]=norm/(sig*math.pi**(1/2))*math.exp((-(xi - mu)**2) / (2 * sig**2))+c
+            i+=1
     return y
 
 class analisys_conf: #Analysis class used for configurations10
@@ -1342,6 +1361,102 @@ class analisys_read:
         # ax.set_zlabel('Counts')
         plt.title('Threshold Scan Tiger {}, ch {}'.format(TIGER, CHANNEL))
         plt.show()
+
+def find_baseline(data):
+    max = np.max(data)
+    first = np.argmax(data > 0.9 * max)
+    last = 63 - np.argmax(np.flip(data) > 0.9 * max)
+    print round((last - first) / 2 + first)
+    return first, last, round((last - first) / 2 + first)
+
+def error_fit(data,TP_rate):
+    # for i, ytest in enumerate(ydata):
+    #     if ytest == np.max(ydata):
+    #         m = i
+    #         break
+    M = int(np.argmax(data))
+    ydata = np.copy(data)
+    for i in range(M, 64):
+        ydata[i] = np.max(data)
+
+    xdata = np.arange(0, 64)
+    #  popt, pcov = curve_fit(errorfunc, xdata, ydata[:m], method='lm', maxfev=5000)
+    #  double_error_func(x, x0, x1, sig0, sig1, c0, c1)115fvb
+
+    #  fit with double error function summed
+    # guess=np.array([2,50,5,5,TP_rate,300000])
+    # boundsd = ((0,0,0,0,TP_rate*0.7,200000),(64,64,20,20,TP_rate*1.3,500000))
+    # popt1, pcov1 = curve_fit(double_error_func, xdata, ydata, method='trf', maxfev=20000,p0=guess,bounds=boundsd)
+
+    baseline_restults = [0, 0]
+
+    # fit with double error function + single fit on TP
+
+    guess = np.array([2, 50, 5, 5, TP_rate, 300000])
+    boundsd = ((0, 0, 0, 0, TP_rate * 0.6, 200000), (64, 64, 20, 20, TP_rate * 1.5, 500000))
+    try:
+        popt1, pcov1 = curve_fit(double_error_func, xdata, ydata, method='trf', maxfev=20000, p0=guess, bounds=boundsd)
+
+        y = np.zeros(64)
+        for i in range(0, len(ydata)):
+            y[i] = double_error_func(i, *popt1)
+
+        end = int(round(popt1[1] - 5 * popt1[3]))
+        if end > 5:
+            xdata = xdata[:end]
+            ydata = ydata[:end]
+            guess = np.array([popt1[0], popt1[2], popt1[4]])
+            boundsd = ((0, 0, TP_rate * 0.2), (64, 20, TP_rate * 2))
+            try:
+                popt2, pcov2 = curve_fit(errorfunc, xdata, ydata, method='trf', maxfev=20000, p0=guess, bounds=boundsd)
+                for i in range(0, len(ydata)):
+                    y[i] = errorfunc(i, *popt2)
+
+            except:
+                popt2 = ("Fail", "Fail", "Fail")
+                pcov2 = np.zeros((3, 3))
+        else:
+            popt2 = ("Fail", "Fail", "Fail")
+            pcov2 = np.zeros((3, 3))
+    except:
+        popt1 = ('Fail', 'Fail', 'Fail')
+        pcov1 = np.zeros((6, 6))
+        popt2 = ("Fail", "Fail", "Fail")
+        pcov2 = np.zeros((3, 3))
+    if popt2[0] != "Fail":
+        baseline_restults = gaus_fit_baseline(data, popt2[0], popt2[1], popt2[2])
+    else:
+        baseline_restults = ("Fail", "Fail")
+    return (popt1, pcov1, popt2, pcov2, baseline_restults[0], baseline_restults[1])
+
+# def gauss_fit_baseline(data,mu_s1, sigma_s1,norm_tp):
+#     print mu_s1, sigma_s1,norm_tp
+#     M=int(np.argmax(data))
+#     first=int(round(mu_s1-3*sigma_s1))
+#     second=int(round(M+4*sigma_s1))
+#     if first>=0 and second <64:
+#         print first
+#         print second
+#         ydata = np.copy(data)[first:second]
+#         xdata = np.arange(first, second)
+#
+#         result=curve_fit(gaussian,xdata,ydata,method='trf', maxfev=20000)
+#         return result
+def gaus_fit_baseline(data, TP_bas, sigma_TP, tp_norm):
+    first = int(round(TP_bas + 3 * sigma_TP))
+    translated_data = data - tp_norm
+    try:
+        popt, pcov = curve_fit(gaus, np.arange(first, 64, 1.0), translated_data[first:], p0=[250000, 50, 4])
+        print popt[1]
+    except:
+        popt = ["Fail"]
+        pcov = ["Fail"]
+    return popt, pcov
+
+def convert_to_fC(sigma, VcaspVth):
+    guadagno = 12.25
+    fC = (VcaspVth * -0.621 + 39.224) / guadagno * sigma
+    return fC
 
 
 
