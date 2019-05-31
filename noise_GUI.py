@@ -23,7 +23,7 @@ else:
 	print("ERROR: OS {} non compatible".format(OS))
 	sys.exit()
 
-TP_rate = 68000
+TP_rate = 49000
 
 
 
@@ -386,10 +386,10 @@ class noise_measure ():
     def start_TP(self):
         for number, GEMROC_number in self.GEMROC_reading_dict.items():
             GEMROC_number.GEM_COM.Soft_TP_generate()
-            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TP_period'] = 500
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TP_period'] = 800
             GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['Periodic_TP_EN_pattern'] = 15
-            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['number_of_repetitions'] = 1012
-            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TP_width'] = 8
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['number_of_repetitions'] = 512+16
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TP_width'] = 10
             GEMROC_number.GEM_COM.DAQ_set_with_dict()
     def plotta(self):
         if self.sampling_scan==True:
@@ -457,7 +457,8 @@ class noise_measure ():
 
                     else:
                         noise= "Canno't fit"
-                    if Bas_parameters_fit[0]!="Fail" and TPparameters[0]!="Fail":
+
+                    if Bas_parameters_fit!="Fail" and TPparameters[0]!="Fail":
                         translated_gas=AN_CLASS.gaus(np.arange(TPparameters[0],64,1.0),*Bas_parameters_fit)+TPparameters[2]
                         self.line_list.append( self.plot_rate.plot(np.arange(TPparameters[0],64,1.0),translated_gas , '--',label= "Gaussian baseline estimation"))
 
@@ -493,6 +494,7 @@ class noise_measure ():
             GEMROC.g_inst.load_specif_settings(GEMROC.GEM_COM.conf_folder+sep+"specific_conf_GLOBAL_for_TP")
             for T in range (0,8):
                 GEMROC.GEM_COM.Set_param_dict_global(GEMROC.g_inst, "FE_TPEnable", T, 1)
+        print("TP settings loaded")
     def fit(self):
         for GEMROC,matrix in self.scan_matrixs.items():
             for TIG in range (0,8):
@@ -521,7 +523,7 @@ class noise_measure ():
                 for TIGER,dict1 in self.TPfits[GEMROC].items():
                     for CH,dictionary in self.TPfits[GEMROC][TIGER].items():
                         parameters=self.TPfits[GEMROC][TIGER][CH]
-                        if parameters[0] != "Fail" and parameters[2]>50000 and parameters[2]<100000:
+                        if parameters[0] != "Fail" and parameters[2]>TP_rate/5 and parameters[2]<TP_rate*5:
                             noise = AN_CLASS.convert_to_fC(parameters[1], 55)
                             cov = AN_CLASS.convert_to_fC(self.TPcovs[GEMROC][TIGER][CH][1][1], 55)
 

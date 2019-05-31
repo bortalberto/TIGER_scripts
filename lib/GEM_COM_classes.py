@@ -50,9 +50,9 @@ class communication: ##The directory are declared here to avoid multiple declara
         self.DiagnDPRAM_data_log_fname="."+sep+"log_folder"+sep+"GEMROC{}_Diagn_log_{}.txt".format(self.GEMROC_ID,datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         self.success_counter=0
         self.fail_counter=0
-        local_test=True
+        self.local_test=False
 
-        if local_test:
+        if self.local_test:
             # HOST_DYNAMIC_IP_ADDRESS = "192.168.1.%d" %(GEMROC_ID)
             self.HOST_IP = "127.0.0.1"  # uncomment for test only
 

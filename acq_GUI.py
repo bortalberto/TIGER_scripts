@@ -29,7 +29,6 @@ class menu():
     def __init__(self, std_alone=True, main_winz=None, GEMROC_reading_dict=None,father=None):
 
         self.father=father
-        self.restart=True
         self.PMT=True
         self.std_alone = std_alone
         self.GEM_to_read = np.zeros((20))
@@ -58,6 +57,7 @@ class menu():
             self.tabControl = ttk.Notebook(self.master_window)  # Create Tab Control
 
         self.master_window.wm_title("GEMROC acquisition")
+        self.restart=BooleanVar(self.master_window)
 
         self.simple_analysis = IntVar(self.master_window)
         self.run_analysis = IntVar(self.master_window)
@@ -106,6 +106,8 @@ class menu():
         self.time_in.grid(row=0, column=1, sticky=NW, pady=4)
         Checkbutton(self.start_frame, text="Fast analysis", variable=self.simple_analysis).grid(row=0, column=2, sticky=NW, pady=4)
         Checkbutton(self.start_frame, text="On run analysis", variable=self.run_analysis).grid(row=0, column=3, sticky=NW, pady=4)
+        Checkbutton(self.start_frame, text="Restart", variable=self.restart).grid(row=0, column=4, sticky=NW, pady=4)
+
         a_frame = Frame(self.master)
         a_frame.pack()
         zero_frame=LabelFrame(a_frame)
@@ -300,7 +302,7 @@ class menu():
             else:
                 self.LED[int(i.GEMROC_ID)]['image'] = self.icon_on
         for i in self.GEM:
-            if i.TIMED_out and self.restart:
+            if i.TIMED_out and self.restart.get():
                 self.relaunch_acq()
                 break
     def PMT_on(self):
@@ -311,7 +313,7 @@ class menu():
 
     def relaunch_acq(self):
         self.stop_acq(True)
-        if self.restart:
+        if self.restart.get():
 
             if self.PMT:
                 self.PMT_OFF()
@@ -435,7 +437,6 @@ class menu():
         self.check_sub_run()
         self.logfile = "."+sep+"data_folder" + sep + self.run_folder + sep + "ACQ_log_{}".format(self.sub_run_number)
         self.conffile = "."+sep+"data_folder" + sep + self.run_folder + sep +  "CONF_log_{}".format(self.sub_run_number)
-        self.restart=True
         self.save_conf_registers()
         self.but7.config(state='disabled')
         self.but6.config(state='disabled')
@@ -517,7 +518,7 @@ class menu():
 
     def stop_acq(self, auto=False):
         if not auto:
-            self.restart=False
+            self.restart.set(False)
         if self.simple_analysis.get():
             print "Stopping analizing"
         else:

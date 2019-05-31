@@ -1374,7 +1374,25 @@ def error_fit(data,TP_rate):
     #     if ytest == np.max(ydata):
     #         m = i
     #         break
+    if np.max(data)< 100000:
+        ydata = np.copy(data)
+        M=np.argmax(data>7*TP_rate)
+        for i in range(M, 64):
+            xdata = np.arange(0, 64)
+            ydata[i] = np.max(data)
+            boundsd = ((0, 0, TP_rate * 0.2), (64, 5, TP_rate * 2))
+            guess = np.array([32, 2, TP_rate])
+
+            try:
+                popt2, pcov2 = curve_fit(errorfunc, xdata, ydata, method='trf', maxfev=20000, p0=guess, bounds=boundsd)
+            except:
+                popt2, pcov2 = ('Fail', 'Fail','Fail')
+            popt1 = ('Fail', 'Fail', 'Fail')
+            pcov1 = np.zeros((6, 6))
+            return (popt1, pcov1, popt2, pcov2, 'Fail', 'Fail')
+
     M = int(np.argmax(data))
+
     ydata = np.copy(data)
     for i in range(M, 64):
         ydata[i] = np.max(data)
@@ -1449,8 +1467,8 @@ def gaus_fit_baseline(data, TP_bas, sigma_TP, tp_norm):
         popt, pcov = curve_fit(gaus, np.arange(first, 64, 1.0), translated_data[first:], p0=[250000, 50, 4])
         print popt[1]
     except:
-        popt = ["Fail"]
-        pcov = ["Fail"]
+        popt = "Fail"
+        pcov = "Fail"
     return popt, pcov
 
 def convert_to_fC(sigma, VcaspVth):

@@ -408,12 +408,12 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
                self.Global_cfg_list[T]["TP_Vcal"] = config_dict[self.TARGET_GEMROC_ID][T]["TP_Vcal"]
                self.Global_cfg_list[T]["IBiasTPcal"] = config_dict[self.TARGET_GEMROC_ID][T]["Ibias_TP_cal_diff"]
                if TP_amplitude == "low":
-                   self.Global_cfg_list[T]["TP_Vcal_ref"] = int(config_dict[self.TARGET_GEMROC_ID][T]["start"]+self.search_for_Q( config_dict[self.TARGET_GEMROC_ID][T],7))
+                   self.Global_cfg_list[T]["TP_Vcal_ref"] = int(config_dict[self.TARGET_GEMROC_ID][T]["start"]+self.search_for_Q( config_dict[self.TARGET_GEMROC_ID][T],12))
                if TP_amplitude == "high":
                    self.Global_cfg_list[T]["TP_Vcal_ref"] = config_dict[self.TARGET_GEMROC_ID][T]["start"]+self.search_for_Q( config_dict[self.TARGET_GEMROC_ID][T],20)
            else:
                if TP_amplitude == "low":
-                   self.Global_cfg_list[T]["TP_Vcal_ref"] = 4
+                   self.Global_cfg_list[T]["TP_Vcal_ref"] = 5
                if TP_amplitude == "high":
                    self.Global_cfg_list[T]["TP_Vcal_ref"] = 13
    def load_specif_settings(self, filename):
@@ -422,13 +422,16 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
                if line[0]!="#":
                    try:
                     command, gemroc, tiger, field, value = line.split(" ")
-                    gemroc = int(gemroc)
                     tiger = int(tiger)
                     value = int(value)
+                    if gemroc != "ALL":
+                        gemroc = int(gemroc)
                    except Exception as E:
                        print ("Parsing Error: {}".format(E))
                        return
-                   if gemroc == self.TARGET_GEMROC_ID:
+                   if gemroc == self.TARGET_GEMROC_ID or gemroc == "ALL":
+
+                       print gemroc
                        if command == "ADD":
                            self.Global_cfg_list[tiger][field] = self.Global_cfg_list[tiger][field]+value
                        elif command == "SET":

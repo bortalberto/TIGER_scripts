@@ -194,7 +194,10 @@ class menu():
                 self.Launch_error_check['text'] = "GEMROC {}: {}".format(i, error)
                 self.LED[i]["image"] = self.icon_bad
             else:
-                self.Launch_error_check['text'] = "Communication with GEMROC {} enstablished".format(i)
+                Fake=" "
+                if self.handler_list[-1].GEM_COM.local_test:
+                    Fake="Simulated "
+                self.Launch_error_check['text'] = "{} Communication with GEMROC {} enstablished".format(Fake, i)
 
 
         else:
