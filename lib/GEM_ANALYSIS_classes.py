@@ -827,12 +827,12 @@ class analisys_conf: #Analysis class used for configurations10
                 self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
                 self.GEM_COM.set_counter((Ts * 2), 1, 0)
                 self.GEM_COM.reset_counter()
-                time.sleep(0.2)
+                time.sleep(0.4)
                 counter1=self.GEM_COM.GEMROC_counter_get()
                 self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
                 self.GEM_COM.set_counter((Ts * 2+1), 1, 0)
                 self.GEM_COM.reset_counter()
-                time.sleep(0.2)
+                time.sleep(0.4)
                 counter2=self.GEM_COM.GEMROC_counter_get()
 
                 error_matrix[Ts * 2,TD]=counter1

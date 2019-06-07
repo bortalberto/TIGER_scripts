@@ -1380,6 +1380,10 @@ class menu():
             for T in range(0, 8):
                 GEMROC.c_inst.Channel_cfg_list[T][20]["TriggerMode"] = 1
 
+    def reactivate_TIGERS(self):
+        for number,GEMROC in self.GEMROC_reading_dict.items():
+            GEMROC.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"] = 255
+            GEMROC.GEM_COM.DAQ_set_register()
 
 def character_limit(entry_text):
     try:

@@ -12,6 +12,9 @@ from multiprocessing import Process, Pipe
 import json
 import os
 import glob
+import pickle
+import h5py
+
 OS = sys.platform
 if OS == 'win32':
     sep = '\\'
@@ -58,7 +61,7 @@ class menu():
 
         self.master_window.wm_title("GEMROC acquisition")
         self.restart=BooleanVar(self.master_window)
-
+        self.save_conf_every_run = BooleanVar(self.master_window)
         self.simple_analysis = IntVar(self.master_window)
         self.run_analysis = IntVar(self.master_window)
         self.set_last_folder()
@@ -107,6 +110,7 @@ class menu():
         Checkbutton(self.start_frame, text="Fast analysis", variable=self.simple_analysis).grid(row=0, column=2, sticky=NW, pady=4)
         Checkbutton(self.start_frame, text="On run analysis", variable=self.run_analysis).grid(row=0, column=3, sticky=NW, pady=4)
         Checkbutton(self.start_frame, text="Restart", variable=self.restart).grid(row=0, column=4, sticky=NW, pady=4)
+        Checkbutton(self.start_frame, text="Save conf. at every subrun", variable=self.save_conf_every_run).grid(row=0, column=5, sticky=NW, pady=4)
 
         a_frame = Frame(self.master)
         a_frame.pack()
@@ -259,21 +263,24 @@ class menu():
             for T in range(0, 8):
                 self.button_dict["{} TIGER {}".format(number, T)] = Button(a, text='{}'.format(T), width=4,height=1,font=("Courier", 10),command=lambda (number, T)=(number, T): self.Change_Reading_Tigers((number, T)))
                 self.button_dict["{} TIGER {}".format(number, T)].grid(row=0, column=T + 1, sticky=NW, pady=4)
-            Label(a,text="___________________________________________________________________________________________________________________________").grid(row=2, column=0, sticky=NW,columnspan=12)
+            Label(a, text="___________________________________________________________________________________________________________________________").grid(row=2, column=0, sticky=NW,columnspan=12)
 
         self.refresh_but_TIGERs()
 
     def myfunction(self, event):
         self.canvas2.configure(scrollregion=self.canvas2.bbox("all"), width=1000, height=700)
 
-    def Change_Reading_Tigers(self,(number,T)):
+    def Change_Reading_Tigers(self,(number,T),ForceOff=False):
 
-        n=(self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"] >> T) & 0x1
-        if n==1:
+        n =( self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"] >> T) & 0x1
+        if n == 1:
             self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"] -=2**T
-        else:
+            with open (self.logfile,'a') as f:
+                f.write("{} -- {} TIGER {} disabled\n".format(time.ctime(),number,T))
+
+        elif ForceOff==False:
             self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"] +=2**T
-        print self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"]
+        # print self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"]
         self.GEMROC_reading_dict[number].GEM_COM.DAQ_set_register()
         self.refresh_but_TIGERs()
 
@@ -317,7 +324,8 @@ class menu():
 
             if self.PMT:
                 self.PMT_OFF()
-
+            self.father.reactivate_TIGERS()
+            self.refresh_but_TIGERs()
             self.father.Synch_reset()
             self.father.power_on_FEBS()
             self.father.Synch_reset()
@@ -340,21 +348,40 @@ class menu():
             item.pack_forget()
         self.refresh_but_TIGERs()
 
-    def save_conf_registers(self,save_txt=True, save_pickle=False):
-        with open (self.conffile,'a+') as f:
-            # print self.GEMROC_reading_dict.items()
-            for number, GEMROC in self.GEMROC_reading_dict.items():
-                f.write ("\n\n ---  {} configurations   ---\n\n".format(number))
-                f.write ("\n\n ---  DAQ configurations  ---\n\n".format(number))
-                f.write(json.dumps(GEMROC.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict))
-                for T in range (0,8):
-                    f.write("\n\n ---  GEMROC {} TIGER {} global configurations  ---\n\n".format(number,T))
-                    f.write(json.dumps(GEMROC.g_inst.Global_cfg_list[T]))
-                    f.write("\n\n ---  GEMROC {} TIGER {} Channel configurations  ---\n\n".format(number,T))
-                    for ch in range(0, 64):
-                        f.write("\n\n GEMROC {} TIGER {} Channel {} ---\n\n".format(number,T,ch))
+    def save_conf_registers(self,save_txt=False, save_pickle=True):
+        """
+        Save configuration registers during acquisition start
+        """
+        conf_dict_total = {}
+        for number, GEMROC in self.GEMROC_reading_dict.items():
+            conf_dict_total[number] = {}
+            conf_dict_total[number]["DAQ"] = GEMROC.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict
+            for T in range(0, 8):
+                conf_dict_total[number]["TIGER {}".format(T)] = {}
+                conf_dict_total[number]["TIGER {}".format(T)]["Global"] = GEMROC.g_inst.Global_cfg_list[T]
+                for ch in range(0, 64):
+                    conf_dict_total[number]["TIGER {}".format(T)]["Ch {}".format(ch)] = {}
+                    conf_dict_total[number]["TIGER {}".format(T)]["Ch {}".format(ch)] = GEMROC.c_inst.Channel_cfg_list[T][ch]
+        if save_txt:
+            with open (self.conffile,'a+') as f:
+                f.write(json.dumps(conf_dict_total))
+        if save_pickle:
+            with open (self.conffile+".pkl",'a+') as f:
+                pickle.dump(conf_dict_total,f)
 
-                        f.write(json.dumps(GEMROC.c_inst.Channel_cfg_list[T][ch]))
+                # print self.GEMROC_reading_dict.items()
+            # for number, GEMROC in self.GEMROC_reading_dict.items():
+            #     f.write ("\n\n ---  {} configurations   ---\n\n".format(number))
+            #     f.write ("\n\n ---  DAQ configurations  ---\n\n".format(number))
+            #     f.write(json.dumps(GEMROC.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict))
+            #     for T in range (0,8):
+            #         f.write("\n\n ---  GEMROC {} TIGER {} global configurations  ---\n\n".format(number,T))
+            #         f.write(json.dumps(GEMROC.g_inst.Global_cfg_list[T]))
+            #         f.write("\n\n ---  GEMROC {} TIGER {} Channel configurations  ---\n\n".format(number,T))
+            #         for ch in range(0, 64):
+            #             f.write("\n\n GEMROC {} TIGER {} Channel {} ---\n\n".format(number,T,ch))
+            #
+            #             f.write(json.dumps(GEMROC.c_inst.Channel_cfg_list[T][ch]))
 
     def plotta(self):
         if self.simple_analysis.get() or self.run_analysis.get():
@@ -436,7 +463,11 @@ class menu():
     def start_acq(self):
         self.check_sub_run()
         self.logfile = "."+sep+"data_folder" + sep + self.run_folder + sep + "ACQ_log_{}".format(self.sub_run_number)
-        self.conffile = "."+sep+"data_folder" + sep + self.run_folder + sep +  "CONF_log_{}".format(self.sub_run_number)
+        if self.save_conf_every_run.get():
+            self.conffile = "."+sep+"data_folder" + sep + self.run_folder + sep +  "CONF_log_{}".format(self.sub_run_number)
+        else:
+            self.conffile = "."+sep+"data_folder" + sep + self.run_folder + sep +  "CONF_log_all_run"
+
         self.save_conf_registers()
         self.but7.config(state='disabled')
         self.but6.config(state='disabled')
@@ -609,10 +640,14 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
                     try:
                         key, value = pipe_out.recv()
                         if value!=0 :
-                        # if value!=0 and (self.caller.GEMROC_reading_dict[key]):
                             with open(self.caller.logfile, 'a') as f:
-                                f.write("{} -- {} : {} 8/10 bit errors in the last 20 seconds\n".format(time.ctime(), key,value ))
-                            number=key.split()[0]+" "+key.split()[1]
+                                f.write("{} -- {} : {} 8/10 bit errors in the last 10 seconds\n".format(time.ctime(), key,value ))
+                                GEMROC_numb = "GEMROC {}".format((key.split()[1]))
+                                TIGER_numb=int(key.split()[3])
+                            self.caller.Change_Reading_Tigers((GEMROC_numb,TIGER_numb), ForceOff=True)
+                        # if value!=0 and (self.caller.GEMROC_reading_dict[key]):
+
+
                             #self.caller.relaunch_acq()
 
                             # GEMROC=self.GEMROC_reading_dict[number]
@@ -621,7 +656,7 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
                         self.TIGER_error_counters[key] = value
 
                     except Exception as e:
-                        print e
+                        print "Error: {}".format(e)
                     process.terminate()
             self.caller.refresh_8_10_counters_and_TimeOut()
             del process_list[:]
