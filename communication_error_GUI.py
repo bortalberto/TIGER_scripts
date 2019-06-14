@@ -23,6 +23,7 @@ class menu():
         self.GEMROC_reading_dict=gemroc_handler
         self.error_window = Toplevel(main_window)
         Label(self.error_window,text='Communication Errors',font=("Courier", 25)).pack()
+        self.error_window.wm_title('Communication Errors')
         self.grid_frame=Frame(self.error_window)
         self.grid_frame.pack()
         tot=len(self.GEMROC_reading_dict)

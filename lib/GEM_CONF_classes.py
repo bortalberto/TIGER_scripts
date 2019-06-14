@@ -408,15 +408,48 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
                self.Global_cfg_list[T]["TP_Vcal"] = config_dict[self.TARGET_GEMROC_ID][T]["TP_Vcal"]
                self.Global_cfg_list[T]["IBiasTPcal"] = config_dict[self.TARGET_GEMROC_ID][T]["Ibias_TP_cal_diff"]
                if TP_amplitude == "low":
-                   self.Global_cfg_list[T]["TP_Vcal_ref"] = config_dict[self.TARGET_GEMROC_ID][T]["start"]+3
+                   self.Global_cfg_list[T]["TP_Vcal_ref"] = int(config_dict[self.TARGET_GEMROC_ID][T]["start"]+self.search_for_Q( config_dict[self.TARGET_GEMROC_ID][T],12))
                if TP_amplitude == "high":
-                   self.Global_cfg_list[T]["TP_Vcal_ref"] = config_dict[self.TARGET_GEMROC_ID][T]["stop"]-4
+                   self.Global_cfg_list[T]["TP_Vcal_ref"] = config_dict[self.TARGET_GEMROC_ID][T]["start"]+self.search_for_Q( config_dict[self.TARGET_GEMROC_ID][T],20)
            else:
                if TP_amplitude == "low":
-                   self.Global_cfg_list[T]["TP_Vcal_ref"] = 4
+                   self.Global_cfg_list[T]["TP_Vcal_ref"] = 5
                if TP_amplitude == "high":
                    self.Global_cfg_list[T]["TP_Vcal_ref"] = 13
+   def load_specif_settings(self, filename):
+       with open (filename, 'r') as f:
+           for line in f.readlines():
+               if line[0]!="#":
+                   try:
+                    command, gemroc, tiger, field, value = line.split(" ")
+                    tiger = int(tiger)
+                    value = int(value)
+                    if gemroc != "ALL":
+                        gemroc = int(gemroc)
+                   except Exception as E:
+                       print ("Parsing Error: {}".format(E))
+                       return
+                   if gemroc == self.TARGET_GEMROC_ID or gemroc == "ALL":
 
+                       print gemroc
+                       if command == "ADD":
+                           self.Global_cfg_list[tiger][field] = self.Global_cfg_list[tiger][field]+value
+                       elif command == "SET":
+                           self.Global_cfg_list[tiger][field] = value
+                       else:
+                           print ("Command {} not recognized".format(command))
+
+
+   def search_for_Q(self,conf_dict, Q):
+       if conf_dict["TP_calib"] != 'NA':
+           distance = 1000
+           for key in conf_dict["TP_calib"]:
+               new_dist = abs((conf_dict["TP_calib"][key]['Q']) - Q)
+               if new_dist > distance:
+                   return key - 1
+               distance = new_dist
+       else:
+           return 2
 ###CCCCCCCCCCCCCCCC###     CLASS ch_reg_settings BEGIN  ###CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC###
 class ch_reg_settings: # purpose: organize the Channel Configuration Register Settings in an array format which can be sent over Ethernet or optical link
    def __init__(self,
