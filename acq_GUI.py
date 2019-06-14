@@ -252,7 +252,7 @@ class menu():
         self.canvas2.pack(side=LEFT,fill=BOTH)
         Label(frame,text='Acquisiton set single TIGERs',font=("Courier", 16)).pack()
         self.button_dict={}
-        for number, GEMROC in self.GEMROC_reading_dict.items():
+        for number, GEMROC in sorted(self.GEMROC_reading_dict.items()):
             a = Frame(frame)
             a.pack(pady=5,fill=BOTH)
             Label(a, text='{} Err(8/10):   '.format(number),font=("Courier", 10)).grid(row=1, column=0, sticky=NW, pady=4)
@@ -268,7 +268,7 @@ class menu():
         self.refresh_but_TIGERs()
 
     def myfunction(self, event):
-        self.canvas2.configure(scrollregion=self.canvas2.bbox("all"), width=1000, height=700)
+        self.canvas2.configure(scrollregion=self.canvas2.bbox("all"), width=1200, height=700)
 
     def Change_Reading_Tigers(self,(number,T),ForceOff=False):
 

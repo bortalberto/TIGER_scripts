@@ -1,4 +1,5 @@
 #Possible commands are ADD and SET
+#Comments line begin with "#"
 #Command GEMROC TIGER FIELD value
 ADD 0 5 TP_Vcal_ref 1
 ADD 0 6 TP_Vcal_ref -1
@@ -52,3 +53,12 @@ ADD ALL 4 IPostamp -1
 ADD ALL 5 IPostamp -1
 ADD ALL 6 IPostamp -1
 ADD ALL 7 IPostamp -1
+## Uncomment below for E banch scan
+#ADD ALL 0 IPostamp -1
+#ADD ALL 1 IPostamp -1
+#ADD ALL 2 IPostamp -1
+#ADD ALL 3 IPostamp -1
+#ADD ALL 4 IPostamp -1
+#ADD ALL 5 IPostamp -1
+#ADD ALL 6 IPostamp -1
+#ADD ALL 7 IPostamp -1

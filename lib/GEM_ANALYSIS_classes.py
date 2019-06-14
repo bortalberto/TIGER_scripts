@@ -1366,15 +1366,18 @@ def find_baseline(data):
     max = np.max(data)
     first = np.argmax(data > 0.9 * max)
     last = 63 - np.argmax(np.flip(data) > 0.9 * max)
-    print round((last - first) / 2 + first)
-    return first, last, round((last - first) / 2 + first)
+    return first, last, ((last - first) / 2 + first)
 
-def error_fit(data,TP_rate):
+def error_fit(data,TP_rate, Ebranch=True):
     # for i, ytest in enumerate(ydata):
     #     if ytest == np.max(ydata):
     #         m = i
     #         break
-    if np.max(data)< 100000:
+    if Ebranch:
+        max_tp=53000
+    else:
+        max_tp=100000
+    if np.max(data)< max_tp:
         ydata = np.copy(data)
         M=np.argmax(data>7*TP_rate)
         for i in range(M, 64):
@@ -1386,10 +1389,10 @@ def error_fit(data,TP_rate):
             try:
                 popt2, pcov2 = curve_fit(errorfunc, xdata, ydata, method='trf', maxfev=20000, p0=guess, bounds=boundsd)
             except:
-                popt2, pcov2 = ('Fail', 'Fail','Fail')
-            popt1 = ('Fail', 'Fail', 'Fail')
+                popt2, pcov2 = ['Fail', 'Fail','Fail'] , ['Fail']
+            popt1 = ['Fail', 'Fail', 'Fail']
             pcov1 = np.zeros((6, 6))
-            return (popt1, pcov1, popt2, pcov2, 'Fail', 'Fail')
+            return (popt1, pcov1, popt2, pcov2, ['Fail', 'Fail', 'Fail'], ['Fail', 'Fail', 'Fail'])
 
     M = int(np.argmax(data))
 
@@ -1410,8 +1413,11 @@ def error_fit(data,TP_rate):
 
     # fit with double error function + single fit on TP
 
-    guess = np.array([2, 50, 5, 5, TP_rate, 300000])
+    guess = np.array([1.5, 55, 1, 1, TP_rate, 300000])
+
     boundsd = ((0, 0, 0, 0, TP_rate * 0.6, 200000), (64, 64, 20, 20, TP_rate * 1.5, 500000))
+    if Ebranch:
+        boundsd = ((0, 0, 0, 0, TP_rate * 0.6, 51000), (64, 64, 20, 20, TP_rate * 1.5, 600000))
     try:
         popt1, pcov1 = curve_fit(double_error_func, xdata, ydata, method='trf', maxfev=20000, p0=guess, bounds=boundsd)
 
@@ -1439,12 +1445,12 @@ def error_fit(data,TP_rate):
     except:
         popt1 = ('Fail', 'Fail', 'Fail')
         pcov1 = np.zeros((6, 6))
-        popt2 = ("Fail", "Fail", "Fail")
+        popt2 = ["Fail", "Fail", "Fail"]
         pcov2 = np.zeros((3, 3))
     if popt2[0] != "Fail":
         baseline_restults = gaus_fit_baseline(data, popt2[0], popt2[1], popt2[2])
     else:
-        baseline_restults = ("Fail", "Fail")
+        baseline_restults = ["Fail", "Fail", "Fail"]
     return (popt1, pcov1, popt2, pcov2, baseline_restults[0], baseline_restults[1])
 
 # def gauss_fit_baseline(data,mu_s1, sigma_s1,norm_tp):
@@ -1465,10 +1471,9 @@ def gaus_fit_baseline(data, TP_bas, sigma_TP, tp_norm):
     translated_data = data - tp_norm
     try:
         popt, pcov = curve_fit(gaus, np.arange(first, 64, 1.0), translated_data[first:], p0=[250000, 50, 4])
-        print popt[1]
     except:
-        popt = "Fail"
-        pcov = "Fail"
+        popt = ["Fail", "Fail", "Fail"]
+        pcov = ["Fail", "Fail", "Fail"]
     return popt, pcov
 
 def convert_to_fC(sigma, VcaspVth):
@@ -1478,7 +1483,7 @@ def convert_to_fC(sigma, VcaspVth):
 
 
 
-class Thread_handler(Thread): #In order to scan during configuration is mandatory to use multithreading
+class Thread_handler(Thread):
     def __init__(self, name,analisys_conf,analysys_reader):
         Thread.__init__(self)
         self.name = name

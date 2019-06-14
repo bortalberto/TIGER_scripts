@@ -12,7 +12,7 @@ import os
 OS = sys.platform
 if OS == 'win32':
     sep = '\\'
-elif OS == 'linux2':
+elif OS == 'linux2' or OS == "linux":
     sep = '/'
 else:
     print("ERROR: OS {} non compatible".format(OS))
@@ -56,11 +56,11 @@ class reader:
 
             for linea in linee:
                 mystruct.gemroc_id = G
-                mystruct.tiger_id = long(linea.split()[2].replace("TIG", ""))
-                mystruct.channel_id = long(linea.split()[3].replace("CH", ""))
+                mystruct.tiger_id = int(linea.split()[2].replace("TIG", ""))
+                mystruct.channel_id = int(linea.split()[3].replace("CH", ""))
                 mystruct.noise_lvl = float(linea.split()[5])
                 mystruct.variance = float(linea.split()[7])
-                if G < 3:
+                if G < 4:
                     mystruct.layer_id = 1
                 elif G < 11:
                     mystruct.layer_id = 2
@@ -74,7 +74,7 @@ class reader:
 
 
 if len(sys.argv) < 1:
-    print "specify GEMROC number or interval with - (remember spaces)"
+    print ("specify GEMROC number or interval with - (remember spaces)")
 if "-" not in sys.argv:
     GEMROC_NUM = int(sys.argv[1])
 else:

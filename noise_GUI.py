@@ -1,18 +1,18 @@
-from Tkinter import *
-from ttk import Progressbar
-import ttk
-import Tkinter, Tkconstants, tkFileDialog
-from scipy.optimize import curve_fit
-from scipy import special,interpolate
 import os
-import numpy as np
-from multiprocessing import Process,Pipe
-import time
-from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
-import sys
 import pickle
+import sys
+import time
+import tkFileDialog
+import ttk
+from Tkinter import *
+from multiprocessing import Process, Pipe
+from ttk import Progressbar
+from multiprocessing import Pool
+import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
+
+from lib import GEM_ANALYSIS_classes as AN_CLASS
 
 OS = sys.platform
 if OS == 'win32':
@@ -37,7 +37,7 @@ class menu():
         noise_measure_._insert("Noise measure")
         noise_measure_._init_windows()
         baseline_exit_= baseline_exit(noise_measure,self.error_window_main ,gemroc_handler,self.tabControl)
-        baseline_exit_._insert("Baseline_extim")
+        baseline_exit_._insert("Baseline estimation")
         baseline_exit_._init_windows()
         self.tabControl.pack(expand=1, fill="both")  # Pack to make visible
 
@@ -115,12 +115,16 @@ class noise_measure ():
         Button(self.third_row, text="Save", command=self.SAVE).pack(side=LEFT,padx=2)
         Button(self.third_row, text="Load", command=self.LOAD).pack(side=LEFT,padx=2)
         Button(self.third_row, text="Fit", command=self.fit).pack(side=LEFT,padx=2)
-        Button(self.third_row, text="Save noise levels", command=self.SAVE_noise).pack(side=LEFT,padx=2)
-
+        self.E_branch = BooleanVar (self.main_window)
+        Checkbutton(self.third_row, text="Save for E-branch", variable=self.E_branch).pack(side=LEFT,padx=2)
         if self.title == "Noise_measure":
+            Button(self.third_row, text="Save noise levels", command=self.SAVE_noise).pack(side=LEFT, padx=2)
             Button(self.third_row, text="Load TP settings", command=self.load_TP_settings).pack(side=LEFT,padx=2)
+
             Button(self.third_row, text="Sampling time scan", command=self.sampling_time_scan).pack(side=LEFT,padx=25)
             Button(self.third_row, text="Save noise levels for thr setting", command=self.SAVE_noise_for_thr_setting).pack(side=LEFT,padx=2)
+        if self.title == "Baseline estimation":
+            Button(self.third_row, text="Save baseline levels for thr setting", command=self.SAVE_baseline).pack(side=LEFT,padx=2)
 
         #Button(self.third_row, text="Switch to TP distribution measurment", command=self.switch_to_tp_distr).pack(side=LEFT, padx=25)
 
@@ -206,12 +210,13 @@ class noise_measure ():
                     self.fits[number]["TIG{}".format(T)]["CH{}".format(ch)] = (0,0,1,1,0,0)
                     self.covs[number]["TIG{}".format(T)]["CH{}".format(ch)] = np.zeros((6,6))
                     self.TPcovs[number]["TIG{}".format(T)]["CH{}".format(ch)] = np.zeros((3,3))
-                    self.TPfits[number]["TIG{}".format(T)]["CH{}".format(ch)] = ("Fail","Fail","Fail")
+                    self.TPfits[number]["TIG{}".format(T)]["CH{}".format(ch)] = ["Fail","Fail","Fail"]
 
-                    self.baseline[number]["TIG{}".format(T)]["CH{}".format(ch)] = ("Fail","Fail","Fail")
+                    self.baseline[number]["TIG{}".format(T)]["CH{}".format(ch)] = ["Fail","Fail","Fail"]
                     self.baseline_pos[number]["TIG{}".format(T)]["CH{}".format(ch)] = (0,0,0)
                     self.efine_average[number]["TIG{}".format(T)]["CH{}".format(ch)] = []
                     self.efine_stdv[number]["TIG{}".format(T)]["CH{}".format(ch)] = []
+
     def _insert(self,name):
         self.tabControl.add(self.error_window, text=name)  # Add the tab
 
@@ -459,16 +464,16 @@ class noise_measure ():
                     else:
                         noise= "Canno't fit"
 
-                    if Bas_parameters_fit!="Fail" and TPparameters[0]!="Fail":
+                    if Bas_parameters_fit[0] != "Fail" and TPparameters[0]!="Fail":
+                        print Bas_parameters_fit
                         translated_gas=AN_CLASS.gaus(np.arange(TPparameters[0],64,1.0),*Bas_parameters_fit)+TPparameters[2]
                         self.line_list.append( self.plot_rate.plot(np.arange(TPparameters[0],64,1.0),translated_gas , '--',label= "Gaussian baseline estimation"))
                     self.plot_rate.set_title("ROC {},TIG {}, CH {} , Sigma Noise={} fC".format(self.plotting_gemroc, self.plotting_TIGER, self.plotting_Channel, noise))
 
-                    if self.title=="Baseline extimation":
-                        if Bas_parameters_fit!="Fail":
+                    if self.title == "Baseline estimation":
+                        if Bas_parameters_fit[0] != "Fail" :
                             self.line_list.append(self.plot_rate.plot(np.arange(0, 64, 1.0), AN_CLASS.gaus(np.arange(0,64,1.0), *Bas_parameters_fit), '--', label="Gaussian baseline estimation"))
                             self.plot_rate.set_title("ROC {},TIG {}, CH {} , baseline: {}, {}(fit)".format(self.plotting_gemroc, self.plotting_TIGER, self.plotting_Channel, bas_parameters_not_fit[2],Bas_parameters_fit[1]))
-
                     self.plot_rate.legend()
                     break
                 else:
@@ -486,6 +491,7 @@ class noise_measure ():
         filename = tkFileDialog.askopenfilename(initialdir="." + sep + "noise_scan" + sep + "saves", title="Select file", filetypes=(("Noise scan files", "*.ns"), ("all files", "*.*")))
         with  open(filename, 'rb') as f:
             self.scan_matrixs=pickle.load(f)
+
     def load_TP_settings(self):
         filename = "." + sep + "conf" + sep + "TP_conf.pickle"
         with open(filename, 'rb') as f:
@@ -496,15 +502,19 @@ class noise_measure ():
             for T in range (0,8):
                 GEMROC.GEM_COM.Set_param_dict_global(GEMROC.g_inst, "FE_TPEnable", T, 1)
         print("TP settings loaded")
+
     def fit(self):
+        start = time.time()
         for GEMROC,matrix in self.scan_matrixs.items():
+
             for TIG in range (0,8):
                 for channel in range (0,64):
                     if any(matrix[TIG][channel]) != 0:
-                        print ("TIG%s CH%s"%(TIG,channel))
+                        print ("GEM%s TIG%s CH%s"%(GEMROC,TIG,channel))
                         self.baseline_pos[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)] = AN_CLASS.find_baseline(matrix[TIG][channel])
-                        values = AN_CLASS.error_fit(matrix[TIG][channel],TP_rate)
-
+                        values = AN_CLASS.error_fit(matrix[TIG][channel],TP_rate, Ebranch=self.E_branch.get())
+                        print type(values)
+                        print len (values)
                         self.fits[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[0]
                         self.covs[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[1]
                         self.TPfits[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[2]
@@ -515,7 +525,36 @@ class noise_measure ():
                         # if values[2][2]!="Fail":
                             # gauss_values=gauss_fit_baseline(matrix[TIG][channel],values[0][1],values[0][3],values[2][2])
                             # self.gaussians[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=gauss_values
-
+        print ("time")
+        print(time.time()-start)
+    # def fit(self):
+    #     start = time.time()
+    #     for GEMROC,matrix in self.scan_matrixs.items():
+    #         pool = Pool()
+    #         # print type(pool.map(process_image, matrix))
+    #         # print len(pool.map(process_image, matrix))
+    #
+    #         lista = pool.map(process_image, matrix)
+    #
+    #     #         for TIG in range (0,8):
+    #     #             for channel in range (0,64):
+    #     #                 if any(matrix[TIG][channel]) != 0:
+    #     #                     # print ("TIG%s CH%s"%(TIG,channel))
+    #     #                     self.baseline_pos[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)] = AN_CLASS.find_baseline(matrix[TIG][channel])
+    #     #                     #values = AN_CLASS.error_fit(matrix[TIG][channel],TP_rate, Ebranch=self.E_branch.get())
+    #     #                     self.fits[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=zero
+    #     #                     self.covs[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=uno
+    #     #                     self.TPfits[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=due
+    #     #                     self.TPcovs[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=tre
+    #     #                     self.baseline[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=quatro
+    #     #                     # self.chi[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[4]
+    #     #                     # self.TPchi[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[5]
+    #     #                     # if values[2][2]!="Fail":
+    #     #                         # gauss_values=gauss_fit_baseline(matrix[TIG][channel],values[0][1],values[0][3],values[2][2])
+    #     #                         # self.gaussians[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=gauss_values
+    #     # print ("time")
+    #     # print(time.time()-start)
+    #     #
 
     def SAVE_noise(self):
         for GEMROC,dict0 in self.TPfits.items():
@@ -547,23 +586,27 @@ class noise_measure ():
         """
         Saves the value of the baseline for advanced threshold placement
         """
-        if os.path.isfile("." + sep + "conf" + sep + "advanced_threshold_setting" + sep + "baseline.pickle"):
-            os.rename("." + sep + "conf" + sep + "advanced_threshold_setting" + sep + "baseline.pickle", "." + sep + "conf" + sep + "advanced_threshold_setting" + sep + "last_baseline.pickle")
+        if self.E_branch.get():
+            name = "Baseline_E"
+        else:
+            name = "Baseline_T"
+        if os.path.isfile("." + sep + "conf" + sep + "advanced_threshold_setting" + sep + name+".pickle"):
+            os.rename("." + sep + "conf" + sep + "advanced_threshold_setting" + sep + name+".pickle", "." + sep + "conf" + sep + "advanced_threshold_setting" + sep + "last"+name+".pickle")
 
-        with open("." + sep + "conf" + sep + "advanced_threshold_setting" + sep + "baseline.pickle", 'w') as f:
+        with open("." + sep + "conf" + sep + "advanced_threshold_setting" + sep + name +".pickle", 'w') as f:
             if NOT_FIT:
                 pickle.dump(self.baseline_pos, f)
             else:
                 pickle.dump(self.baseline, f)
-                
-    def switch_to_tp_distr(self):
+        print (self.E_branch.get())
+    def switch_to_tp_distr(self):   
         self.strart_button["text"] = "Acquire test pulses"
 
 
 class baseline_exit(noise_measure):
     def __init__(self, noise_measure,main_window, gemroc_handler,tab_control):
         noise_measure.__init__(self,gemroc_handler=gemroc_handler, main_window=main_window,tab_control=tab_control)
-        self.title="Baseline extimation"
+        self.title="Baseline estimation"
     def fit(self):
         for GEMROC, matrix in self.scan_matrixs.items():
             for TIG in range(0, 8):
@@ -574,7 +617,7 @@ class baseline_exit(noise_measure):
                         self.baseline[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)] = AN_CLASS.gaus_fit_baseline(matrix[TIG][channel], 0, 0, 0)[0]
                         # self.chi[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[4]
                         # self.TPchi[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[5]
-                        # if values[2][2]!="Fail":
+                        # if values[2][2]!="Fail":Save base
                         # gauss_values=gauss_fit_baseline(matrix[TIG][channel],values[0][1],values[0][3],values[2][2])
                         # self.gaussians[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=gauss_values
 def squared_sum(A,B):
@@ -587,3 +630,7 @@ def squared_sum(A,B):
         return np.sum(C)
     else:
         raise Exception("A and B not same size")
+
+def process_image(data):
+    values =AN_CLASS.error_fit(data,TP_rate, Ebranch=True)
+    return values
