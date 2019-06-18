@@ -1,6 +1,6 @@
 GEMROC
 UDP_DATA_DESTINATION_IPADDR
-Simulated_L1_latency
+L1_TM_extraction_latency
 TP_width
 L1_scan_window_UPPER_edge
 L1_period_simulated

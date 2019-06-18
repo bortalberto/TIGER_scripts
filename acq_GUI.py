@@ -1,19 +1,19 @@
-from Tkinter import *
-import ttk
-import numpy as np
-from lib import GEM_ACQ_classes as GEM_ACQ
 import datetime
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
-from matplotlib.figure import Figure
-import communication_error_GUI as error_GUI
-import time
-from threading import Thread
-from multiprocessing import Process, Pipe
+import glob
 import json
 import os
-import glob
 import pickle
-import h5py
+import time
+import ttk
+from Tkinter import *
+from multiprocessing import Process, Pipe
+from threading import Thread
+
+import numpy as np
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from matplotlib.figure import Figure
+
+from lib import GEM_ACQ_classes as GEM_ACQ
 
 OS = sys.platform
 if OS == 'win32':
@@ -24,9 +24,6 @@ else:
     print("ERROR: OS {} non compatible".format(OS))
     sys.exit()
 
-
-# TODO:
-# Red dot if timedout (per acquizione e config)
 
 class menu():
     def __init__(self, std_alone=True, main_winz=None, GEMROC_reading_dict=None,father=None):

@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import os
+import glob
 
 
 
@@ -103,10 +104,8 @@ class reader:
                 #     s="Ciao Giulio\n"
                 with open("out.txt", 'a') as ff:
                     ff.write("{}     {}".format(raw,s))
-    def write_txt_TM(self, path):
-        LOCAL_L1_COUNT_31_6 = 0
-        LOCAL_L1_COUNT_5_0 = 0
-        LOCAL_L1_COUNT = 0
+    def write_txt_TM(self, path,outfile="out.txt"):
+
         LOCAL_L1_TIMESTAMP = 0
         HITCOUNT = 0
         BUFSIZE = 4096
@@ -116,7 +115,7 @@ class reader:
         f.close()
         previous_L1_TS = 0
         L1_TS_abs_diff = 0
-        with open(path, 'r') as f, open("out.txt", 'w') as out_file:
+        with open(path, 'r') as f, open(outfile, 'w') as out_file:
             for i in range(0, statinfo.st_size / 8):
                 data = f.read(8)
                 hexdata = binascii.hexlify(data)
@@ -152,18 +151,19 @@ class reader:
                                 (int_x >> 24) & 0x7) + 'LAST COUNT WORD FROM TIGER:CH_ID[5:0]: %02X ' % ((int_x >> 18) & 0x3F) + 'LAST COUNT WORD FROM TIGER: DATA[17:0]: %05X \n' % (int_x & 0x3FFFF)
                 if (((int_x & 0xC000000000000000) >> 62) == 0x0):
                     LOCAL_L1_TS_minus_TIGER_COARSE_TS = LOCAL_L1_TIMESTAMP - ((int_x >> 32) & 0xFFFF)
-                    s = 'DATA   : TIGER: %01X ' % ((int_x >> 59) & 0x7) + 'L1_TS - TIGERCOARSE_TS: %d ' % (LOCAL_L1_TS_minus_TIGER_COARSE_TS) + 'LAST TIGER FRAME NUM[2:0]: %01X ' % ((int_x >> 56) & 0x7) + 'TIGER DATA: ChID: %d ' % ((int_x >> 50) & 0x3F) + 'tacID: %01X ' % (
+                    s = 'DATA   : TIGER: %01X ' % ((int_x >> 59) & 0x7) + 'L1_TS - TIGERCOARSE_TS: %d ' % (LOCAL_L1_TS_minus_TIGER_COARSE_TS) + 'LAST TIGER FRAME NUM[2:0]: %01X ' % ((int_x >> 56) & 0x7) + 'TIGER DATA: ChID [base10]: %d ' % ((int_x >> 50) & 0x3F) + 'tacID: %01X ' % (
                                 (int_x >> 48) & 0x3) + 'Tcoarse: %04X ' % ((int_x >> 32) & 0xFFFF) + 'Ecoarse: %03X ' % ((int_x >> 20) & 0x3FF) + 'Tfine: %03X ' % ((int_x >> 10) & 0x3FF) + 'Efine: {} \n' .format(int_x & 0x3FF)
                 if (((int_x & 0xF000000000000000) >> 60) == 0x4):
-                    s = 'UDP_SEQNO: ' + 'GEMROC_ID: %02X ' % ((int_x >> 52) & 0x1F) + 'UDP_SEQNO_U48: %012X \n\n' % (((int_x >> 32) & 0xFFFFF) + ((int_x >> 0) & 0xFFFFFFF))
-                #if int(int_x & 0x3FF)<1000  and int(int_x & 0x3FF)>600 and int ((int_x >> 50) & 0x3F)!=10:  # (HITCOUNT > 0):
-                # if((int_x & 0x3FF)>700 and (int_x & 0x3FF)<1000 and ((int_x >> 50) & 0x3F)!=10):
-                out_file.write(s)
+                    s = 'UDP_SEQNO: ' + 'GEMROC_ID: %02X ' % ((int_x >> 52) & 0x1F) + 'UDP_SEQNO_U48: %012X' % (((int_x >> 32) & 0xFFFFF) + ((int_x >> 0) & 0xFFFFFFF)) + "  " \
+                                                                                                                                                                          "STATUS BIT[5:3]:{}\n\n".format((int_x>>57)&0x7)
                 out_file.write(raw)
-            ##        out_file.write(s)
-            ## comment this block to avoid parsing
+                out_file.write(s)
 
             print 'finished writing file'
+    def  write_txt_TM_folder(self, path):
+        for data_file in glob.glob(path+"/*.dat"):
+            print data_file
+            self.write_txt_TM(data_file, outfile=data_file+"out.txt")
 
     def create_rate_plot(self):
         plt.ion()
@@ -220,34 +220,6 @@ class reader:
         ax7.set_title('GEMROC {}, TIGER {}'.format(self.GEMROC_ID, 7))
         ax7.set_xlabel('Channel')
         ax7.set_ylabel('Rate [Hz]')
-
-    def ordered_rate_plot(self):
-        plt.ion()
-        for i in range(0, 8):
-            self.thr_scan_rate[i, :] = (self.thr_scan_matrix[i, :] / self.thr_scan_frames[i]) * (1 / 0.0002048)
-        thr_scan_copy = self.thr_scan_rate
-        fig = plt.figure(figsize=(8, 8))
-        gs = gridspec.GridSpec(nrows=1, ncols=1)  # , height_ratios=[1, 1, 2])
-        ax0 = fig.add_subplot(gs[0, 0])
-        chip,channel = pin_order_X[:]
-        ax0.bar(np.arange(0, 128), thr_scan_copy [chip,channel], width=1.0)
-        ax0.set_title('GEMROC {}, TIGER {}'.format(self.GEMROC_ID, 0))
-        ax0.set_xlabel('Channel')
-        ax0.set_ylabel('Rate [Hz]')
-
-        chip=chip+2
-
-        ax1 = fig.add_subplot(gs[0, 1])
-        ax1.bar(np.arange(0, 128),  thr_scan_copy[chip,channel], width=1.0)
-        ax1.set_title('GEMROC {}, TIGER {}'.format(self.GEMROC_ID, 1))
-        ax1.set_xlabel('Channel')
-        ax1.set_ylabel('Rate [Hz]')
-
-
-        plt.tight_layout()
-
-        axarray = [ax0, ax1]
-        return fig, axarray
 
     def refresh_rate_plot(self, fig, axarray):
         for i in range(0, 8):

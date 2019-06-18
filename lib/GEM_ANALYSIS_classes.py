@@ -1,11 +1,13 @@
 #Author: Alberto Bortone
 #Created 22/03/2018
-import socket
 import binascii
-import numpy as np
-import sys
 import os
+import socket
+import sys
+
 import matplotlib
+import numpy as np
+
 matplotlib.use('pdf',warn=False, force=True)
 import matplotlib.pyplot as plt
 import math
