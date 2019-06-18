@@ -1505,7 +1505,6 @@ class menu():
         self.load_default_config()
         self.Synch_reset(1)
         self.Synch_reset(1)
-        self.set_pause_mode(True, 1)
 
     def prepare_for_TP(self):
         for number, GEMROC_number in self.GEMROC_reading_dict.items():

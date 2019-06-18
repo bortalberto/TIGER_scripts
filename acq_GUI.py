@@ -29,7 +29,7 @@ class menu():
     def __init__(self, std_alone=True, main_winz=None, GEMROC_reading_dict=None,father=None):
 
         self.father=father
-        self.PMT=True
+        self.PMT=False
         self.std_alone = std_alone
         self.GEM_to_read = np.zeros((20))
         self.GEM_to_read_last = np.zeros((20))
@@ -558,9 +558,6 @@ class menu():
         for i in range(0, len(self.GEM)):
             self.thread[i].running = False
 
-        for i in range(0, len(self.GEM)):
-            if self.thread[i].isAlive():
-                self.thread[i].join()
         for i in self.GEM:
             if i.TIMED_out == True:
                 self.LED[int(i.GEMROC_ID)]['image'] = self.icon_bad
@@ -571,6 +568,10 @@ class menu():
         self.refresh_error_status()
         self.refresh_plot()
         self.but7.config(state='normal')
+
+        for i in range(0, len(self.GEM)):
+            if self.thread[i].isAlive():
+                self.thread[i].join()
 
     def build_errors(self):
         self.TM_errors = []
