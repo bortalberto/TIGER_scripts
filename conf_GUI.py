@@ -15,7 +15,7 @@ import ttk
 import pickle
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
-import matplotlib.pyplot as plt
+
 OS = sys.platform
 if OS == 'win32':
     sep = '\\'
@@ -1541,7 +1541,7 @@ class menu():
     def specific_channel_fast_setting(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():
             for T in range(0, 8):
-                GEMROC.c_inst.Channel_cfg_list[T][20]["TriggerMode"] = 1
+                GEMROC.c_inst.Channel_cfg_list[T][62]["TriggerMode"] = 1
 
     def reactivate_TIGERS(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():
