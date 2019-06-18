@@ -6,17 +6,19 @@
 # last modifications / additions
 # acr 2018-01-15 modified "GEMconf_classes" to split LV parameter control from DAQ parameter control
 # acr 2017-07-11 modified "GEMconf_classes" to read single TIGER global / channel configuration from files
-import socket
-import time
-import GEM_CONF_classes as GEM_CONF_classes  # acr 2018-02-19 import GEMconf_classes_2018
-import struct
-import binascii
 import array
-import classes_test_functions
-import numpy as np
+import binascii
 import datetime
-import sys
 import os
+import socket
+import struct
+import sys
+import time
+
+import numpy as np
+
+import GEM_CONF_classes as GEM_CONF_classes  # acr 2018-02-19 import GEMconf_classes_2018
+import classes_test_functions
 
 OS = sys.platform
 if OS == 'win32':
@@ -26,7 +28,7 @@ elif OS == 'linux2':
 else:
     print("ERROR: OS {} non compatible".format(OS))
     sys.exit()
-local_test = False
+local_test = True
 
 
 class communication:  ##The directory are declared here to avoid multiple declaration

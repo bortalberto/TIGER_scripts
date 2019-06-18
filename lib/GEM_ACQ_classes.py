@@ -1,15 +1,13 @@
+import binascii
+import os
+import socket
+import sys
 import time
 from threading import Thread
-import socket
-import binascii
-import numpy as np
-import sys
-import os
-import matplotlib.pyplot as plt
-import datetime
+
 import matplotlib.gridspec as gridspec
-import os
-import pickle
+import matplotlib.pyplot as plt
+import numpy as np
 
 OS = sys.platform
 if OS == 'win32':

@@ -251,7 +251,7 @@ class menu():
         frame.bind("<Configure>", self.myfunction)
         self.canvas2.pack(side=LEFT, fill=BOTH)
 
-        for number, GEMROC in sorted(self.GEMROC_reading_dict.items()):
+        for number, GEMROC in sorted(self.GEMROC_reading_dict.items(),cmp = sort_by_number):
             this_ROC_IVT = self.IVT_dict[number]
             a = Frame(frame)
             a.pack(pady=5, fill=BOTH)
@@ -393,7 +393,7 @@ class menu():
             self.GEMROC_reading_dict["GEMROC {}".format(ID)] = self.handler_list[i]
         Label(self.second_row_frame, text='GEMROC   ').grid(row=0, column=0, sticky=NW, pady=4)
         # print self.GEMROC_reading_dict.keys()
-        self.select_GEMROC = OptionMenu(self.second_row_frame, self.showing_GEMROC, *sorted(self.GEMROC_reading_dict.keys()))
+        self.select_GEMROC = OptionMenu(self.second_row_frame, self.showing_GEMROC, *sorted(self.GEMROC_reading_dict.keys(),cmp = sort_by_number))
         self.select_GEMROC.grid(row=1, column=0, sticky=NW, pady=4)
         fields_options = ["DAQ configuration", "LV and diagnostic", "Global Tiger configuration", "Channel Tiger configuration"]
 
@@ -947,7 +947,7 @@ class menu():
             L1_win_lower_edge_offset_Tiger_clk = int(L1_lat_TIGER_clk_param + (TM_window_TIGER_clk_param / 2))
             GEMROC.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["L1_scan_window_UPPER_edge"] = L1_win_upper_edge_offset_Tiger_clk
             GEMROC.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["L1_scan_window_LOWER_edge"] = L1_win_lower_edge_offset_Tiger_clk
-            GEMROC.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["Simulated_L1_latency"] = L1_lat_TIGER_clk_param
+            GEMROC.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["L1_TM_extraction_latency"] = L1_lat_TIGER_clk_param
             GEMROC.GEM_COM.DAQ_set_with_dict()
 
     def hard_reset(self, to_all):
@@ -1210,7 +1210,7 @@ class menu():
         read_dict = {
             "GEMROC": ((L_array[0] >> 16) & 0X1f),
             "UDP_DATA_DESTINATION_IPADDR": ((L_array[0] >> 8) & 0xFF),
-            "Simulated_L1_latency": ((L_array[1] >> 20) & 0x3FF),
+            "L1_TM_extraction_latency": ((L_array[1] >> 20) & 0x3FF),
             "TP_width": ((L_array[1] >> 16) & 0xF),
             "L1_scan_window_UPPER_edge": ((L_array[1] >> 0) & 0xFFFF),
             "L1_period_simulated": ((L_array[2] >> 20) & 0x3FF),
@@ -1572,6 +1572,18 @@ class GEMROC_HANDLER:
     def __del__(self):
         self.GEM_COM.__del__()
 
+def sort_by_number(stringa1,stringa2):
+    number1=find_number(stringa1)
+    number2=find_number(stringa2)
+    return number1-number2
+
+def find_number(stringa):
+    if type(stringa) != tuple:
+        number = int(stringa.split(" ")[1])
+    else:
+        number = int(stringa[0].split(" ")[1])
+
+    return number
 
 Main_menu = menu()
 Main_menu.runna()
