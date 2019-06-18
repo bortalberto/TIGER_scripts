@@ -98,7 +98,7 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
     def run(self):
         Totallissimi_packets=0
         Total_data_MAX_size = 2 ** 20
-        Total_MAX_packets=50
+        Total_MAX_packets=1
         datapath = "." + sep + "data_folder" + sep+self.sub_folder+sep + "SubRUN_{}_GEMROC_{}_TM.dat".format(self.sub_run_number, self.reader.GEMROC_ID)
         with open(self.reader.log_path, 'ab') as f:
             f.write("{} -- Saving data from  GEMROC {} in file {}\n".format(time.ctime(), self.reader.GEMROC_ID,datapath))
@@ -116,8 +116,8 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
                 try:
                     x = self.reader.fast_acquisition(data_list)  # self.reader.fast_acquisition(data_list)
                     Total_Data += x
-                    Total_packets+=1
-                    Totallissimi_packets+=1
+                    Total_packets += 1
+                    Totallissimi_packets += 1
                     #print ("Packet from GEMROC {}".format(self.reader.GEMROC_ID))
                 except Exception as e:
                     print e
@@ -185,7 +185,7 @@ class reader:
 
         try:
             self.dataSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            self.dataSock.settimeout(10)
+            self.dataSock.settimeout(20)
             self.dataSock.bind((self.HOST_IP, self.HOST_PORT))
         except Exception as e:
             print "--GEMROC {}-{}".format(self.GEMROC_ID,e)

@@ -391,7 +391,7 @@ class noise_measure ():
         self.plotta()
     def start_TP(self):
         for number, GEMROC_number in self.GEMROC_reading_dict.items():
-            GEMROC_number.GEM_COM.Soft_TP_generate()
+            GEMROC_number.GEM_COM.TP_generate()
             GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TP_period'] = 800
             GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['Periodic_TP_EN_pattern'] = 15
             GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['number_of_repetitions'] = 512+16

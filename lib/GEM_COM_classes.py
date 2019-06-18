@@ -28,7 +28,7 @@ elif OS == 'linux2':
 else:
     print("ERROR: OS {} non compatible".format(OS))
     sys.exit()
-local_test = True
+local_test = False
 
 
 class communication:  ##The directory are declared here to avoid multiple declaration
@@ -979,7 +979,7 @@ class communication:  ##The directory are declared here to avoid multiple declar
 
     # acr 2018-04-23
 
-    def Soft_TP_generate(self):
+    def TP_generate(self):
         # acr 2018-11-02 updated paradigm definition END
         COMMAND_STRING = 'CMD_GEMROC_DAQ_TP_GEN'
         command_echo = self.send_GEMROC_DAQ_CMD(self.gemroc_DAQ_XX, COMMAND_STRING)
@@ -2173,6 +2173,7 @@ class communication:  ##The directory are declared here to avoid multiple declar
     #     COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
     #     command_echo = self.send_GEMROC_DAQ_CMD( COMMAND_STRING)
     #     return command_echo
+
 
     def double_enable(self, value, reg):
         if value == 1:

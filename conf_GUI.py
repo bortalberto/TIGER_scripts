@@ -15,7 +15,7 @@ import ttk
 import pickle
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
-import matplotlib.pyplot as plt
+
 OS = sys.platform
 if OS == 'win32':
     sep = '\\'
@@ -92,7 +92,7 @@ class menu():
         Label(Title_frame2, text="GUFI software",font=("Times", 25)).pack(side=LEFT)
         Label(Title_frame2, image=self.icon_GUFI2).pack(side=LEFT)
 
-        Label(Title_frame, text="             v.2.3 -- 2019 -- INFN-TO (abortone@to.infn.it)",font=("Times", 10, "italic")).pack(anchor=SE, side=RIGHT)
+        Label(Title_frame, text="             v.2.3 --Special Version for IHEP testing -- 2019 -- INFN-TO (abortone@to.infn.it)",font=("Times", 10, "italic")).pack(anchor=SE, side=RIGHT)
         Title_frame2.pack(anchor=S)
         Title_frame.pack(fill=BOTH)
 
@@ -184,13 +184,18 @@ class menu():
         TROPPii_frame = LabelFrame(basic_operation_frame, padx=5, pady=5,background="#cce6ff")
         TROPPii_frame.pack(side=LEFT)
         Button(TROPPii_frame, text="Sync Reset to all", command=self.Synch_reset, activeforeground="blue").pack(side=LEFT)
-        Button(TROPPii_frame, text="Write configuration", command=self.load_default_config, activeforeground="blue").pack(side=LEFT)
+        # Button(TROPPii_frame, text="Write configuration", command=self.load_default_config, activeforeground="blue").pack(side=LEFT)
         Frame(basic_operation_frame,width=90).pack(side=LEFT)  # Spacer
         TROPPi_frame = LabelFrame(basic_operation_frame, padx=5, pady=5,background="#cce6ff")
         TROPPi_frame.pack(side=LEFT)
         Button(TROPPi_frame, text="Run controller", command=self.launch_controller, activeforeground="blue").pack(side=RIGHT)
-        Button(TROPPi_frame, text="Fast configuration", command=self.fast_configuration, activeforeground="blue").pack(side=RIGHT)
-        Button(TROPPi_frame, text="Enable double thr", command=self.double_enable, activeforeground="blue").pack(side=RIGHT)
+        Button(TROPPi_frame, text="Fast configuration", command=self.fast_configuration_IHEP_TEST, activeforeground="blue").pack(side=RIGHT)
+        Button(TROPPi_frame, text="Launch TP", command=self.start_TP, activeforeground="blue").pack(side=RIGHT)
+        self.NUM_TP = Entry(TROPPi_frame, width=2)
+        self.NUM_TP.insert(0,'2')
+        self.NUM_TP.pack(side=RIGHT)
+        Label(TROPPi_frame, text="TP number").pack(side=RIGHT)
+        # Button(TROPPi_frame, text="Enable double thr", command=self.double_enable, activeforeground="blue").pack(side=RIGHT)
 
         self.LED = []
         for i in range(0, len(self.GEM_to_config)):
@@ -204,7 +209,7 @@ class menu():
             self.LED[i].grid(row=riga, column=colonna)
 
         self.advanced_threshold_settings = Frame(self.select_window)
-        self.tabControl.add(self.advanced_threshold_settings,text = "Advanced threshold options")
+        #self.tabControl.add(self.advanced_threshold_settings,text = "Advanced threshold options")
         Label(self.advanced_threshold_settings,text="---Threshold setting with scan on noise---").pack(anchor=N)
         scan_frame = Frame(self.advanced_threshold_settings)
         scan_frame.pack()
@@ -855,47 +860,6 @@ class menu():
         Label(single_use_frame, text="---").grid(row=i + 2, column=1, pady=1, sticky=W)
         TP_num = Entry(single_use_frame, width="4", textvariable=self.TP_num)
         TP_num.grid(row=i + 2, column=2, pady=1, sticky=W)
-        # another_frame = Frame(self.third_row_frame)
-        # another_frame.grid(row=0, column=1, sticky=W, pady=2)
-        # Label(another_frame, text="Change configuration", font=("Courier", 20)).grid(row=0, column=0, columnspan=8, sticky=S, pady=5)
-        # # modebut=Button(another_frame, text="Trigger matched",command= lambda : self.switch_mode(modebut))
-        # # modebut.grid(row=1, column=1, sticky=W, pady=2)
-        #
-        # Label(another_frame, text="TCAM_Enable_pattern").grid(row=2, column=0, sticky=S, pady=0)
-        # Label(another_frame, text="Periodic_FEB_TP_Enable_pattern").grid(row=3, column=0, sticky=S, pady=0)
-        # Label(another_frame, text="TP_repeat_burst").grid(row=4, column=0, sticky=S, pady=0)
-        # Label(another_frame, text="TP_Num_in_burst").grid(row=5, column=0, sticky=S, pady=0)
-        # Label(another_frame, text="TL_nTM_ACQ_choice").grid(row=6, column=0, sticky=S, pady=0)
-        # # Label(another_frame,text="Periodic_L1_Enable_BIT").grid(row=7, column=0,sticky=S, pady=0) #E' lo stesso di periodic FEB_TP_Enable pattern
-        # Label(another_frame, text="Enab_Auto_L1_from_TP_bit_param").grid(row=8, column=0, sticky=S, pady=0)
-        # Label(another_frame, text="Enable_DAQPause_Until_First_Trigger").grid(row=9, column=0, sticky=S, pady=0)
-        # # Label(another_frame,text="DAQPause_Set").grid(row=10, column=0,sticky=S, pady=0)
-        # # Label(another_frame,text="Tpulse_gen_w_ext_trigger_enable").grid(row=11, column=0,sticky=S, pady=0)
-        # Label(another_frame, text="EXT_nINT_B3clk").grid(row=12, column=0, sticky=S, pady=0)
-        #
-        # self.IN1 = Entry(another_frame)
-        # self.IN1.grid(row=2, column=1, sticky=S, pady=0)
-        # self.IN2 = Entry(another_frame)
-        # self.IN2.grid(row=3, column=1, sticky=S, pady=0)
-        # self.IN3 = Entry(another_frame)
-        # self.IN3.grid(row=4, column=1, sticky=S, pady=0)
-        # self.IN4 = Entry(another_frame)
-        # self.IN4.grid(row=5, column=1, sticky=S, pady=0)
-        # self.IN5 = Entry(another_frame)
-        # self.IN5.grid(row=6, column=1, sticky=S, pady=0)
-        # # self.IN6=Entry(another_frame)
-        # # self.IN6.grid(row=7, column=1,sticky=S, pady=0)
-        # self.IN7 = Entry(another_frame)
-        # self.IN7.grid(row=8, column=1, sticky=S, pady=0)
-        # self.IN8 = Entry(another_frame)
-        # self.IN8.grid(row=9, column=1, sticky=S, pady=0)
-        # # self.IN9 = Entry(another_frame)
-        # # self.IN9.grid(row=10, column=1, sticky=S, pady=0)
-        # # self.IN10 = Entry(another_frame)
-        # # self.IN10.grid(row=11, column=1, sticky=S, pady=0)
-        # self.IN11 = Entry(another_frame)
-        # self.IN11.grid(row=12, column=1, sticky=S, pady=0)
-
         Button(single_use_frame, text='Set', command=self.write_DAQ_CR).grid(row=0, column=2, sticky=W, pady=2)
         Button(single_use_frame, text='Set on all active GEMROCs', command=lambda: self.write_DAQ_CR(1)).grid(row=0, column=3, sticky=W, pady=2)
         I_love_frames = Frame(self.third_row_frame)
@@ -1531,6 +1495,34 @@ class menu():
         self.Synch_reset(1)
         self.set_pause_mode(True, 1)
 
+    def fast_configuration_IHEP_TEST(self):
+        self.power_on_FEBS()
+        self.prepare_for_TP()
+        self.Synch_reset(1)
+        self.Synch_reset(1)
+        self.change_acquisition_mode(True, 0)
+        self.specific_channel_fast_setting()
+        self.load_default_config()
+        self.Synch_reset(1)
+        self.Synch_reset(1)
+        self.set_pause_mode(True, 1)
+
+    def prepare_for_TP(self):
+        for number, GEMROC_number in self.GEMROC_reading_dict.items():
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TP_period'] = 500
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['Periodic_TP_EN_pattern'] = 15
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TP_width'] = 5
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['AUTO_L1_EN'] = 1
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['EXT_nINT_B3clk'] = 0
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['B3Clk_sim_en'] = 0
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['Tpulse_generation_w_L1Chk_enable'] = 0
+            GEMROC_number.GEM_COM.DAQ_set_with_dict()
+
+    def start_TP(self):
+        for number, GEMROC_number in self.GEMROC_reading_dict.items():
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['number_of_repetitions'] = int(self.NUM_TP.get())
+            GEMROC_number.GEM_COM.TP_generate()
+
     def change_trigger_mode(self, value, to_all=False):
         if to_all == True:
             for number, GEMROC in self.GEMROC_reading_dict.items():
@@ -1542,6 +1534,8 @@ class menu():
         for number, GEMROC in self.GEMROC_reading_dict.items():
             for T in range(0, 8):
                 GEMROC.c_inst.Channel_cfg_list[T][20]["TriggerMode"] = 1
+                GEMROC.c_inst.Channel_cfg_list[T][40]["TriggerMode"] = 1
+
 
     def reactivate_TIGERS(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():

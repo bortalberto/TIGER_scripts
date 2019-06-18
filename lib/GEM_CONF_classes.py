@@ -999,10 +999,11 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
                             'CMD_GEMROC_DAQ_DIAGN_DPRAM_ACCESS'
                        ]
       self.is_a_write = 0x1
-      if self.TARGET_GEMROC_ID in (0,4,11):
-          B3Clk_sim_en_param=1
-      else:
-          B3Clk_sim_en_param=0
+      #Deprecated with new FAN-out
+      # if self.TARGET_GEMROC_ID in (0,4,11):
+      #     B3Clk_sim_en_param=1
+      # else:
+      #     B3Clk_sim_en_param=0
 
       self.DAQ_config_dict = {
         "GEMROC":                                   self.TARGET_GEMROC_ID,
@@ -1029,7 +1030,7 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
         "number_of_repetitions":                    self.number_of_repetitions,
         "target_TCAM_ID":                           self.target_TCAM_ID,
         "TO_ALL_TCAM_EN":                           self.to_ALL_TCAM_enable,
-        "B3Clk_sim_en":                             B3Clk_sim_en_param,
+        "B3Clk_sim_en":                             0,
         "DAQPause_Flag":                            0,
         "top_daq_pll_unlocked_sticky_flag":         0
       }
@@ -1051,7 +1052,7 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
       #self.cmd_word3 = ((self.L1_latency & 0x3FF) << 20) + ((self.Periodic_TP_EN_pattern & 0xF) << 16) + (self.L1_win_upper_edge_offset & 0xFFFF)
       self.cmd_word3 = ((self.L1_TM_xtrct_start_latency & 0x3FF) << 20) + ((self.TP_width & 0xF) << 16) + (self.L1_win_upper_edge_offset & 0xFFFF)
       #self.cmd_word2 = ((self.L1_period  & 0x3FF) << 20) + ((self.Periodic_TP_EN_pattern  & 0xF) << 16) + (self.L1_win_lower_edge_offset & 0xFFFF)
-      self.cmd_word2 = ((self.L1_period  & 0x3FF) << 20) + ((self.Dbg_functions_ctrl_bits_HiNibble  & 0xF) << 16) + (self.L1_win_lower_edge_offset & 0xFFFF)
+      self.cmd_word2 = ((self.L1_period & 0x3FF) << 20) + ((self.Dbg_functions_ctrl_bits_HiNibble  & 0xF) << 16) + (self.L1_win_lower_edge_offset & 0xFFFF)
       # acr 2018-04-24 self.cmd_word1 = ((self.TP_period & 0x3FF) << 20) + ((self.Periodic_TP_EN_pattern & 0xF) << 16) + ((self.TL_nTM_ACQ & 0x1) << 11) + ((self.AUTO_L1_EN_pattern & 0x1) << 10) + ((self.AUTO_TP_EN_pattern & 0x1) << 9) + ((self.TP_Pos_nNeg & 0x1) << 8)  + (self.EN_TM_TCAM_pattern & 0xFF)
       self.cmd_word1 = ((self.TP_period & 0x3FF) << 20) + ((self.Periodic_TP_EN_pattern & 0xF) << 16) + ((self.Dbg_functions_ctrl_bits_LoNibble & 0xF) << 12) + ((self.TL_nTM_ACQ & 0x1) << 11) + ((self.AUTO_L1_EN_bit & 0x1) << 10) + ((self.AUTO_TP_EN_bit & 0x1) << 9) + ((self.TP_Pos_nNeg & 0x1) << 8)  + (self.EN_TM_TCAM_pattern & 0xFF)
       self.command_words = [ self.cmd_header,
@@ -1151,7 +1152,7 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
 
 ## acr 2018-01-15 updated definition: zero all setting when it's a 'CMD_GEMROC_DAQ_CFG_RD' ( = 2 ) or
    def update_command_words_dict(self):
-       if ( ((self.gemroc_cmd_code & 0xF) != 0x0) and ((self.gemroc_cmd_code & 0xF) != 0x1) ):
+       if ( ((self.gemroc_cmd_code & 0xF) != 0x0) and ((self.gemroc_cmd_code & 0xF) != 0x1) and (self.gemroc_cmd_code & 0xF) != 0x6 ):
            self.cmd_header &= ~(0xFF << 8)
            self.cmd_word3  = 0
            self.cmd_word2  = 0
