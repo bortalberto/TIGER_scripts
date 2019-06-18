@@ -234,7 +234,7 @@ class menu():
 
     def generate_rows(self):
         """
-        Generate or regenerate the rows containing the GEMROCs
+        Generate or regenerate the rows containing the GEMROCs.
         :return:
         """
         self.statu_tab_rows.destroy()
