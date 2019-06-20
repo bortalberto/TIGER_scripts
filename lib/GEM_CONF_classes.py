@@ -999,10 +999,10 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
                             'CMD_GEMROC_DAQ_DIAGN_DPRAM_ACCESS'
                        ]
       self.is_a_write = 0x1
-      if self.TARGET_GEMROC_ID in (0,4,11):
-          B3Clk_sim_en_param=1
-      else:
-          B3Clk_sim_en_param=0
+      # if self.TARGET_GEMROC_ID in (0,4,11):
+      #     B3Clk_sim_en_param=1
+      # else:
+      #     B3Clk_sim_en_param=0
 
       self.DAQ_config_dict = {
         "GEMROC":                                   self.TARGET_GEMROC_ID,
