@@ -888,17 +888,17 @@ class analisys_conf: #Analysis class used for configurations10
             safe_delays[Ts]=zero
             if safe_delays[Ts]>63:
                 safe_delays[Ts]=safe_delays[Ts]-64
-            print ("GEMROC {}, FEB{}, length safe zone = {}".format(self.GEMROC_ID, Ts*2, maximum))
-            print ("GEMROC {}, FEB{}, Set TD in {}\n".format(self.GEMROC_ID, Ts*2, zero))
+            print ("GEMROC {}, FEB{}, length safe zone = {}".format(self.GEMROC_ID, Ts, maximum))
+            print ("GEMROC {}, FEB{}, Set TD in {}\n".format(self.GEMROC_ID, Ts, zero))
 
         # if not direct_plot:
         for Ts in range (0,4):
-            plt.plot(delay_vector[:],error_matrix[Ts*2,:], 'b-', label='TIGER {}'.format(Ts*2))
-            plt.plot(delay_vector[:],error_matrix[Ts*2 + 1,:], 'g-',label='TIGER {}'.format(Ts*2+1))
+            plt.semilogy(delay_vector[:],error_matrix[Ts*2,:], 'b-', label='TIGER {}'.format(Ts*2))
+            plt.semilogy(delay_vector[:],error_matrix[Ts*2 + 1,:], 'g-',label='TIGER {}'.format(Ts*2+1))
             plt.axvline(x=safe_delays[Ts],color='r',label="Time delay set at {}".format(safe_delays[Ts]))
             plt.legend(loc='best')
-            plt.ylabel('Errors')
-            plt.xlabel('Communication delay [ps] ')
+            plt.ylabel('Errors [log]')
+            plt.xlabel('Communication delay')
             plt.title('Delay scan, GEMROC {} FEB {}'.format(self.GEM_COM.GEMROC_ID, Ts))
             plt.savefig(self.GEM_COM.conf_folder+sep+"TD_scan_results"+sep+"GEMROC_{}_TD_scan_FEB_{}.png".format(self.GEM_COM.GEMROC_ID,Ts))
             plt.clf()

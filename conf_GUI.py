@@ -236,8 +236,8 @@ class menu():
         print ("TD scan")
         conf_wind = error_GUI.menu(self.main_window, self.GEMROC_reading_dict)
         conf_wind.TD_scan(0,True)
+        conf_wind.load_TD_from_file()
         conf_wind.error_window.destroy()
-
         print ("Vthr-1 scan")
         self.thr_Scan(-1, -1, 1)
         print ("Vthr-2 scan")
