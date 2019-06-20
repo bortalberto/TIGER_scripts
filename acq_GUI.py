@@ -121,7 +121,7 @@ class menu():
 
         self.but6 = Button(a_frame, text='Start acquisition', command=self.start_acq)
         self.but6.grid(row=1, column=2, sticky=NW, pady=4)
-        self.but7 = Button(a_frame, text='Trigger less acquisition', command=self.switch_mode, background='#ccffff', activebackground='#ccffff', height=1, width=18)
+        self.but7 = Button(a_frame, text='Trigger less file name', command=self.switch_mode, background='#ccffff', activebackground='#ccffff', height=1, width=18)
         self.but7.grid(row=1, column=3, sticky=NW, pady=4)
         self.but8 = Button(a_frame, text='Stop acquisition', command=self.stop_acq, state='normal')
         b_frame = LabelFrame(a_frame)
@@ -435,14 +435,14 @@ class menu():
     def switch_mode(self):
         if self.mode == 'TL':
             self.mode = 'TM'
-            self.but7['text'] = "Trigger match acquisition"
+            self.but7['text'] = "Trigger match file name"
             self.but7['background'] = '#ccff99'
             self.but7['activebackground'] = '#ccff99'
 
 
         else:
             self.mode = 'TL'
-            self.but7['text'] = "Trigger less acquisition"
+            self.but7['text'] = "Trigger less file name"
             self.but7['background'] = '#ccffff'
             self.but7['activebackground'] = '#ccffff'
 

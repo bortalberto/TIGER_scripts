@@ -809,12 +809,12 @@ class analisys_conf: #Analysis class used for configurations10
 
         self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
         self.check_sync()
-    def TIGER_delay_tuning(self):
-        for T in range (0,8):
-            self.GEM_COM.Set_param_dict_global(self.g_inst, "FE_TPEnable",T,0)
-            for ch in range (0,64):
-                self.GEM_COM.Set_param_dict_channel(self.c_inst, "TP_disable_FE", T, ch, 1)
-                self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode",T,ch,1)
+    def TIGER_delay_tuning(self, time_for_step = 0.2):
+        # for T in range (0,8):
+        #     self.GEM_COM.Set_param_dict_global(self.g_inst, "FE_TPEnable",T,0)
+        #     for ch in range (0,64):
+        #         self.GEM_COM.Set_param_dict_channel(self.c_inst, "TP_disable_FE", T, ch, 1)
+        #         self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode",T,ch,1)
 
         error_matrix = np.zeros((8,64))
         delay_vector = np.zeros((64))
@@ -826,55 +826,76 @@ class analisys_conf: #Analysis class used for configurations10
             self.GEM_COM.DAQ_set(0, 0xff, 1, 256, 1, 1, False)
             self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
             for Ts in range(0, 4):
-                self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
-                self.GEM_COM.set_counter((Ts * 2), 1, 0)
-                self.GEM_COM.reset_counter()
-                time.sleep(0.4)
-                counter1=self.GEM_COM.GEMROC_counter_get()
-                self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
-                self.GEM_COM.set_counter((Ts * 2+1), 1, 0)
-                self.GEM_COM.reset_counter()
-                time.sleep(0.4)
-                counter2=self.GEM_COM.GEMROC_counter_get()
-
+                if time_for_step<0:
+                    self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
+                    self.GEM_COM.set_counter((Ts * 2), 1, 0)
+                    self.GEM_COM.reset_counter()
+                    time.sleep(time_for_step)
+                    counter1=self.GEM_COM.GEMROC_counter_get()
+                    self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
+                    self.GEM_COM.set_counter((Ts * 2+1), 1, 0)
+                    self.GEM_COM.reset_counter()
+                    time.sleep(time_for_step)
+                    counter2=self.GEM_COM.GEMROC_counter_get()
+                else:
+                    self.GEM_COM.set_counter((Ts * 2), 1, 0)
+                    self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
+                    self.GEM_COM.reset_counter()
+                    time.sleep(time_for_step)
+                    counter1=self.GEM_COM.GEMROC_counter_get()
+                    self.GEM_COM.set_counter((Ts * 2+1), 1, 0)
+                    counter2=self.GEM_COM.GEMROC_counter_get()
                 error_matrix[Ts * 2,TD]=counter1
                 error_matrix[Ts*2 +1,TD]=counter2
 
         for i in range (0,64):
-            delay_vector[i]=88*i
+            delay_vector[i]=i
 
         for Ts in range(0, 4):
-            first_zero=65
-            second_zero=65
-            Searching_first_zero=True
-            Searching_second_zero=False
+            counter =0
+            counter_list = []
 
-            for delay in range (0,64): #Searching for the zero error interval
-                total_error=error_matrix[Ts * 2,delay]+error_matrix[Ts * 2+1,delay]
-                if total_error== 0 and Searching_first_zero:
-                    first_zero=delay
-                    Searching_first_zero=False
-                    Searching_second_zero=True
-                if total_error != 0 and Searching_second_zero:
-                    second_zero = delay-1
-                    Searching_second_zero=False
-                if total_error ==0 and not Searching_second_zero and not Searching_first_zero:
-                    first_zero=delay
+            #First gets the lengths of the zero series
+            total_error=error_matrix[Ts * 2, :]+error_matrix[Ts * 2+1, :]
+            for elem in total_error:
+                if elem == 0:
+                        counter += 1
+                elif counter != 0:
+                    counter_list.append(counter)
+                    counter = 0
+            if counter!=0:
+                counter_list.append(counter)
+            try:
+                argmax=np.argmax(counter_list)
+                maximum=np.max(counter_list)
+            except:
+                argmax = 0
+                maximum = 0
+            not_inzero = True
+            counter = 0
+            zero = 0
+            for elem in total_error:
+                zero += 1
+                if elem == 0 and not_inzero:
+                    not_inzero = False
+                    counter += 1
+                if elem != 0:
+                     not_inzero = True
+                if counter == argmax + 1:
+                    zero = round (zero + maximum / 2)
+                    break
 
-            print ("First zero {} second zero {}\n".format(first_zero,second_zero))
-            if first_zero==second_zero: #Same zero, not stable (or not sero at all)
-                print("\nWarning! Can't fine a stable communication delay for FEB {}!".format(Ts))
-            if first_zero>second_zero:
-                second_zero=second_zero+64
-
-            safe_delays[Ts]=(second_zero+first_zero)/2
+            safe_delays[Ts]=zero
             if safe_delays[Ts]>63:
                 safe_delays[Ts]=safe_delays[Ts]-64
+            print ("GEMROC {}, FEB{}, length safe zone = {}".format(self.GEMROC_ID, Ts*2, maximum))
+            print ("GEMROC {}, FEB{}, Set TD in {}\n".format(self.GEMROC_ID, Ts*2, zero))
+
         # if not direct_plot:
         for Ts in range (0,4):
             plt.plot(delay_vector[:],error_matrix[Ts*2,:], 'b-', label='TIGER {}'.format(Ts*2))
             plt.plot(delay_vector[:],error_matrix[Ts*2 + 1,:], 'g-',label='TIGER {}'.format(Ts*2+1))
-            plt.axvline(x=safe_delays[Ts]*88,color='r',label="Time delay set at {}".format(safe_delays[Ts]))
+            plt.axvline(x=safe_delays[Ts],color='r',label="Time delay set at {}".format(safe_delays[Ts]))
             plt.legend(loc='best')
             plt.ylabel('Errors')
             plt.xlabel('Communication delay [ps] ')

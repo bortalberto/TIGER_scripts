@@ -62,11 +62,16 @@ class menu():
         self.second_row_frame=Frame(self.error_window)
         self.second_row_frame.pack()
         Button(self.second_row_frame, text ='Acquire errors on all GEMROCs', command=lambda: self.error_acquisition (0, 0, True, True)).pack(side=LEFT)
+        Label(self.second_row_frame, text = 'Time for each step TD scan  ').pack(side=LEFT)
+        self.time_for_TD_step = Entry(self.second_row_frame, width = 4)
+        self.time_for_TD_step.pack(side=LEFT)
+        self.time_for_TD_step.insert(0,0.4)
         Button(self.second_row_frame, text ='Launch TD scan on all GEMROCs', command=lambda: self.TD_scan (0, True)).pack(side=LEFT)
-        Button(self.second_row_frame, text ='Load TD from TD delay file', command=lambda: self.load_TD_from_file()).pack(side=LEFT)
+
         self.third_row_frame=Frame(self.error_window)
         self.third_row_frame.pack()
         Button(self.third_row_frame, text ='Acquire errors since last reset', command=lambda: self.error_acquisition (0, 0, True, True,False)).pack(side=LEFT)
+        Button(self.third_row_frame, text ='Load TD from TD delay file', command=lambda: self.load_TD_from_file()).pack(side=LEFT)
 
 
     def toggle(self, GEMROC_number):
@@ -165,7 +170,7 @@ class menu():
         c_inst = GEMROC.c_inst
         g_inst = GEMROC.g_inst
         test_r = (AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst))
-        safe_delays = test_r.TIGER_delay_tuning()
+        safe_delays = test_r.TIGER_delay_tuning(float(self.time_for_TD_step.get()))
         pipe_in.send((safe_delays,test_r.GEMROC_ID))
         pipe_in.close()
         test_r.__del__()

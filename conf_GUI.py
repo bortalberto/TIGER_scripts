@@ -151,6 +151,7 @@ class menu():
         Tantissime_frame.grid(row=3, column=5, sticky=N, pady=5,columnspan=20)
         Button(Tantissime_frame, text="Write configuration", command=self.load_default_config, activeforeground="#f77f00").pack(side=LEFT)
         Button(Tantissime_frame, text="Open communication error interface", command=self.open_communicaton_GUI, activeforeground="#f77f00").pack(side=LEFT)
+        Button(Tantissime_frame, text="Run prearation (TD + both scans)", command=self.run_prep, activeforeground="#f77f00").pack(side=LEFT)
 
         cornice = Frame(Tante_frame)
         cornice.grid(row=4, column=5, sticky=N, pady=5,columnspan=20)
@@ -229,6 +230,18 @@ class menu():
         self.statu_tab_rows.pack(anchor = NW, fill =BOTH)
         self.version_dict = {}
         self.IVT_dict = {}
+
+
+    def run_prep(self):
+        print ("TD scan")
+        conf_wind = error_GUI.menu(self.main_window, self.GEMROC_reading_dict)
+        conf_wind.TD_scan(0,True)
+        conf_wind.error_window.destroy()
+
+        print ("Vthr-1 scan")
+        self.thr_Scan(-1, -1, 1)
+        print ("Vthr-2 scan")
+        self.thr_Scan(-1, -1, 2)
 
 
 
