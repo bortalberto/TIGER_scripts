@@ -636,12 +636,12 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
                     process.join()
                     try:
                         key, value = pipe_out.recv()
-                        if value!=0 :
-                            with open(self.caller.logfile, 'a') as f:
-                                f.write("{} -- {} : {} 8/10 bit errors in the last 10 seconds\n".format(time.ctime(), key,value ))
-                                GEMROC_numb = "GEMROC {}".format((key.split()[1]))
-                                TIGER_numb=int(key.split()[3])
-                            self.caller.Change_Reading_Tigers((GEMROC_numb,TIGER_numb), ForceOff=True)
+                        # if value!=0 :
+                            # with open(self.caller.logfile, 'a') as f:
+                            #     f.write("{} -- {} : {} 8/10 bit errors in the last 10 seconds\n".format(time.ctime(), key,value ))
+                            #     GEMROC_numb = "GEMROC {}".format((key.split()[1]))
+                            #     TIGER_numb=int(key.split()[3])
+                            # self.caller.Change_Reading_Tigers((GEMROC_numb,TIGER_numb), ForceOff=True)
                         # if value!=0 and (self.caller.GEMROC_reading_dict[key]):
 
 

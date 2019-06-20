@@ -1003,7 +1003,7 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
       #     B3Clk_sim_en_param=1
       # else:
       #     B3Clk_sim_en_param=0
-
+      B3Clk_sim_en_param = 0
       self.DAQ_config_dict = {
         "GEMROC":                                   self.TARGET_GEMROC_ID,
         "UDP_DATA_DESTINATION_IPADDR":              self.UDP_DATA_DESTINATION_IPADDR,
