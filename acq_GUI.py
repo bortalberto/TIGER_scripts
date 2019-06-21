@@ -247,7 +247,7 @@ class menu():
         self.canvas2.create_window((0, 0), window=frame, anchor='nw')
         frame.bind("<Configure>", self.myfunction)
         self.canvas2.pack(side=LEFT,fill=BOTH)
-        Label(frame,text='Acquisiton set single TIGERs',font=("Courier", 16)).pack()
+        Label(frame,text='Acquisition set single TIGERs',font=("Courier", 16)).pack()
         self.button_dict={}
         for number, GEMROC in sorted(self.GEMROC_reading_dict.items()):
             a = Frame(frame)
@@ -321,21 +321,23 @@ class menu():
 
             if self.PMT:
                 self.PMT_OFF()
-            self.father.reactivate_TIGERS()
+            time.sleep(10)
+            # self.father.reactivate_TIGERS()
             self.refresh_but_TIGERs()
             self.father.Synch_reset()
-            self.father.power_on_FEBS()
             self.father.Synch_reset()
-            self.father.load_default_config()
-            self.father.Synch_reset()
-            time.sleep(0.2)
+
+            # self.father.Synch_reset()
+            # self.father.load_default_config()
+            # self.father.Synch_reset()
+            time.sleep(1)
 
             self.father.Synch_reset()
             self.father.set_pause_mode(to_all=True,value=1)
 
             if self.PMT:
                 self.PMT_on()
-            time.sleep(10)
+            time.sleep(20)
 
             self.start_acq()
 
@@ -636,9 +638,9 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
                     process.join()
                     try:
                         key, value = pipe_out.recv()
-                        # if value!=0 :
-                            # with open(self.caller.logfile, 'a') as f:
-                            #     f.write("{} -- {} : {} 8/10 bit errors in the last 10 seconds\n".format(time.ctime(), key,value ))
+                        if value!=0 :
+                             with open(self.caller.logfile, 'a') as f:
+                                f.write("{} -- {} : {} 8/10 bit errors\n".format(time.ctime(), key,value ))
                             #     GEMROC_numb = "GEMROC {}".format((key.split()[1]))
                             #     TIGER_numb=int(key.split()[3])
                             # self.caller.Change_Reading_Tigers((GEMROC_numb,TIGER_numb), ForceOff=True)
