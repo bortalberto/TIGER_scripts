@@ -100,7 +100,7 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
         Total_data_MAX_size = 2 ** 20
         Total_MAX_packets=50
         datapath = "." + sep + "data_folder" + sep+self.sub_folder+sep + "SubRUN_{}_GEMROC_{}_TM.dat".format(self.sub_run_number, self.reader.GEMROC_ID)
-        with open(self.reader.log_path, 'ab') as f:
+        with open(self.reader.log_path, 'a') as f:
             f.write("{} -- Saving data from  GEMROC {} in file {}\n".format(time.ctime(), self.reader.GEMROC_ID,datapath))
         # with open(self.reader.log_path, 'a') as log_file:
         #     log_file.write("{} --Launching acquisition on GEMROC {} for {} seconds\n".format(time.ctime(),self.reader.GEMROC_ID,self.acq_time))
@@ -127,7 +127,7 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
                     print ("\n---GEMROC {} - {}\n".format(self.reader.GEMROC_ID, e))
                     self.reader.TIMED_out = True
                     Exception("GEMROC {} TIMED_OUT".format(self.reader.GEMROC_ID))
-                    with open(self.reader.log_path, 'ab') as f:
+                    with open(self.reader.log_path, 'a') as f:
                         f.write("{} -- Finished saving data from  GEMROC {} in file {}, total packets= {}\n".format(time.ctime(), self.reader.GEMROC_ID, self.reader.datapath, Totallissimi_packets))
                     print ("Finished saving data from  GEMROC {} in file {}, total packets= {}\n".format(self.reader.GEMROC_ID, self.reader.datapath, Totallissimi_packets))
 
@@ -155,7 +155,7 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
         self.reader.dataSock.close()
 
         self.reader.datapath = datapath
-        with open(self.reader.log_path, 'ab') as f:
+        with open(self.reader.log_path, 'a') as f:
             f.write("{} -- Finished saving data from  GEMROC {} in file {}, total packets= {}\n".format(time.ctime(), self.reader.GEMROC_ID, self.reader.datapath,Totallissimi_packets ))
         print ("Finished saving data from  GEMROC {} in file {}, total packets= {}\n".format( self.reader.GEMROC_ID, self.reader.datapath,Totallissimi_packets ))
 
@@ -185,7 +185,7 @@ class reader:
 
         try:
             self.dataSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            self.dataSock.settimeout(15)
+            self.dataSock.settimeout(25)
             self.dataSock.bind((self.HOST_IP, self.HOST_PORT))
         except Exception as e:
             print "--GEMROC {}-{}".format(self.GEMROC_ID,e)
@@ -602,7 +602,8 @@ class reader:
                         self.thr_scan_matrix[(int_x >> 56) & 0x7, int(int_x >> 48) & 0x3F] = self.thr_scan_matrix[(int_x >> 56) & 0x7, int(int_x >> 48) & 0x3F] + 1
                         TIGER_not_missing[((int_x >> 56) & 0x7)]=1
         for i in range(0, 8):
-            self.thr_scan_rate[i, :] = (self.thr_scan_matrix[i, :] / self.thr_scan_frames[i]) * (1 / 0.0002048)
+            # self.thr_scan_rate[i, :] = (self.thr_scan_matrix[i, :] / self.thr_scan_frames[i]) * (1 / 0.0002048)
+            self.thr_scan_rate = self.thr_scan_matrix
 
         TIGER_out=[]
         for i in range (0,8):

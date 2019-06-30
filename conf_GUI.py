@@ -238,8 +238,15 @@ class menu():
         conf_wind.TD_scan(0,True)
         conf_wind.load_TD_from_file()
         conf_wind.error_window.destroy()
+        self.Synch_reset()
+        self.Synch_reset()
+        time.sleep(0.5)
+        self.Synch_reset()
+        time.sleep(0.5)
+        self.Synch_reset()
         print ("Vthr-1 scan")
         self.thr_Scan(-1, -1, 1)
+        self.Synch_reset()
         print ("Vthr-2 scan")
         self.thr_Scan(-1, -1, 2)
 
@@ -1482,6 +1489,7 @@ class menu():
             for number,gemroc in self.GEMROC_reading_dict.items():
                 for T in range (0,8):
                     self.write_CHANNEL(gemroc, T,64)
+
     def load_thr(self, to_all=False, source="auto", sigma_T=3, sigma_E=2, offset=0, first=0, last=8):
         if not to_all:
             GEMROC = self.GEMROC_reading_dict[self.showing_GEMROC.get()]

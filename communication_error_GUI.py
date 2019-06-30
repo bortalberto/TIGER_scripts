@@ -65,7 +65,7 @@ class menu():
         Label(self.second_row_frame, text = 'Time for each step TD scan  ').pack(side=LEFT)
         self.time_for_TD_step = Entry(self.second_row_frame, width = 4)
         self.time_for_TD_step.pack(side=LEFT)
-        self.time_for_TD_step.insert(0,0.4)
+        self.time_for_TD_step.insert(0,3)
         Button(self.second_row_frame, text ='Launch TD scan on all GEMROCs', command=lambda: self.TD_scan (0, True)).pack(side=LEFT)
 
         self.third_row_frame=Frame(self.error_window)
@@ -140,17 +140,17 @@ class menu():
         save_winz=Toplevel(self.error_window)
         ws = save_winz.winfo_screenwidth()
         hs = save_winz.winfo_screenheight()
-        w,h=400,100
-        # calculate position x, y
-        x = (ws / 2) - (w / 2)
-        y = (hs / 2) - (h / 2)
-        save_winz.geometry('%dx%d+%d+%d' % (w, h, x, y))
-
-        Label(save_winz, text='Save the values?', font=("Courier", 18)).pack()
-        cornice=Frame(save_winz)
-        cornice.pack()
-        Button(cornice, text ='Yes', command= lambda: self.save_TD(save_winz,GEMROC_num)).pack(side=LEFT)
-        Button(cornice, text ='No', command= lambda: save_winz.destroy()).pack(side=LEFT)
+        # w,h=400,100
+        # # calculate position x, y
+        # x = (ws / 2) - (w / 2)
+        # y = (hs / 2) - (h / 2)
+        # save_winz.geometry('%dx%d+%d+%d' % (w, h, x, y))
+        self.save_TD(save_winz, GEMROC_num)
+        # Label(save_winz, text='Save the values?', font=("Courier", 18)).pack()
+        # cornice=Frame(save_winz)
+        # cornice.pack()
+        # Button(cornice, text ='Yes', command= lambda: self.save_TD(save_winz,GEMROC_num)).pack(side=LEFT)
+        # Button(cornice, text ='No', command= lambda: save_winz.destroy()).pack(side=LEFT)
 
     def save_TD(self,winz,GEMROC_num=-1):
         if GEMROC_num!=-1:

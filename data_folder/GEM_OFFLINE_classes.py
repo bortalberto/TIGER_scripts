@@ -68,7 +68,7 @@ class reader:
 
                     # with open ("out.txt", 'a') as ff:
                     # ff.write("{}\n".format(raw))
-    def write_txt(self, path):
+    def write_txt(self, path,outfile="out.txt"):
         statinfo = os.stat(path)
         f = open("out.txt", 'w')
         f.close()
@@ -102,7 +102,7 @@ class reader:
                     self.thr_scan_matrix[(int_x >> 56) & 0x7, int(int_x >> 48) & 0x3F] = self.thr_scan_matrix[(int_x >> 56) & 0x7, int(int_x >> 48) & 0x3F] + 1
                 # if ((int_x >> 48) & 0x3F)==5:
                 #     s="Ciao Giulio\n"
-                with open("out.txt", 'a') as ff:
+                with open(outfile, 'a') as ff:
                     ff.write("{}     {}".format(raw,s))
     def write_txt_TM(self, path,outfile="out.txt"):
 
@@ -161,9 +161,14 @@ class reader:
 
             print 'finished writing file'
     def  write_txt_TM_folder(self, path):
-        for data_file in glob.glob(path+"/*.dat"):
+        for data_file in glob.glob(path+"/*TM*.dat"):
             print data_file
             self.write_txt_TM(data_file, outfile=data_file+"out.txt")
+
+    def  write_txt_TL_folder(self, path):
+        for data_file in glob.glob(path+"/*TL*.dat"):
+            print data_file
+            self.write_txt(data_file, outfile=data_file+"out.txt")
 
     def create_rate_plot(self):
         plt.ion()

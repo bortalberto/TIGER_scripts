@@ -30,7 +30,6 @@ else:
     sys.exit()
 local_test = False
 
-
 class communication:  ##The directory are declared here to avoid multiple declaration
 
     def __init__(self, gemroc_ID, feb_pwr_pattern, keep_cfg_log=False, keep_IVT_log=False):

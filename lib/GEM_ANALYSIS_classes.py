@@ -809,7 +809,7 @@ class analisys_conf: #Analysis class used for configurations10
 
         self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
         self.check_sync()
-    def TIGER_delay_tuning(self, time_for_step = 0.2):
+    def TIGER_delay_tuning(self, time_for_step = 1):
         # for T in range (0,8):
         #     self.GEM_COM.Set_param_dict_global(self.g_inst, "FE_TPEnable",T,0)
         #     for ch in range (0,64):

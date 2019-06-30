@@ -34,8 +34,6 @@ class menu():
         self.GEM_to_read = np.zeros((20))
         self.GEM_to_read_last = np.zeros((20))
         self.errors_counters_810 = {}
-        # for i in range (0,20):
-        #     self.errors_counters_810[i]=i*20
         self.logfile = "." + sep + "log_folder" + sep + "ACQ_log_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         self.conffile = "." + sep + "log_folder" + sep + "CONF_log_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         self.sub_run_number=0
@@ -313,7 +311,7 @@ class menu():
         os.system("./HVWrappdemo ttyUSB0 VSet 2000")
 
     def PMT_OFF(self):
-        os.system("./HVWrappdemo ttyUSB0 VSet 1000")
+        os.system("./HVWrappdemo ttyUSB0 VSet 1300")
 
     def relaunch_acq(self):
         self.stop_acq(True)
@@ -612,7 +610,8 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
         Thread.__init__(self)
         self.caller=caller
     def run(self):
-        print "Acquiring for {:.2f} seconds".format(float(self.caller.time)*60)
+        if self.caller.mode == 'TM':
+            print "Acquiring for {:.2f} seconds".format(float(self.caller.time)*60)
         self.start_time=time.time()
         while self.running:
             if (time.time()-self.start_time)>float(self.caller.time)*60:
@@ -639,8 +638,8 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
                     try:
                         key, value = pipe_out.recv()
                         if value!=0 :
-                             with open(self.caller.logfile, 'a') as f:
-                                f.write("{} -- {} : {} 8/10 bit errors\n".format(time.ctime(), key,value ))
+                            with open(self.caller.logfile, 'a') as f:
+                                f.write("{} -- {} : {} 8/10 bit errors since last reset\n".format(time.ctime(), key,value ))
                             #     GEMROC_numb = "GEMROC {}".format((key.split()[1]))
                             #     TIGER_numb=int(key.split()[3])
                             # self.caller.Change_Reading_Tigers((GEMROC_numb,TIGER_numb), ForceOff=True)
