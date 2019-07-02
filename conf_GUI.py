@@ -218,7 +218,7 @@ class menu():
         Button(scan_frame, text="Load thr",command= lambda: self.load_thr(to_all = True, source = 'scan', sigma_T = int(self.T_thr_sigma.get()), sigma_E = int(self.E_thr_sigma.get()))).pack(side = LEFT)
         Label(self.advanced_threshold_settings,text="---Calculate thr fC from thr set---").pack(anchor=N)
         Button(self.advanced_threshold_settings, text="Calculate",command= self.calculate_FC_thr).pack(anchor=N)
-
+        Button(self.advanced_threshold_settings, text = "Import thresholds from old run", command =self.import_old_conf).pack(anchor=N)
         if COM_class.local_test == True:
             for G in range (0,11):
                 self.toggle(G)
@@ -1568,8 +1568,31 @@ class menu():
         for number, GEMROC in self.GEMROC_reading_dict.items():
             GEMROC.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"] = 255
             GEMROC.GEM_COM.DAQ_set_register()
+    def import_old_conf(self):
+        """
+        Funcion to import the channel configuration from old RUNS. Needs the pickle containing the data
+        :return:
+        """
+        File_name = tkFileDialog.askopenfilename(initialdir="." + sep + "data_folder", title="Select file", filetypes=(("Configuration log", "*.pkl"), ("all files", "*.*")))
 
+        with open(File_name, 'rb') as f:
+            old_conf_dict = pickle.load(f)
 
+        for GEMROC_key, dict in sorted(old_conf_dict.items(),cmp = sort_by_number):
+            for TIGER_key, dict2 in dict.items():
+                if TIGER_key.split(" ")[0] == "TIGER":
+                    TIGER_id = int(TIGER_key.split(" ")[1])
+                    for channel_key, dict3 in dict2.items():
+                        if channel_key.split(" ")[0] == "Ch":
+                            channel_id = int(channel_key.split(" ")[1])
+                            # print ("{} - {} - {}".format(gemroc_id[0], tiger_id[0], channel_id[0]))
+                            try:
+                                self.GEMROC_reading_dict[GEMROC_key].c_inst.Channel_cfg_list[TIGER_id][channel_id] = dict3.copy()
+                            except KeyError as e:
+                                print 'I a KeyError - missing %s. Probably a GEMROC is offline '% str(e)
+                                break
+                            # print self.GEMROC_reading_dict[GEMROC_key].c_inst.Channel_cfg_list[TIGER_id][channel_id]
+            print ("Channel settings for {} loaded".format(GEMROC_key))
 def character_limit(entry_text):
     try:
         if int(entry_text.get()) < 0:

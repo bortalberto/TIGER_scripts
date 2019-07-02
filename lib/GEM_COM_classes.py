@@ -1853,9 +1853,9 @@ class communication:  ##The directory are declared here to avoid multiple declar
         thr_T = np.zeros(64)
         for ch in range(0, 64):
             med, sigma = thr0_T[ch, :]
-            if (sigma * number_sigma_T) < 0.51:
+            if (sigma * number_sigma_T) < 1:
                 print ("Sigma on ch {} to low, setting 0.6 instead".format(ch))
-                shift = 0.6
+                shift = 1
             else:
                 shift = sigma * number_sigma_T
             thr_T[ch] = np.rint(med - shift) + offset
