@@ -547,6 +547,7 @@ class menu():
     def stop_acq(self, auto=False):
         if not auto:
             self.restart.set(False)
+        self.run_analysis.set(False)
         if self.simple_analysis.get():
             print "Stopping analizing"
         else:
@@ -570,7 +571,11 @@ class menu():
             self.build_errors()
         self.refresh_error_status()
         self.refresh_plot()
+        self.save_GEMROC_errors()
         self.but7.config(state='normal')
+    def save_GEMROC_errors(self):
+        for number, GEMROC in self.GEMROC_reading_dict.items():
+            GEMROC.GEM_COM.Access_diagn_DPRAM_read_and_log(0, 1,logtype="not_auto",logpth=self.logfile)
 
     def build_errors(self):
         self.TM_errors = []

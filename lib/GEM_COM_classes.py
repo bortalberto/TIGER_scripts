@@ -2048,7 +2048,7 @@ class communication:  ##The directory are declared here to avoid multiple declar
         return command_echo_f
 
     # acr 2019-02-19 BEGIN
-    def Access_diagn_DPRAM_read_and_log(self, display_enable_param, log_enable_param):  # acr 2019-02-19
+    def Access_diagn_DPRAM_read_and_log(self, display_enable_param, log_enable_param,logtype='auto',logpth="safe.txt"):  # acr 2019-02-19
         # acr 2019-02-19 not foreseen for the moment resources to send the auxiliary configuration word to be writtern to the diagn_dpram address 0 (a new word in the DAQ CMD packet would be needed)
         COMMAND_STRING = 'CMD_GEMROC_DAQ_DIAGN_DPRAM_ACCESS'
         self.gemroc_DAQ_XX.set_gemroc_cmd_code(COMMAND_STRING)
@@ -2056,9 +2056,11 @@ class communication:  ##The directory are declared here to avoid multiple declar
         array_to_send = self.gemroc_DAQ_XX.command_words
         command_echo_diagn_dpram_data_rdback = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING, array_to_send,
                                                                             self.DEST_IP_ADDRESS, self.DEST_PORT_NO)
-        self.display_and_log_diagn_dpram_data(command_echo_diagn_dpram_data_rdback, display_enable_param, log_enable_param)  # acr 2018-11-27 log_file mode updated*
+        self.display_and_log_diagn_dpram_data(command_echo_diagn_dpram_data_rdback, display_enable_param, log_enable_param,logtype,logpth)  # acr 2018-11-27 log_file mode updated*
 
-    def display_and_log_diagn_dpram_data(self, command_echo_param, display_enable_param, log_enable_param):
+    def display_and_log_diagn_dpram_data(self, command_echo_param, display_enable_param, log_enable_param, logtype="auto", logpth="safe.txt"):
+        if logtype == "auto":
+            logpth = self.DiagnDPRAM_data_log_fname
         L_array = array.array('I')  # L is an array of unsigned long
         L_array.fromstring(command_echo_param)
         L_array.byteswap()
@@ -2133,7 +2135,7 @@ class communication:  ##The directory are declared here to avoid multiple declar
             print '\n' + 'XCVR_Input_link_rx_err_cntr: ' + '%d; ' % XCVR_Input_link_rx_err_cntr
 
         if (log_enable_param == 1):
-            with open(self.DiagnDPRAM_data_log_fname, 'a') as DiagnDPRAM_data_log_file:
+            with open(logpth, 'a+') as DiagnDPRAM_data_log_file:
                 DiagnDPRAM_data_log_file.write('\n%s' % datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
                 DiagnDPRAM_data_log_file.write('\n' + 'TL_in_buf_full_feb0_t0_cntr: ' + '%d; ' % TL_in_buf_full_feb0_t0_cntr + 'TL_in_buf_full_feb0_t1_cntr: ' + '%d; ' % TL_in_buf_full_feb0_t1_cntr)
                 DiagnDPRAM_data_log_file.write('\n' + 'TL_in_buf_full_feb1_t0_cntr: ' + '%d; ' % TL_in_buf_full_feb1_t0_cntr + 'TL_in_buf_full_feb1_t1_cntr: ' + '%d; ' % TL_in_buf_full_feb1_t1_cntr)
