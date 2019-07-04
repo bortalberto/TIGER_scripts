@@ -1077,7 +1077,7 @@ class analisys_read:
         sigma=np.std(efine)
         total=len(efine)
         self.dataSock.close()
-        print (average, sigma,total)
+        print ("Total events: {2}, average Efine {0}, sigma {1}".format(average, sigma,total))
         return (average,sigma,total)
 
     def data_save_thr_scan_with_counter(self, ch, vth, TIG, frame_count, save_binout=False, save_txt=False):

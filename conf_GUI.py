@@ -5,6 +5,7 @@ import numpy as np
 from lib import GEM_COM_classes as COM_class
 import communication_error_GUI as error_GUI
 import noise_GUI as noise_GUI
+import generic_scan as scan_GUI
 from multiprocessing import Process, Pipe
 import acq_GUI as acq_GUI
 from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
@@ -152,13 +153,18 @@ class menu():
         Button(Tantissime_frame, text="Write configuration", command=self.load_default_config, activeforeground="#f77f00").pack(side=LEFT)
         Button(Tantissime_frame, text="Open communication error interface", command=self.open_communicaton_GUI, activeforeground="#f77f00").pack(side=LEFT)
         Button(Tantissime_frame, text="Run prearation (TD + both scans)", command=self.run_prep, activeforeground="#f77f00").pack(side=LEFT)
-
+        Button(Tantissime_frame, text="Launch TP", command=self.start_TP, activeforeground="blue").pack(side=RIGHT)
+        self.NUM_TP = Entry(Tantissime_frame, width=4)
+        self.NUM_TP.insert(0,'2')
+        self.NUM_TP.pack(side=RIGHT)
+        Label(Tantissime_frame, text="TP number").pack(side=RIGHT)
         cornice = Frame(Tante_frame)
         cornice.grid(row=4, column=5, sticky=N, pady=5,columnspan=20)
         Button(cornice, text="THR scan (T-branch)", command=lambda: self.thr_Scan(-1, -1, 1), activeforeground="#f77f00").pack(side=LEFT)
         Button(cornice, text="THR scan (E-branch)", command=lambda: self.thr_Scan(-1, -1, 2), activeforeground="#f77f00").pack(side=LEFT)
 
         Button(cornice, text="Noise measure tool", command=self.launch_noise_window, activeforeground="#f77f00").pack(side=LEFT)
+        Button(cornice, text="Generic scan tool", command=self.launch_scan_window, activeforeground="#f77f00").pack(side=LEFT)
 
         Label(cornice, text="Rate").pack(side=LEFT)
         Entry(cornice, textvar=self.rate, width=5).pack(side=LEFT)
@@ -166,14 +172,11 @@ class menu():
         Button(cornice, text="Load thresholds to all", command=lambda: self.load_thr(True, source="scan"), activeforeground="#f77f00").pack(side=LEFT)
 
         Button(cornice, text="Load auto-thr to all", command=lambda: self.load_thr(True, source="auto"), activeforeground="#f77f00").pack(side=LEFT)
-
         self.error_frame2 = Frame(Tante_frame)
         self.error_frame2.grid(row=5, column=5, sticky=N, pady=10,columnspan=20)
         Label(self.error_frame2, text='Message ').grid(row=0, column=1, sticky=NW, pady=4)
         self.Launch_error_check_op = Label(self.error_frame2, text='-', background='white')
         self.Launch_error_check_op.grid(row=0, column=2, sticky=NW, pady=4)
-
-
         Frame(self.select_frame, height=20).pack()
         basic_operation_frame = Frame(self.select_frame)
         basic_operation_frame.pack()
@@ -192,7 +195,6 @@ class menu():
         Button(TROPPi_frame, text="Run controller", command=self.launch_controller, activeforeground="blue").pack(side=RIGHT)
         Button(TROPPi_frame, text="Fast configuration", command=self.fast_configuration, activeforeground="blue").pack(side=RIGHT)
         Button(TROPPi_frame, text="Enable double thr", command=self.double_enable, activeforeground="blue").pack(side=RIGHT)
-
         self.LED = []
         for i in range(0, len(self.GEM_to_config)):
             if i < 10:
@@ -250,6 +252,11 @@ class menu():
         print ("Vthr-2 scan")
         self.thr_Scan(-1, -1, 2)
 
+
+    def start_TP(self):
+        for number, GEMROC_number in self.GEMROC_reading_dict.items():
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['number_of_repetitions'] = int(self.NUM_TP.get())
+            GEMROC_number.GEM_COM.Soft_TP_generate()
 
 
     def generate_rows(self):
@@ -357,6 +364,9 @@ class menu():
 
     def launch_noise_window(self):
         self.noise_wind = noise_GUI.menu(self.main_window, self.GEMROC_reading_dict)
+
+    def launch_scan_window(self):
+        self.scan_wind = scan_GUI.menu(self.main_window, self.GEMROC_reading_dict)
 
     def launch_controller(self):
         self.acq = acq_GUI.menu(False, self.main_window, self.GEMROC_reading_dict, self)
