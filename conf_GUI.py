@@ -93,7 +93,7 @@ class menu():
         Label(Title_frame2, text="GUFI software",font=("Times", 25)).pack(side=LEFT)
         Label(Title_frame2, image=self.icon_GUFI2).pack(side=LEFT)
 
-        Label(Title_frame, text="             v.2.3 -- 2019 -- INFN-TO (abortone@to.infn.it)",font=("Times", 10, "italic")).pack(anchor=SE, side=RIGHT)
+        Label(Title_frame, text="             v.3.0 -- 2019 -- INFN-TO (abortone@to.infn.it)",font=("Times", 10, "italic")).pack(anchor=SE, side=RIGHT)
         Title_frame2.pack(anchor=S)
         Title_frame.pack(fill=BOTH)
 
