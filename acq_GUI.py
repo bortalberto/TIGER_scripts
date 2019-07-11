@@ -59,7 +59,6 @@ class menu():
         self.save_conf_every_run = BooleanVar(self.master_window)
         self.simple_analysis = IntVar(self.master_window)
         self.run_analysis = IntVar(self.master_window)
-        self.set_last_folder()
 
         Label(self.master_window, text='Acquisition setting', font=("Courier", 25)).pack()
         if not std_alone:
@@ -110,12 +109,14 @@ class menu():
         a_frame = Frame(self.master)
         a_frame.pack()
         zero_frame=LabelFrame(a_frame)
-        zero_frame.grid(row=1, column=0, sticky=NW,padx=80)
+        zero_frame.grid(row=1, column=1, sticky=NW,padx=70)
+
         self.but6 = Button(zero_frame, text='New run folder', command=self.new_run_folder)
         self.but6.grid(row=1, column=2, sticky=NW)
         self.but7 = Button(zero_frame, text='Test folder', command=self.set_test_folder)
         self.but7.grid(row=1, column=3, sticky=NW)
-
+        self.folder_label = Label(zero_frame,text="-",width= 20)
+        self.folder_label.grid(row=1, column=4, sticky= W)
 
         self.but6 = Button(a_frame, text='Start acquisition', command=self.start_acq)
         self.but6.grid(row=1, column=2, sticky=NW, pady=4)
@@ -148,7 +149,7 @@ class menu():
         self.errors = Frame(self.master)
         self.errors.pack()
         self.LBerror = Label(self.errors, text='Acquisition errors check', font=("Courier", 25))
-        self.LBerror.grid(row=0, column=0, columnspan=8, sticky=S, pady=5)
+        self.LBerror.grid(row=0, column=1, columnspan=8, sticky=S, pady=5)
         self.butleftG_err = Button(self.errors, text='<', command=lambda: self.change_G_or_T(-1, "G")).grid(row=1, column=0, sticky=S, pady=4)
         self.LBGEM_err = Label(self.errors, text='GEMROC {}'.format(self.plotting_gemroc), font=("Courier", 14))
         self.LBGEM_err.grid(row=1, column=1, sticky=S, pady=4)
@@ -204,6 +205,8 @@ class menu():
             for number, GEMROC in self.GEMROC_reading_dict.items():
                 n=int(number.split()[1])
                 self.toggle(n)
+        self.set_last_folder()
+
     def set_last_folder(self):
         """
         Funzione per andare all'ultima cartella
@@ -219,6 +222,7 @@ class menu():
             self.run_folder="RUN_0"
 
         print "Data folder set: {}".format(self.run_folder)
+        self.folder_label['text']="Folder : {}".format(self.run_folder)
     def new_run_folder(self):
         list_folder=[name for name in os.listdir("."+sep+"data_folder") if os.path.isdir("."+sep+"data_folder"+sep+name)]
         list_number=[int(folder [4:]) for folder in list_folder if folder[0:3]=="RUN" ]
@@ -229,6 +233,7 @@ class menu():
     def set_test_folder(self):
         self.run_folder="test_folder"
         print "Test folder set: {}".format(self.run_folder)
+        self.folder_label['text']="Folder : {}".format(self.run_folder)
 
     def open_adv_acq(self):
         self.adv_frame = Frame(self.tabControl)

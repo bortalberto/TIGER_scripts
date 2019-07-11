@@ -774,34 +774,6 @@ class analisys_conf: #Analysis class used for configurations10
 
         return (error_list)
 
-    def TIGER_TP_test(self):
-        print "--------------------------"
-        print "Test pulse reception, GEMROC {}". format(self.GEMROC_ID)
-        print "--------------------------"
-        for T in range (0,8):
-            self.GEM_COM.set_FE_TPEnable(self.g_inst, T, 1)
-            for ch in range (0,64):
-                self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst,T,ch,0, 1)
-
-            frameMax=10
-            """ Acquiring rate """
-            test_r=analisys_read(self.GEM_COM, self.c_inst)
-            scan_matrix = np.zeros((8, 64))
-            frame_count = 0
-            test_r.start_socket()
-            while frame_count < frameMax and not self.timedOut:
-                frame_count, scan_matrix = self.acquire_rate(frame_count, scan_matrix, test_r)
-            test_r.dataSock.close()
-            scan_matrix = scan_matrix / frameMax * (1 / 0.0002048)
-            for ch in range (0,64):
-                self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst,T,ch,0, 3)
-            self.GEM_COM.set_FE_TPEnable(self.g_inst, T, 0)
-            if self.timedOut:
-                print "\nTiger {} timed out".format(T)
-                self.timedOut=0
-        #TODO finish this function when we can check on real GEMROCS
-
-
     def TIGER_GEMROC_sync_test(self):
         print "--------------------------"
         print "Checking synchronization for GEMROC {}".format(self.GEMROC_ID)
@@ -1397,25 +1369,32 @@ def error_fit(data,TP_rate, Ebranch=True):
     #         m = i
     #         break
     if Ebranch:
-        max_tp=53000
+        max_tp=58000
     else:
         max_tp=100000
     if np.max(data)< max_tp:
         ydata = np.copy(data)
-        M=np.argmax(data>7*TP_rate)
+        M=np.argmax(data > TP_rate*0.9)
+        if M < 5:
+            ## If can't find baseline, search where the counts go down
+            big_value=np.max(data)
+            bigger=np.argmax(data == big_value)
+            going_down=np.argmax(data[bigger:]<big_value*0.9)
+            print going_down
+            print bigger
+            M=going_down+bigger
         for i in range(M, 64):
-            xdata = np.arange(0, 64)
-            ydata[i] = np.max(data)
-            boundsd = ((0, 0, TP_rate * 0.2), (64, 5, TP_rate * 2))
-            guess = np.array([32, 2, TP_rate])
-
-            try:
-                popt2, pcov2 = curve_fit(errorfunc, xdata, ydata, method='trf', maxfev=20000, p0=guess, bounds=boundsd)
-            except:
-                popt2, pcov2 = ['Fail', 'Fail','Fail'] , ['Fail']
-            popt1 = ['Fail', 'Fail', 'Fail']
-            pcov1 = np.zeros((6, 6))
-            return (popt1, pcov1, popt2, pcov2, ['Fail', 'Fail', 'Fail'], ['Fail', 'Fail', 'Fail'])
+            ydata[i] = TP_rate
+        boundsd = ((0, 0, TP_rate * 0.2), (64, 7, TP_rate * 2))
+        guess = np.array([32, 2, TP_rate])
+        xdata = np.arange(0, 64)
+        try:
+            popt2, pcov2 = curve_fit(errorfunc, xdata, ydata, method='trf', maxfev=20000, p0=guess, bounds=boundsd)
+        except:
+            popt2, pcov2 = ['Fail', 'Fail','Fail'] , ['Fail']
+        popt1 = ['Fail', 'Fail', 'Fail']
+        pcov1 = np.zeros((6, 6))
+        return (popt1, pcov1, popt2, pcov2, ['Fail', 'Fail', 'Fail'], ['Fail', 'Fail', 'Fail'])
 
     M = int(np.argmax(data))
 
@@ -1436,36 +1415,41 @@ def error_fit(data,TP_rate, Ebranch=True):
 
     # fit with double error function + single fit on TP
 
-    guess = np.array([1.5, 55, 1, 1, TP_rate, 300000])
+    guess = np.array([1.5, 55, 1, 1, TP_rate, 60000])
 
-    boundsd = ((0, 0, 0, 0, TP_rate * 0.6, 200000), (64, 64, 20, 20, TP_rate * 1.5, 500000))
+    boundsd = ((0, 0, 0, 0, TP_rate * 0.6, 50000), (63, 63, 20, 20, TP_rate * 1.5,np.max(data)*1.3))
     if Ebranch:
-        boundsd = ((0, 0, 0, 0, TP_rate * 0.6, 51000), (64, 64, 20, 20, TP_rate * 1.5, 600000))
+        boundsd = ((0, 0, 0, 0, TP_rate * 0.6, 51000), (63, 63, 20, 15, TP_rate * 1.5, np.max(data)*1.3))
     try:
-        popt1, pcov1 = curve_fit(double_error_func, xdata, ydata, method='trf', maxfev=20000, p0=guess, bounds=boundsd)
-
+        popt1, pcov1 = curve_fit(double_error_func, xdata, ydata, maxfev=10000, p0=guess, bounds=boundsd)
         y = np.zeros(64)
         for i in range(0, len(ydata)):
             y[i] = double_error_func(i, *popt1)
+        if popt1[3]<5 and popt1[1] <62:
+            end = int(round(popt1[1] - 3 * popt1[3]))
+        else:
+            # print ("Rejecting prefit")
+            end = np.argmax(ydata > TP_rate)
 
-        end = int(round(popt1[1] - 5 * popt1[3]))
         if end > 5:
             xdata = xdata[:end]
             ydata = ydata[:end]
             guess = np.array([popt1[0], popt1[2], popt1[4]])
-            boundsd = ((0, 0, TP_rate * 0.2), (64, 20, TP_rate * 2))
+            boundsd = ((0, 0, popt1[4] * 0.5), (64, 20, popt1[4] * 2))
             try:
-                popt2, pcov2 = curve_fit(errorfunc, xdata, ydata, method='trf', maxfev=20000, p0=guess, bounds=boundsd)
+                popt2, pcov2 = curve_fit(errorfunc, xdata, ydata, maxfev=10000, p0=guess, bounds=boundsd)
                 for i in range(0, len(ydata)):
                     y[i] = errorfunc(i, *popt2)
 
-            except:
+            except Exception as e:
+                print ("Failed noise fit {}".format(e))
                 popt2 = ("Fail", "Fail", "Fail")
                 pcov2 = np.zeros((3, 3))
         else:
             popt2 = ("Fail", "Fail", "Fail")
             pcov2 = np.zeros((3, 3))
-    except:
+    except Exception as e:
+        print ("Failed preliminary fit {}".format(e))
         popt1 = ('Fail', 'Fail', 'Fail')
         pcov1 = np.zeros((6, 6))
         popt2 = ["Fail", "Fail", "Fail"]

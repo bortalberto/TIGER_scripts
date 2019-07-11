@@ -506,15 +506,12 @@ class noise_measure ():
     def fit(self):
         start = time.time()
         for GEMROC,matrix in self.scan_matrixs.items():
-
             for TIG in range (0,8):
                 for channel in range (0,64):
                     if any(matrix[TIG][channel]) != 0:
-                        print ("GEM%s TIG%s CH%s"%(GEMROC,TIG,channel))
+                        print ("%s TIG%s CH%s"%(GEMROC,TIG,channel))
                         self.baseline_pos[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)] = AN_CLASS.find_baseline(matrix[TIG][channel])
                         values = AN_CLASS.error_fit(matrix[TIG][channel],TP_rate, Ebranch=self.E_branch.get())
-                        print type(values)
-                        print len (values)
                         self.fits[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[0]
                         self.covs[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[1]
                         self.TPfits[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[2]
@@ -536,25 +533,9 @@ class noise_measure ():
     #
     #         lista = pool.map(process_image, matrix)
     #
-    #     #         for TIG in range (0,8):
-    #     #             for channel in range (0,64):
-    #     #                 if any(matrix[TIG][channel]) != 0:
-    #     #                     # print ("TIG%s CH%s"%(TIG,channel))
-    #     #                     self.baseline_pos[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)] = AN_CLASS.find_baseline(matrix[TIG][channel])
-    #     #                     #values = AN_CLASS.error_fit(matrix[TIG][channel],TP_rate, Ebranch=self.E_branch.get())
-    #     #                     self.fits[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=zero
-    #     #                     self.covs[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=uno
-    #     #                     self.TPfits[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=due
-    #     #                     self.TPcovs[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=tre
-    #     #                     self.baseline[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=quatro
-    #     #                     # self.chi[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[4]
-    #     #                     # self.TPchi[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[5]
-    #     #                     # if values[2][2]!="Fail":
-    #     #                         # gauss_values=gauss_fit_baseline(matrix[TIG][channel],values[0][1],values[0][3],values[2][2])
-    #     #                         # self.gaussians[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=gauss_values
-    #     # print ("time")
-    #     # print(time.time()-start)
-    #     #
+    #     print ("time")
+    #     print(time.time()-start)
+
 
     def SAVE_noise(self):
         for GEMROC,dict0 in self.TPfits.items():
