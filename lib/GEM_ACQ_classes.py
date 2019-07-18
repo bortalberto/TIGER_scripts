@@ -201,7 +201,29 @@ class reader:
     def __del__(self):
 
         return 0
+    def acquire_rate(self, max_time):
+        acq_matrix = np.zeros((8,64))
+        self.beginning_time = time.time()
+        self.start_socket()
+        while time.time()-self.beginning_time<max_time:
+            data, addr = self.dataSock.recvfrom(self.BUFSIZE)
+            reversed_data = (list(reversed(data)))  # Swaps the byte order
+            this_word={}
+            if (reversed_data[0] >> 6) == 0:  # It's a hit
+                this_word = {
+                    "word_type": "hit",
+                    "TIGER": (reversed_data[0] >> 3) & 0x7,
+                    "Channel": (reversed_data[1] >> 2) & 0x3F,
+                    # "TAC": (reversed_data[1]) & 0x3,
+                    # "T_coarse": (reversed_data[2] << 8 | reversed_data[3] | reversed_data[4] >> 8) & 0xFFFF,
+                    # "E_coarse": (reversed_data[4] << 4 | reversed_data[5] >> 4) & 0x3FF,
+                    # "T_fine": (reversed_data[5] << 6 | reversed_data[   6] >> 2) & 0x3FF,
+                    # "E_fine": (reversed_data[6] << 8 | reversed_data[7]) & 0x3FF
 
+                }
+                acq_matrix[this_word["TIGER"]][this_word["Channel"]]+=1
+        self.dataSock.close()
+        return acq_matrix
     def build_hist_and_miss(self, frameword_check=True):
         self.thr_scan_matrix = np.zeros((8, 64))  # Tiger,Channel
         self.thr_scan_frames = np.ones(8)

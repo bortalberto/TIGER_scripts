@@ -28,7 +28,7 @@ elif OS == 'linux2':
 else:
     print("ERROR: OS {} non compatible".format(OS))
     sys.exit()
-local_test = False
+local_test = True
 
 class communication:  ##The directory are declared here to avoid multiple declaration
 
@@ -1846,15 +1846,15 @@ class communication:  ##The directory are declared here to avoid multiple declar
         file_T = self.conf_folder + sep + "thr" + sep + "GEMROC{}_Chip{}_T.thr".format(self.GEMROC_ID, TIGER_ID_param)
         file_E = self.conf_folder + sep + "thr" + sep + "GEMROC{}_Chip{}_E.thr".format(self.GEMROC_ID, TIGER_ID_param)
 
-        self.log_file.write("\n Setting VTH from file in  TIGER {}\n".format(TIGER_ID_param))
-        print "Setting VTH on both VTH from file in GEMROC {}, TIGER {}, {} and {} sigmas\n".format(self.GEMROC_ID, TIGER_ID_param, number_sigma_T, number_sigma_E)
+        self.log_file.write("Setting VTH on both VTH from file in GEMROC {}, TIGER {}, {}(T) and {}(E) sigmas\n".format(self.GEMROC_ID, TIGER_ID_param, number_sigma_T, number_sigma_E))
+        print "Setting VTH on both VTH from file in GEMROC {}, TIGER {}, {}(T) and {}(E) sigmas\n".format(self.GEMROC_ID, TIGER_ID_param, number_sigma_T, number_sigma_E)
 
         thr0_T = np.loadtxt(file_T, )
         thr_T = np.zeros(64)
         for ch in range(0, 64):
             med, sigma = thr0_T[ch, :]
             if (sigma * number_sigma_T) < 1:
-                print ("Sigma on ch {} to low, setting 0.6 instead".format(ch))
+                print ("Sigma on ch {} (T branch) to low, setting threshold at 0.6 instead".format(ch))
                 shift = 1
             else:
                 shift = sigma * number_sigma_T
@@ -2065,7 +2065,7 @@ class communication:  ##The directory are declared here to avoid multiple declar
         L_array.fromstring(command_echo_param)
         L_array.byteswap()
         L_array_size = len(L_array)
-        print '\n L_array_size: %d' % L_array_size
+        # print '\n L_array_size: %d' % L_array_size
         # for i in range(0, L_array_size, 1):
         #     print '\nL_array[%d]: %08X' % (i, L_array[i])
         GEMROC_CMD_DAQ_Num_PktWords = GEM_CONF_classes.GEMROC_CMD_DAQ_Num_Of_PktWords  # acr 2019-02-19

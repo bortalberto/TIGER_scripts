@@ -6,6 +6,8 @@ from lib import GEM_COM_classes as COM_class
 import communication_error_GUI as error_GUI
 import noise_GUI as noise_GUI
 import generic_scan as scan_GUI
+from lib import rate_interface as rate_interface
+
 from multiprocessing import Process, Pipe
 import acq_GUI as acq_GUI
 from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
@@ -152,6 +154,7 @@ class menu():
         Tantissime_frame.grid(row=3, column=5, sticky=N, pady=5,columnspan=20)
         Button(Tantissime_frame, text="Write configuration", command=self.load_default_config, activeforeground="#f77f00").pack(side=LEFT)
         Button(Tantissime_frame, text="Open communication error interface", command=self.open_communicaton_GUI, activeforeground="#f77f00").pack(side=LEFT)
+        Button(Tantissime_frame, text="Rate measure", command=self.open_rate_window, activeforeground="#f77f00").pack(side=LEFT)
         Button(Tantissime_frame, text="Run prearation (TD + both scans)", command=self.run_prep, activeforeground="#f77f00").pack(side=LEFT)
         Button(Tantissime_frame, text="Launch TP", command=self.start_TP, activeforeground="blue").pack(side=RIGHT)
         self.NUM_TP = Entry(Tantissime_frame, width=4)
@@ -217,7 +220,7 @@ class menu():
         Label(scan_frame,text="E sigmas").pack(side=LEFT)
         self.E_thr_sigma = Entry(scan_frame, width = 4)
         self.E_thr_sigma.pack(side=LEFT)
-        Button(scan_frame, text="Load thr",command= lambda: self.load_thr(to_all = True, source = 'scan', sigma_T = int(self.T_thr_sigma.get()), sigma_E = int(self.E_thr_sigma.get()))).pack(side = LEFT)
+        Button(scan_frame, text="Load thr",command= lambda: self.load_thr(to_all = True, source = 'scan', sigma_T = float(self.T_thr_sigma.get()), sigma_E = float(self.E_thr_sigma.get()))).pack(side = LEFT)
         Label(self.advanced_threshold_settings,text="---Calculate thr fC from thr set---").pack(anchor=N)
         Button(self.advanced_threshold_settings, text="Calculate",command= self.calculate_FC_thr).pack(anchor=N)
         Button(self.advanced_threshold_settings, text = "Import thresholds from old run", command =self.import_old_conf).pack(anchor=N)
@@ -339,11 +342,16 @@ class menu():
                     Baseline_T1 = baseline_T[number]["TIG{}".format(T)]["CH{}".format(ch)][1]
                     Baseline_T2 = baseline_E[number]["TIG{}".format(T)]["CH{}".format(ch)][1]
                     if Baseline_T1 != "Fail":
-                        print (AN_CLASS.convert_to_fC(Baseline_T1-Vth_T1, 55))
+                        # print (AN_CLASS.convert_to_fC(Baseline_T1-Vth_T1, 55))
                         list_t.append(AN_CLASS.convert_to_fC(Baseline_T1-Vth_T1, 55))
                     if Baseline_T2 != "Fail":
-                        print (AN_CLASS.convert_to_fC(Baseline_T2-Vth_T2, 55))
+                        # print (AN_CLASS.convert_to_fC(Baseline_T2-Vth_T2, 55))
                         list_e.append(AN_CLASS.convert_to_fC(Baseline_T2-Vth_T2, 55))
+        print "T branch (0-4fC) {}/{}".format(len(list(x for x in list_t if 0 <= x <= 4)), len (list_t) )
+        print "E branch (0-4fC) {}/{}".format(len(list(x for x in list_e if 0 <= x <= 4)), len (list_e) )
+
+        print "T branch (>4fC)  {}/{}".format(len(list(x for x in list_t if 4.01 <= x <= 100)), len (list_t) )
+        print "E branch (>4fC)  {}/{}".format(len(list(x for x in list_e if 4.01 <= x <= 100)), len (list_e) )
         self.plot_window = Toplevel(self.main_window)
 
         self.fig = Figure(figsize=(14, 8))
@@ -367,6 +375,13 @@ class menu():
 
     def launch_scan_window(self):
         self.scan_wind = scan_GUI.menu(self.main_window, self.GEMROC_reading_dict)
+    def open_rate_window(self):
+        """
+        Open a window to asser the noise rate condition of the setup
+        :return:
+        """
+        self.rate_window = rate_interface.menu(self.main_window, self.GEMROC_reading_dict)
+
 
     def launch_controller(self):
         self.acq = acq_GUI.menu(False, self.main_window, self.GEMROC_reading_dict, self)
@@ -1397,6 +1412,7 @@ class menu():
             i += 1
         write = self.GEMROC_reading_dict['{}'.format(GEMROC)].GEM_COM.Set_param_dict_global(self.GEMROC_reading_dict[GEMROC].g_inst, "TxDDR", TIGER, 0)
         read = self.GEMROC_reading_dict['{}'.format(GEMROC)].GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(self.GEMROC_reading_dict[GEMROC].g_inst, TIGER)
+        read = self.GEMROC_reading_dict['{}'.format(GEMROC)].GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(self.GEMROC_reading_dict[GEMROC].g_inst, TIGER)
         try:
             self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.global_set_check(write, read)
         except:
@@ -1488,19 +1504,19 @@ class menu():
         thr_target = thr_target_entry.get()
         if thr_target == "This TIGER":
             TIGER = int(self.showing_TIGER.get())
-            self.load_thr(source=mode, sigma_T=int(self.thr_sigma_T.get()), sigma_E=int(self.thr_sigma_E.get()), first=TIGER, last=TIGER + 1)
+            self.load_thr(source=mode, sigma_T=float(self.thr_sigma_T.get()), sigma_E=float(self.thr_sigma_E.get()), first=TIGER, last=TIGER + 1)
             self.write_CHANNEL( self.GEMROC_reading_dict[self.showing_GEMROC.get()], TIGER, 64, False)
         if thr_target == "All TIGERs":
-            self.load_thr(source=mode, sigma_T=int(self.thr_sigma_T.get()), sigma_E=int(self.thr_sigma_E.get()))
+            self.load_thr(source=mode, sigma_T=float(self.thr_sigma_T.get()), sigma_E=float(self.thr_sigma_E.get()))
             for T in range(0,8):
                 self.write_CHANNEL(self.GEMROC_reading_dict[self.showing_GEMROC.get()], T, 64, False)
         if thr_target == "All TIGERs in all GEMROCs":
-            self.load_thr(source=mode, sigma_T=int(self.thr_sigma_T.get()), sigma_E=int(self.thr_sigma_E.get()), to_all=True)
+            self.load_thr(source=mode, sigma_T=float(self.thr_sigma_T.get()), sigma_E=float(self.thr_sigma_E.get()), to_all=True)
             for number,gemroc in self.GEMROC_reading_dict.items():
                 for T in range (0,8):
                     self.write_CHANNEL(gemroc, T,64)
 
-    def load_thr(self, to_all=False, source="auto", sigma_T=3, sigma_E=2, offset=0, first=0, last=8):
+    def load_thr(self, to_all=False, source="auto", sigma_T=3.0, sigma_E=2.0, offset=0, first=0, last=8):
         if not to_all:
             GEMROC = self.GEMROC_reading_dict[self.showing_GEMROC.get()]
             print (GEMROC)
@@ -1521,6 +1537,7 @@ class menu():
         for number, GEMROC in self.GEMROC_reading_dict.items():
             for TIGER in range(0, 8):
                 write = GEMROC.GEM_COM.Set_param_dict_global(GEMROC.g_inst, "TxDDR", int(TIGER), 0)
+                read = GEMROC.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(GEMROC.g_inst, int(TIGER))
                 read = GEMROC.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(GEMROC.g_inst, int(TIGER))
                 try:
                     GEMROC.GEM_COM.global_set_check(write, read)
@@ -1603,6 +1620,9 @@ class menu():
                                 break
                             # print self.GEMROC_reading_dict[GEMROC_key].c_inst.Channel_cfg_list[TIGER_id][channel_id]
             print ("Channel settings for {} loaded".format(GEMROC_key))
+
+
+
 def character_limit(entry_text):
     try:
         if int(entry_text.get()) < 0:

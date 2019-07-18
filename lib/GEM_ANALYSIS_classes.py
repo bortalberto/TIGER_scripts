@@ -1359,8 +1359,8 @@ class analisys_read:
 
 def find_baseline(data):
     max = np.max(data)
-    first = np.argmax(data > 0.9 * max)
-    last = 63 - np.argmax(np.flip(data) > 0.9 * max)
+    first = np.argmax(data > 0.6 * max)
+    last = 63 - np.argmax(np.flip(data) > 0.6 * max)
     return first, last, ((last - first) / 2 + first)
 
 def error_fit(data,TP_rate, Ebranch=True):
