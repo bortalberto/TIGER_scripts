@@ -95,7 +95,7 @@ class menu():
         Label(Title_frame2, text="GUFI software",font=("Times", 25)).pack(side=LEFT)
         Label(Title_frame2, image=self.icon_GUFI2).pack(side=LEFT)
 
-        Label(Title_frame, text="             v.3.0 -- 2019 -- INFN-TO (abortone@to.infn.it)",font=("Times", 10, "italic")).pack(anchor=SE, side=RIGHT)
+        Label(Title_frame, text="             v.3.1 -- 2019 -- INFN-TO (abortone@to.infn.it)",font=("Times", 10, "italic")).pack(anchor=SE, side=RIGHT)
         Title_frame2.pack(anchor=S)
         Title_frame.pack(fill=BOTH)
 
@@ -156,6 +156,7 @@ class menu():
         Button(Tantissime_frame, text="Open communication error interface", command=self.open_communicaton_GUI, activeforeground="#f77f00").pack(side=LEFT)
         Button(Tantissime_frame, text="Rate measure", command=self.open_rate_window, activeforeground="#f77f00").pack(side=LEFT)
         Button(Tantissime_frame, text="Run prearation (TD + both scans)", command=self.run_prep, activeforeground="#f77f00").pack(side=LEFT)
+        Button(Tantissime_frame, text="ToT Mode", command=self.ToT, activeforeground="blue").pack(side=RIGHT)
         Button(Tantissime_frame, text="Launch TP", command=self.start_TP, activeforeground="blue").pack(side=RIGHT)
         self.NUM_TP = Entry(Tantissime_frame, width=4)
         self.NUM_TP.insert(0,'2')
@@ -481,6 +482,7 @@ class menu():
     def double_enable(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():
             GEMROC.GEM_COM.double_enable(1, GEMROC.c_inst)
+        self.Launch_error_check['text']="Double threshold enabled"
 
     def thr_Scan(self, GEMROC_num, TIGER_num, branch=1):  # if GEMROC num=-1--> To all GEMROC, if TIGER_num=-1 --> To all TIGERs
         startT = time.time()
@@ -858,6 +860,14 @@ class menu():
         Button(single_use_frame, text='Read diag status', command=self.read_diagn_dipram).grid(row=0, column=2, sticky=W, pady=2)
         Button(single_use_frame, text='Write default LV conf', command=self.write_default_LV_conf).grid(row=1, column=2, sticky=W, pady=2)
 
+        clock_sampling_F=LabelFrame(single_use_frame)
+        clock_sampling_F.grid(row=3, column=2, sticky=W, pady=2,columnspan=8, rowspan=8)
+        Label(clock_sampling_F, text="Clock sampling polarity (HEX)", font=("Courier", 10)).grid(row=0, column=0, columnspan=8, sticky=S, pady=5)
+        self.samp_pol_pattern =Entry(clock_sampling_F, width=4)
+        self.samp_pol_pattern.grid(row=1, column=0, columnspan=1, sticky=S, pady=5)
+        Button (clock_sampling_F, command = self.write_clock_pol,text="Write").grid(row=1, column=1, columnspan=1, sticky=S, pady=5)
+        Button (clock_sampling_F, command = self.default_pol,text="Load_default (all GEMROC)").grid(row=1, column=2, columnspan=1, sticky=S, pady=5)
+
         self.field_array = []
         self.input_array = []
         self.label_array = []
@@ -958,8 +968,10 @@ class menu():
         self.Acq_state.pack(side=LEFT)
         another0 = Frame(self.third_row_frame)
         another0.grid(row=0, column=1, sticky=W, pady=2)
+
+
         another1 = LabelFrame(another0)
-        another1.grid(row=0, column=1, sticky=W, pady=2)
+        another1.grid(row=1, column=1, sticky=W, pady=2)
         Label(another1, text="Trigger window settings", font=("Courier", 20)).grid(row=0, column=0, columnspan=8, sticky=S, pady=5)
 
         Label(another1, text="L1_lat_B3clk_param").grid(row=1, column=2, sticky=S, pady=0)
@@ -980,10 +992,15 @@ class menu():
         Button(another1, text='Set L1 windows (all GEMROCs)', command=self.set_L1_window).grid(row=3, column=2, pady=20, sticky=E, columnspan=8)
 
         another2 = Frame(another0)
-        another2.grid(row=1, column=1, sticky=E, pady=2)
-
+        another2.grid(row=2, column=1, sticky=E, pady=2)
         Button(another2, text='Hard reset', width="10", command=lambda: self.hard_reset("False")).grid(row=3, column=2, pady=20, sticky=E, columnspan=8)
 
+    def write_clock_pol(self):
+        GEMROC = self.GEMROC_reading_dict[self.showing_GEMROC.get()]
+        GEMROC.GEM_COM.set_FnR_pattern(int(self.samp_pol_pattern.get(),16))
+    def default_pol(self):
+        for number, GEMROC in sorted(self.GEMROC_reading_dict.items(),cmp = sort_by_number):
+            GEMROC.GEM_COM.reload_default_pol_pattern()
     def set_L1_window(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():
             L1_lat_TIGER_clk_param = int(self.L1_entry1.get()) * 4  # default 358 <-> 8.6us
@@ -1106,6 +1123,10 @@ class menu():
                     DAQ_inst.DAQ_config_dict["Enable_DAQPause_Until_First_Trigger"] = 0
                     DAQ_inst.DAQ_config_dict["DAQPause_Set"] = 0
                     GEMROC.GEM_COM.DAQ_set_with_dict()
+            if value == 1:
+                self.Launch_error_check_op['text'] = "Pause mode"
+            else:
+                self.Launch_error_check_op['text'] = "Unpaused"
 
     def change_clock_mode(self, to_all=0, value=0):
         if to_all == 0:
@@ -1127,6 +1148,12 @@ class menu():
                 DAQ_inst = GEMROC.GEM_COM.gemroc_DAQ_XX
                 DAQ_inst.DAQ_config_dict["EXT_nINT_B3clk"] = value
                 GEMROC.GEM_COM.DAQ_set_with_dict()
+            if value == 1:
+                self.Launch_error_check_op['text'] = "External clock set"
+                self.Launch_error_check['text'] = "External clock set"
+            else:
+                self.Launch_error_check_op['text'] = "Internal clock set"
+                self.Launch_error_check['text'] = "Internal clock set"
 
     def change_acquisition_mode(self, to_all=False, value=1):  # value=1, TL
         if to_all == 0:
@@ -1146,7 +1173,12 @@ class menu():
                 DAQ_inst = GEMROC.GEM_COM.gemroc_DAQ_XX
                 DAQ_inst.DAQ_config_dict["TL_nTM_ACQ"] = value
                 GEMROC.GEM_COM.DAQ_set_with_dict()
-
+            if value == 1:
+                self.Launch_error_check_op['text'] = "Trigger-less mode"
+                self.Launch_error_check['text'] = "Trigger-less mode"
+            else:
+                self.Launch_error_check_op['text'] = "Trigger-match  mode"
+                self.Launch_error_check['text'] = "Trigger-match mode"
     def switch_mode(self, modebut):
         if modebut['text'] == "Trigger matched":
             modebut['text'] = "Trigger less"
@@ -1201,6 +1233,7 @@ class menu():
             "D_OVC_LIMIT_FEB0": ((L_array[4] >> 4) & 0x1FF),
             "A_OVV_LIMIT_FEB3": ((L_array[5] >> 13) & 0x1FF),
             "A_OVC_LIMIT_FEB3": ((L_array[5] >> 4) & 0x1FF),
+            "FnR_8bit_pattern": ((L_array[5] >> 22) & 0xFF),  # New field from clock sampling pol
             "A_OVV_LIMIT_FEB2": ((L_array[6] >> 13) & 0x1FF),
             "A_OVC_LIMIT_FEB2": ((L_array[6] >> 4) & 0x1FF),
             "A_OVV_LIMIT_FEB1": ((L_array[7] >> 13) & 0x1FF),
@@ -1219,6 +1252,8 @@ class menu():
             "TIMING_DLY_FEB1": ((L_array[10] >> 8) & 0x3F),
             "TIMING_DLY_FEB0": ((L_array[10] >> 0) & 0x3F)
         }
+        print read_dict
+
         for i in range(0, len(self.label_array)):
             label = self.label_array[i]
             field = self.field_array[i]
@@ -1281,6 +1316,8 @@ class menu():
             "DAQPause_Flag": ((L_array[4] >> 1) & 0x1),
             "top_daq_pll_unlocked_sticky_flag": ((L_array[4] >> 0) & 0x1)
         }
+
+        #Da eliminare:
         for i in range(0, len(self.label_array)):
             label = self.label_array[i]
             field = self.field_array[i]
@@ -1556,6 +1593,8 @@ class menu():
             self.GEMROC_reading_dict[GEMROC].GEM_COM.SynchReset_to_TgtFEB()
             self.GEMROC_reading_dict[GEMROC].GEM_COM.SynchReset_to_TgtTCAM()
             print ("{} reset".format(self.showing_GEMROC.get()))
+        self.Launch_error_check_op['text']="Synch reset sent"
+        self.Launch_error_check['text']="Synch reset sent"
 
     def error_led_update(self, update=1):
         self.ERROR_LED["image"] = self.icon_bad
@@ -1578,6 +1617,7 @@ class menu():
         self.Synch_reset(1)
         self.Synch_reset(1)
         self.set_pause_mode(True, 1)
+        self.Launch_error_check['text']="Fast configuration done"
 
     def change_trigger_mode(self, value, to_all=False):
         if to_all == True:
@@ -1620,7 +1660,17 @@ class menu():
                                 break
                             # print self.GEMROC_reading_dict[GEMROC_key].c_inst.Channel_cfg_list[TIGER_id][channel_id]
             print ("Channel settings for {} loaded".format(GEMROC_key))
-
+    def ToT(self):
+        """
+        Set parameters for the TOT mode in the whole system. Need to write the settings after that.
+        :return: 
+        """""
+        for GEMROC_KEY, GEMROC in self.GEMROC_reading_dict.items():
+            for T in range (0,8):
+                for ch in range (0,64):
+                    GEMROC.c_inst.Channel_cfg_list[T][ch]["QdcMode"] = 0
+                    GEMROC.c_inst.Channel_cfg_list[T][ch]["Integ"] = 0
+        self.Launch_error_check_op['text']="Channels registers set for TOT mode"
 
 
 def character_limit(entry_text):

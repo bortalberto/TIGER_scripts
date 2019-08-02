@@ -252,7 +252,7 @@ class menu():
         self.canvas2.pack(side=LEFT,fill=BOTH)
         Label(frame,text='Acquisition set single TIGERs',font=("Courier", 16)).pack()
         self.button_dict={}
-        for number, GEMROC in sorted(self.GEMROC_reading_dict.items()):
+        for number, GEMROC in sorted(self.GEMROC_reading_dict.items(),cmp=sort_by_number):
             a = Frame(frame)
             a.pack(pady=5,fill=BOTH)
             Label(a, text='{} Err(8/10):   '.format(number),font=("Courier", 10)).grid(row=1, column=0, sticky=NW, pady=4)
@@ -697,3 +697,16 @@ def all_children(window):
     return _list
 
 
+
+def sort_by_number(stringa1,stringa2):
+    number1=find_number(stringa1)
+    number2=find_number(stringa2)
+    return number1-number2
+
+def find_number(stringa):
+    if type(stringa) != tuple:
+        number = int(stringa.split(" ")[1])
+    else:
+        number = int(stringa[0].split(" ")[1])
+
+    return number

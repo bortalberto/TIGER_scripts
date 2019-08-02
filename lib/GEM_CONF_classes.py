@@ -10,7 +10,7 @@ import pickle
 
 command_code_shift = 11 # acr 2017-08-29
 target_TIGER_ID_shift = 8 # acr 2017-08-29
-GEMROC_CMD_LV_Num_of_params = 31 # acr 2018-01-15
+GEMROC_CMD_LV_Num_of_params = 32 # acr 2018-01-15
 GEMROC_CMD_LV_Num_Of_PktWords = 12 # acr 2018-01-15
 # acr 2018-04-24 GEMROC_CMD_DAQ_Num_of_params = 15 ## ACR 2018-03-15 AT IHEP: ADDED UDP_DATA_DESTINATION_IPADDR AND UDP_DATA_DESTINATION_IPPORT; GEMROC_CMD_DAQ_Num_of_params = 13 # acr 2018-01-15
 GEMROC_CMD_DAQ_Num_of_params = 16 # ACR 2018-04-23 AT CERN: ADDED Debug_functions_control_bits_U4
@@ -791,6 +791,10 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
       self.D_OVC_LIMIT_FEB3 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-29]
       self.D_OVV_LIMIT_FEB3 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-30]
       self.OVT_LIMIT_FEB3 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-31]
+      try: ##Giusto per non piantarci se da qualche parte rimane un file di configurazione vecchio (ricordarsi di togliere il try except)
+          self.FnR_8bit_pattern = self.parameter_array[GEMROC_CMD_LV_Num_of_params - 32] # acr 2019-07-25 added FnR_8bit_pattern
+      except:
+          self.FnR_8bit_pattern = 0
 
       self.TIGER_for_counter = 0 #TIGER on which we count error or hits
       self.HIT_counter_disable = 0 # 1= counting errors, 0= counting hits
@@ -817,7 +821,8 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
       self.cmd_word9 = ((self.OVT_LIMIT_FEB2 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB2 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB2 & 0x1FF) << 4)
       self.cmd_word8 = ((self.OVT_LIMIT_FEB1 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB1 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB1 & 0x1FF) << 4)
       self.cmd_word7 = ((self.OVT_LIMIT_FEB0 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB0 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB0 & 0x1FF) << 4)
-      self.cmd_word6 = ((self.A_OVV_LIMIT_FEB3 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB3 & 0x1FF) << 4)
+      # acr 2019-07-25 self.cmd_word6  = ((self.A_OVV_LIMIT_FEB3 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB3 & 0x1FF) << 4)
+      self.cmd_word6 = ((self.FnR_8bit_pattern & 0xFF) << 22) + ((self.A_OVV_LIMIT_FEB3 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB3 & 0x1FF) << 4) # acr 2019-07-25 added FnR_8bit_pattern
       self.cmd_word5 = ((self.A_OVV_LIMIT_FEB2 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB2 & 0x1FF) << 4)
       self.cmd_word4 = ((self.A_OVV_LIMIT_FEB1 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB1 & 0x1FF) << 4)
       self.cmd_word3 = ((self.A_OVV_LIMIT_FEB0 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB0 & 0x1FF) << 4)
@@ -853,6 +858,9 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
       self.TARGET_GEMROC_ID = GEMROC_ID_param & 0x1F
       self.cmd_header = (self.cmd_header & 0xFF00FFFF) + (self.TARGET_GEMROC_ID << 16)
 
+   def set_FnR_8bit_pattern(self, target_FnR_8bit_pattern_pattern): # ACR 2019-07-25 GEMconf_classes_2019 version2 -> version3: added F_nR pattern for DDR Edge selection of serial data from TIGER
+      self.FnR_8bit_pattern = target_FnR_8bit_pattern_pattern & 0xFF
+
    def set_FEB_PWR_EN_pattern(self, target_FEB_PWR_EN_pattern): # acr 2017-10-03
       self.FEB_PWR_EN_pattern = target_FEB_PWR_EN_pattern & 0xF
 
@@ -868,7 +876,6 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
       for i in range (0, len(self.command_list)):
          if (self.command_string == self.command_list[i]):
             self.gemroc_cmd_code = i
-
 ## acr 2018-01-15 updated definition: zero all setting when it's a 'CMD_GEMROC_LV_CFG_RD' ( = 2 ) or 'CMD_GEMROC_LV_IVT_READ' ( = 3 ) or 'CMD_GEMROC_TIMING_DELAYS_UPDATE' ( = 4 )
    def update_command_words(self):
       gemroc_cmd_tag = 0xC << 24
@@ -891,7 +898,8 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
          self.cmd_word9 = ((self.OVT_LIMIT_FEB2 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB2 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB2 & 0x1FF) << 4)
          self.cmd_word8 = ((self.OVT_LIMIT_FEB1 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB1 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB1 & 0x1FF) << 4)
          self.cmd_word7 = ((self.OVT_LIMIT_FEB0 & 0xFF) << 22) + ((self.D_OVV_LIMIT_FEB0 & 0x1FF) << 13) + ((self.D_OVC_LIMIT_FEB0 & 0x1FF) << 4)
-         self.cmd_word6 = ((self.A_OVV_LIMIT_FEB3 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB3 & 0x1FF) << 4)
+         # acr 2019-07-25 self.cmd_word6  = ((self.A_OVV_LIMIT_FEB3 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB3 & 0x1FF) << 4)
+         self.cmd_word6 = ((self.FnR_8bit_pattern & 0xFF) << 22) + ((self.A_OVV_LIMIT_FEB3 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB3 & 0x1FF) << 4)  # acr 2019-07-25 added FnR_8bit_pattern
          self.cmd_word5 = ((self.A_OVV_LIMIT_FEB2 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB2 & 0x1FF) << 4)
          self.cmd_word4 = ((self.A_OVV_LIMIT_FEB1 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB1 & 0x1FF) << 4)
          self.cmd_word3 = ((self.A_OVV_LIMIT_FEB0 & 0x1FF) << 13) + ((self.A_OVC_LIMIT_FEB0 & 0x1FF) << 4)

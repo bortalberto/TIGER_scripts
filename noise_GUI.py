@@ -497,7 +497,10 @@ class noise_measure ():
         with open(filename, 'rb') as f:
            TP_cof_dict = pickle.load(f)
         for number,GEMROC in self.GEMROC_reading_dict.items():
-            GEMROC.g_inst.load_TP_cal(TP_cof_dict)
+            try:
+                GEMROC.g_inst.load_TP_cal(TP_cof_dict)
+            except KeyError:
+                pass
             GEMROC.g_inst.load_specif_settings(GEMROC.GEM_COM.conf_folder+sep+"specific_conf_GLOBAL_for_TP")
             for T in range (0,8):
                 GEMROC.GEM_COM.Set_param_dict_global(GEMROC.g_inst, "FE_TPEnable", T, 1)
@@ -563,7 +566,7 @@ class noise_measure ():
         with open("." + sep + "conf"+ sep + "advanced_threshold_setting" + sep + "noise_fit.pickle", 'w') as f:
             pickle.dump(self.TPfits, f)
 
-    def SAVE_baseline(self,NOT_FIT = False):
+    def SAVE_baseline(self,NOT_FIT = True):
         """
         Saves the value of the baseline for advanced threshold placement
         """
@@ -576,9 +579,9 @@ class noise_measure ():
 
         with open("." + sep + "conf" + sep + "advanced_threshold_setting" + sep + name +".pickle", 'w') as f:
             if NOT_FIT:
-                pickle.dump(self.baseline_pos, f)
+                pickle.dump(self.baseline_pos, f,protocol=2)
             else:
-                pickle.dump(self.baseline, f)
+                pickle.dump(self.baseline, f,protocol=2)
         print (self.E_branch.get())
     def switch_to_tp_distr(self):   
         self.strart_button["text"] = "Acquire test pulses"
@@ -595,7 +598,7 @@ class baseline_exit(noise_measure):
                     if any(matrix[TIG][channel]) != 0:
                         print ("TIG%s CH%s" % (TIG, channel))
                         self.baseline_pos[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)] = AN_CLASS.find_baseline(matrix[TIG][channel])
-                        self.baseline[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)] = AN_CLASS.gaus_fit_baseline(matrix[TIG][channel], 0, 0, 0)[0]
+                        # self.baseline[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)] = AN_CLASS.gaus_fit_baseline(matrix[TIG][channel], 0, 0, 0)[0]
                         # self.chi[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[4]
                         # self.TPchi[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[5]
                         # if values[2][2]!="Fail":Save base

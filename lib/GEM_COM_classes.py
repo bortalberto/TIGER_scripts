@@ -100,6 +100,8 @@ class communication:  ##The directory are declared here to avoid multiple declar
 
         cfg_filename = self.conf_folder + sep + 'GEMROC_ALL_def_cfg_LV_2018_v2.txt'
         self.time_delay_path = self.conf_folder + sep + 'time_delay_save'
+        self.polarity_path = self.conf_folder + sep + 'clock_pol_save'
+
         self.gemroc_LV_XX = GEM_CONF_classes.gemroc_cmd_LV_settings(self.GEMROC_ID, 'NONE', 1, cfg_filename, self.time_delay_path)
 
         cfg_filename = self.conf_folder + sep + 'GEMROC_ALL_def_cfg_DAQ_2018_v6.txt'
@@ -931,12 +933,28 @@ class communication:  ##The directory are declared here to avoid multiple declar
                         COMMAND_STRING = 'CMD_GEMROC_TIMING_DELAYS_UPDATE'
                         command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
                         # print command_echo
-                        print "GEMROC  Set {}".format(self.GEMROC_ID, timing_array)
+                        print "GEMROC{} TD Set {}".format(self.GEMROC_ID, timing_array)
                         return command_echo
 
-        except:
+        except IOError:
             print "TD file not found"
 
+    def reload_default_pol_pattern(self, display=True):
+        self.gemroc_LV_XX.set_target_GEMROC(self.GEMROC_ID)
+        try:
+            with open(self.polarity_path, "r") as f:
+                while True:
+                    line = f.readline()
+                    if (line.split())[0] == "GEMROC" and int(line.split()[1]) == self.GEMROC_ID:
+                        timing_array = f.readline().split()
+                        polarity_pattern = int(timing_array[3])*2**3+ int(timing_array[2])*2**2 + int(timing_array[1])*2**1 + int(timing_array[0])*2**0
+                        command_echo=self.set_FnR_pattern(polarity_pattern)
+                        if display:
+                            print "GEMROC{}  Set {}".format(self.GEMROC_ID, polarity_pattern)
+                        return command_echo
+
+        except IOError:
+            print "Polarity file not found"
     def save_TD_delay(self, safe_delays):
         path = self.time_delay_path
         with open(path, 'r') as f:
@@ -1672,6 +1690,7 @@ class communication:  ##The directory are declared here to avoid multiple declar
             print ('\nD_OVV_LIMIT_FEB0 : %d' % ((L_array[4] >> 13) & 0x1FF))
             print ('\nD_OVC_LIMIT_FEB0 : %d' % ((L_array[4] >> 4) & 0x1FF))
             print ('\nA_OVV_LIMIT_FEB3 : %d' % ((L_array[5] >> 13) & 0x1FF))
+            print ('\nFnR_8bit_pattern : %d' % ((L_array[5] >> 22) & 0xFF)) # New field from clock sampling pol
             print ('\nA_OVC_LIMIT_FEB3 : %d' % ((L_array[5] >> 4) & 0x1FF))
             print ('\nA_OVV_LIMIT_FEB2 : %d' % ((L_array[6] >> 13) & 0x1FF))
             print ('\nA_OVC_LIMIT_FEB2 : %d' % ((L_array[6] >> 4) & 0x1FF))
@@ -2199,3 +2218,9 @@ class communication:  ##The directory are declared here to avoid multiple declar
                 self.Set_param_dict_channel(reg, "TriggerMode2E", T, ch, 1, send_command=False)
                 self.Set_param_dict_channel(reg, "TriggerMode2T", T, ch, 1, send_command=False)
                 self.Set_param_dict_channel(reg, "Vth_T1", T, ch, 63)
+
+    def set_FnR_pattern(self,target_FnR_8bit_pattern_pattern):
+        self.gemroc_LV_XX.set_FnR_8bit_pattern(target_FnR_8bit_pattern_pattern)
+        self.send_GEMROC_LV_CMD("CMD_GEMROC_LV_CFG_WR")
+        echo = self.send_GEMROC_LV_CMD("CMD_GEMROC_LV_IVT_UPDATE")
+        self.display_log_GEMROC_LV_CfgReg_readback(echo, display_enable_param=False,log_enable_param=False)

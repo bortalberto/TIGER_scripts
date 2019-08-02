@@ -206,22 +206,51 @@ class reader:
         self.beginning_time = time.time()
         self.start_socket()
         while time.time()-self.beginning_time<max_time:
-            data, addr = self.dataSock.recvfrom(self.BUFSIZE)
-            reversed_data = (list(reversed(data)))  # Swaps the byte order
-            this_word={}
-            if (reversed_data[0] >> 6) == 0:  # It's a hit
-                this_word = {
-                    "word_type": "hit",
-                    "TIGER": (reversed_data[0] >> 3) & 0x7,
-                    "Channel": (reversed_data[1] >> 2) & 0x3F,
-                    # "TAC": (reversed_data[1]) & 0x3,
-                    # "T_coarse": (reversed_data[2] << 8 | reversed_data[3] | reversed_data[4] >> 8) & 0xFFFF,
-                    # "E_coarse": (reversed_data[4] << 4 | reversed_data[5] >> 4) & 0x3FF,
-                    # "T_fine": (reversed_data[5] << 6 | reversed_data[   6] >> 2) & 0x3FF,
-                    # "E_fine": (reversed_data[6] << 8 | reversed_data[7]) & 0x3FF
+            data_pack, addr = self.dataSock.recvfrom(self.BUFSIZE)
+            data_pack = bytearray(data_pack)
+            for slices in range(0,len(data_pack)/8):
+                data=data_pack[slices*8:slices*8+8]
+                # print "LEN {}".format(len(data))
+                reversed_data = (list(reversed(data)))  # Swaps the byte order
+                this_word={}
 
-                }
-                acq_matrix[this_word["TIGER"]][this_word["Channel"]]+=1
+
+                if (reversed_data[0] >> 5) == 0:  # It's a hit
+                    this_word = {
+                        "word_type": "hit",
+                        "TIGER": (reversed_data[0]) & 0x7,
+                        "Channel": (reversed_data[1]) & 0x3F,
+
+                        # "TAC": (reversed_data[1]) & 0x3,
+                        # "T_coarse": (reversed_data[2] << 8 | reversed_data[3] | reversed_data[4] >> 8) & 0xFFFF,
+                        # "E_coarse": (reversed_data[4] << 4 | reversed_data[5] >> 4) & 0x3FF,
+                        # "T_fine": (reversed_data[5] << 6 | reversed_data[   6] >> 2) & 0x3FF,
+                        # "E_fine": (reversed_data[6] << 8 | reversed_data[7]) & 0x3FF
+
+                    }
+                # hexdata = binascii.hexlify(data)
+                # string= "{:064b}".format(int(hexdata,16))
+                # inverted=[]
+                # for i in range (8,0,-1):
+                #     inverted.append(string[(i-1)*8:i*8])
+                # string_inv="".join(inverted)
+                # int_x = int(string_inv,2)
+                # raw = "{:064b}  ".format(int_x)
+                # print raw
+                #
+                # if (((int_x & 0xFF00000000000000) >> 59) == 0x00):  # It's a hit
+                #     this_word = {
+                #         "word_type": "hit",
+                #         "TIGER": ((int_x >> 56) & 0x7),
+                #         "Channel": ((int_x >> 48) & 0x3F)
+                #         # "TAC": (reversed_data[1]) & 0x3,
+                #         # "T_coarse": (reversed_data[2] << 8 | reversed_data[3] | reversed_data[4] >> 8) & 0xFFFF,
+                #         # "E_coarse": (reversed_data[4] << 4 | reversed_data[5] >> 4) & 0x3FF,
+                #         # "T_fine": (reversed_data[5] << 6 | reversed_data[   6] >> 2) & 0x3FF,
+                #         # "E_fine": (reversed_data[6] << 8 | reversed_data[7]) & 0x3FF
+                #
+                #     }
+                    acq_matrix[this_word["TIGER"]][this_word["Channel"]]+=1
         self.dataSock.close()
         return acq_matrix
     def build_hist_and_miss(self, frameword_check=True):

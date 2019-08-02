@@ -63,9 +63,7 @@ class analisys_conf: #Analysis class used for configurations10
         self.GEMROC_ID=self.GEM_COM.GEMROC_ID
         self.c_inst=c_inst
         self.g_inst=g_inst
-        self.log_path = "Analysis_log_GEMROC_{}.txt".format(self.GEMROC_ID)
-        f=open(self.log_path,'w')
-        f.close()
+        self.log_path = "".format(self.GEMROC_ID)
 
         self.currentCH=0
         self.currentVTH=0
@@ -100,8 +98,6 @@ class analisys_conf: #Analysis class used for configurations10
     def thr_conf(self, test_r, first_TIGER_to_SCAN, last_TIGER_to_SCAN): #Configuration on run for scan
         # self.GEM_COM.DAQ_set(self.GEM_COM.gemroc_DAQ_XX, self.GEMROC_ID, 0xff, 0x0, 0, 0, 1, 0)
 
-        with open(self.log_path, 'a') as log_file:
-            log_file.write("{} -- Starting thr scan\n".format(time.ctime()))
         for T in range(first_TIGER_to_SCAN, last_TIGER_to_SCAN):
             self.GEM_COM.Set_param_dict_global(self.g_inst, "CounterEnable",T,1)
             self.GEM_COM.Set_param_dict_global(self.g_inst, "CounterPeriod",T,3)
@@ -130,8 +126,6 @@ class analisys_conf: #Analysis class used for configurations10
                         self.currentTIGER=T
                         self.currentVTH = i
                         self.currentCH = j
-                        with open(self.log_path, 'a') as log_file:
-                            log_file.write("@@@@@@   {} -- Set Vth={} on channel {} \n".format(time.ctime(),i,j))
 
                         word_count = 0
                         self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
@@ -143,11 +137,9 @@ class analisys_conf: #Analysis class used for configurations10
                                 word_count = test_r.data_save_thr_scan(j, i, T, word_count, save_binout=False, save_txt=False)
                             #print "after word count {}".format(word_count)
                             except:
-                                with open(self.log_path, 'a') as log_file:
-                                    log_file.write("{} -- Timed out \n".format(time.ctime(), i, j))
-                                    print ("\nTIMED OUT\n")
-                                    time.sleep(0.1)
-                                    break
+                                print ("\nTIMED OUT\n")
+                                time.sleep(0.1)
+                                break
                         test_r.dataSock.close()
                         # globalcheck= self.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(self.g_inst, T)
                         # if (int(binascii.b2a_hex(globalset), 16)) != ((int(binascii.b2a_hex(globalcheck), 16)) - 2048):
@@ -184,8 +176,7 @@ class analisys_conf: #Analysis class used for configurations10
 
         return
     def thr_conf_using_GEMROC_COUNTERS(self,test_r, first_TIGER_to_SCAN, last_TIGER_to_SCAN,print_to_screen=True):
-        with open(self.log_path, 'a') as log_file:
-            log_file.write("{} -- Starting thr scan\n".format(time.ctime()))
+
         thr_scan_matrix=np.zeros((8,64,64))
         for T in range(first_TIGER_to_SCAN, last_TIGER_to_SCAN):
             self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, 64, 1, 3)
@@ -280,8 +271,6 @@ class analisys_conf: #Analysis class used for configurations10
 
         X = "Autotune done"
     def thr_conf_using_GEMROC_COUNTERS_progress_bar(self, test_r, first_TIGER_to_SCAN, last_TIGER_to_SCAN, pipe_out, print_to_screen=True, branch=1):
-        with open(self.log_path, 'a') as log_file:
-            log_file.write("{} -- Starting thr scan\n".format(time.ctime()))
         thr_scan_matrix=np.zeros((8,64,64))
         # self.GEM_COM.sfo
         if branch == 1:
@@ -377,11 +366,10 @@ class analisys_conf: #Analysis class used for configurations10
                                 word_count = test_r.data_save_thr_scan(j, i, T, word_count, save_binout=False, save_txt=False)
                             # print "after word count {}".format(word_count)
                             except:
-                                with open(self.log_path, 'a') as log_file:
-                                    log_file.write("{} -- Timed out \n".format(time.ctime(), i, j))
-                                    print ("\nTIMED OUT\n")
-                                    time.sleep(0.1)
-                                    break
+
+                                print ("\nTIMED OUT\n")
+                                time.sleep(0.1)
+                                break
                         test_r.dataSock.close()
                         position=(T*64*64)+(j*64)+(i)
                         pipe_out.send(position)
@@ -880,11 +868,11 @@ class analisys_conf: #Analysis class used for configurations10
         for i in range(0, 4):
             safe_delays[i]=int(safe_delays[i]//1)
 
-        for T in range (0,8):
-            self.GEM_COM.Set_param_dict_global(self.g_inst, "FE_TPEnable",T,0)
-            for ch in range (0,64):
-                self.GEM_COM.Set_param_dict_channel(self.c_inst, "TP_disable_FE", T, ch, 0)
-                self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode",T,ch,3)
+        # for T in range (0,8):
+        #     self.GEM_COM.Set_param_dict_global(self.g_inst, "FE_TPEnable",T,0)
+        #     for ch in range (0,64):
+        #         self.GEM_COM.Set_param_dict_channel(self.c_inst, "TP_disable_FE", T, ch, 0)
+        #         self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode",T,ch,3)
         return safe_delays
 
     def plot_with_pooling(self,delay_vector,error_matrix,safe_delays):
@@ -1445,6 +1433,10 @@ def error_fit(data,TP_rate, Ebranch=True):
                 print ("Failed noise fit {}".format(e))
                 popt2 = ("Fail", "Fail", "Fail")
                 pcov2 = np.zeros((3, 3))
+            if ydata[0]>10000:
+                print "First point not zero, check settings"
+                popt2 = ("Fail", "Fail", "Fail")
+                pcov2 = np.zeros((3, 3))
         else:
             popt2 = ("Fail", "Fail", "Fail")
             pcov2 = np.zeros((3, 3))
@@ -1505,5 +1497,4 @@ class Thread_handler(Thread):
             # print ("Channel={}".format(self.configurer.currentCH))
             # print ("VTH={}".format(self.configurer.currentVTH))
             self.reader.data_save_thr_scan(self.configurer.currentCH, self.configurer.currentVTH, self.configurer.currentTIGER, False, True)
-        with open(self.configurer.log_path, 'a') as log_file:
-            log_file.write("{} --Timed out, closing acquisition\n".format(time.ctime()))
+
