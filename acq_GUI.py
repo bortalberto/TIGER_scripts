@@ -72,6 +72,7 @@ class menu():
         self.icon_on = PhotoImage(file="." + sep + 'icons' + sep + 'on.gif')
         self.icon_off = PhotoImage(file="." + sep + 'icons' + sep + 'off.gif')
         self.icon_bad = PhotoImage(file="." + sep + 'icons' + sep + 'bad.gif')
+        self.mappa = PhotoImage(file="." + sep + 'icons' + sep + 'mappa.gif')
         self.grid_frame = Frame(self.master)
         self.grid_frame.pack()
         Button(self.grid_frame, text='ROC 00', command=lambda: self.toggle(0)).grid(row=0, column=0, sticky=NW, pady=4)
@@ -157,14 +158,14 @@ class menu():
 
         self.LBUDP0 = Label(self.errors, text='UDP packet error  ')
         self.LBUDP0.grid(row=2, column=1, sticky=S, pady=4)
-        Label(self.errors, text='  TIGER missing').grid(row=2, column=2, sticky=S, pady=4)
+        # Label(self.errors, text='  TIGER missing').grid(row=2, column=2, sticky=S, pady=4) #Tolto TIGER missing perche' inutile
         if not self.std_alone:
             self.open_adv_acq()
 
         self.LED_UDP = Label(self.errors, image=self.icon_off)
         self.LED_UDP.grid(row=4, column=1)
-        self.FIELD_TIGER = Label(self.errors, text='-', background='white')
-        self.FIELD_TIGER.grid(row=4, column=2)
+        # self.FIELD_TIGER = Label(self.errors, text='-', background='white')
+        # self.FIELD_TIGER.grid(row=4, column=2)
 
         self.plot_window = Frame(self.master)
         self.plot_window.pack(side=LEFT)
@@ -181,6 +182,8 @@ class menu():
         self.LBTIG = Label(self.corn0, text='TIGER {}'.format(self.plotting_TIGER), font=("Courier", 14))
         self.LBTIG.grid(row=2, column=1, sticky=S, pady=4)
         self.butrightT = Button(self.corn0, text='>', command=lambda: self.change_G_or_T(1, "T")).grid(row=2, column=2, sticky=S, pady=4)
+        self.FEB_label = Label(self.corn0, text='FEB {}'.format(int(round((self.plotting_TIGER+self.plotting_gemroc*8)/2))), font=("Courier", 14))
+        self.FEB_label.grid(row=3, column=1, sticky=S, pady=4)
         self.corn1 = Frame(self.plot_window)
         self.corn1.pack()
 
@@ -207,6 +210,9 @@ class menu():
                 self.toggle(n)
         self.set_last_folder()
 
+        self.map_frame= Frame(self.master)
+        self.map_frame.pack(side=RIGHT)
+        Label(self.map_frame, image=self.mappa).pack()
     def set_last_folder(self):
         """
         Funzione per andare all'ultima cartella
@@ -428,7 +434,7 @@ class menu():
                 self.plotting_TIGER = 0
             if self.plotting_TIGER == 8:
                 self.plotting_TIGER = 7
-
+        self.FEB_label['text'] = "FEB {}" .format(int(round((self.plotting_TIGER+self.plotting_gemroc*8)/2)))
         self.refresh_plot()
 
     def refresh_plot(self):
@@ -520,9 +526,9 @@ class menu():
                                 self.LED_UDP['image'] = self.icon_bad
                             else:
                                 self.LED_UDP['image'] = self.icon_on
-                            for i in range(0, len(self.GEM)):
-                                for j in range(0, 8):
-                                    self.FIELD_TIGER['text'] = '{}'.format(self.TM_errors[i][0])
+                            # for i in range(0, len(self.GEM)):
+                                # for j in range(0, 8):
+                                #     self.FIELD_TIGER['text'] = '{}'.format(self.TM_errors[i][0])
                             self.LBUDP0['text'] = "UDP packet error  "
 
                             self.LBerror['text'] = "Acquisition errors check(TM) "
@@ -533,20 +539,20 @@ class menu():
                                 self.LED_UDP['image'] = self.icon_bad
                             else:
                                 self.LED_UDP['image'] = self.icon_on
-                            for i in range(0, len(self.GEM)):
-                                for j in range(0, 8):
-                                    self.FIELD_TIGER['text'] = '{}'.format(self.TL_errors[i][0])
+                            # for i in range(0, len(self.GEM)):
+                                # for j in range(0, 8):
+                                #     self.FIELD_TIGER['text'] = '{}'.format(self.TL_errors[i][0])
                             self.LBUDP0['text'] = "Frameword missing   "
 
                             self.LBerror['text'] = "Acquisition errors check(TL) "
             else:
                 self.LBerror['text'] = "GEMROC not acquired "
                 self.LED_UDP['image'] = self.icon_off
-                self.FIELD_TIGER['text'] = '-'
+                # self.FIELD_TIGER['text'] = '-'
         else:
             self.LBerror['text'] = "Data not analyzed "
             self.LED_UDP['image'] = self.icon_off
-            self.FIELD_TIGER['text'] = '-'
+            # self.FIELD_TIGER['text'] = '-'
         #self.FIELD_810['text'] = '{}'.format(int(self.errors_counters_810[self.plotting_gemroc])) TODO check later
 
     def stop_acq(self, auto=False):
@@ -554,7 +560,7 @@ class menu():
             self.restart.set(False)
         self.run_analysis.set(False)
         if self.simple_analysis.get():
-            print "Stopping analizing"
+            print "Stopping and analyzing"
         else:
             print "Stopping"
         self.but6.config(state='normal')
@@ -600,7 +606,6 @@ class menu():
         self.master.destroy()
         self.errors.destroy()
         self.plot_window.destroy()
-        self.destroy()
 
 
 if __name__ == '__main__':
@@ -623,9 +628,11 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
         if self.caller.mode == 'TM':
             print "Acquiring for {:.2f} seconds".format(float(self.caller.time)*60)
         self.start_time=time.time()
+        stopper= Process(target=self.stopper)
+        stopper.run()
         while self.running:
-            if (time.time()-self.start_time)>float(self.caller.time)*60:
-                self.caller.relaunch_acq()
+            # if (time.time()-self.start_time)>float(self.caller.time)*60:
+            #     self.caller.relaunch_acq()
             time.sleep(10)
             if self.caller.run_analysis.get():
                 self.update_err_and_plot_onrun()
@@ -645,30 +652,45 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
             for process, pipe_out in zip(process_list, pipe_list):
                 #if process.is_alive():
                     process.join()
-                    try:
-                        key, value = pipe_out.recv()
-                        if value!=0 :
-                            with open(self.caller.logfile, 'a') as f:
-                                f.write("{} -- {} : {} 8/10 bit errors since last reset\n".format(time.ctime(), key,value ))
-                            #     GEMROC_numb = "GEMROC {}".format((key.split()[1]))
-                            #     TIGER_numb=int(key.split()[3])
-                            # self.caller.Change_Reading_Tigers((GEMROC_numb,TIGER_numb), ForceOff=True)
-                        # if value!=0 and (self.caller.GEMROC_reading_dict[key]):
+                    key, value = pipe_out.recv()
+                    if key not in self.TIGER_error_counters.keys():
+                        self.TIGER_error_counters[key]=0
+                    # print ("{}".format(self.TIGER_error_counters[key]))
+                    # print  type(self.TIGER_error_counters[key])
+                    if value!=0 and int(self.TIGER_error_counters[key]) != 16777215:
+                        with open(self.caller.logfile, 'a') as f:
+                            f.write("{} -- {} : {} 8/10 bit errors since last reset\n".format(time.ctime(), key,value ))
+                            print("{} -- {} : {} 8/10 bit errors since last reset\n".format(time.ctime(), key,value ))
+
+                        #     GEMROC_numb = "GEMROC {}".format((key.split()[1]))
+                        #     TIGER_numb=int(key.split()[3])
+                        # self.caller.Change_Reading_Tigers((GEMROC_numb,TIGER_numb), ForceOff=True)
+                    # if value!=0 and (self.caller.GEMROC_reading_dict[key]):
 
 
-                            #self.caller.relaunch_acq()
+                        #self.caller.relaunch_acq()
 
-                            # GEMROC=self.GEMROC_reading_dict[number]
-                            # GEMROC.GEM_COM.SynchReset_to_TgtFEB()
-                            # GEMROC.GEM_COM.SynchReset_to_TgtTCAM()
-                        self.TIGER_error_counters[key] = value
+                        # GEMROC=self.GEMROC_reading_dict[number]
+                        # GEMROC.GEM_COM.SynchReset_to_TgtFEB()
+                        # GEMROC.GEM_COM.SynchReset_to_TgtTCAM()
+                    self.TIGER_error_counters[key] = value
 
-                    except Exception as e:
-                        print "Error: {}".format(e)
                     process.terminate()
             self.caller.refresh_8_10_counters_and_TimeOut()
             del process_list[:]
             del pipe_list[:]
+    def stopper(self):
+        while True:
+            if self.caller.mode=="TM":
+                time_max = float(self.caller.time)*60
+            else:
+                time_max = float(self.caller.time)
+            # print (time.time() - self.start_time)
+            # print (time_max)
+            if (time.time() - self.start_time) > (time_max):
+                self.caller.relaunch_acq()
+                return 0
+            time.sleep(1)
     def update_err_and_plot_onrun(self):
         self.caller.build_errors()
         self.caller.refresh_error_status()
@@ -677,6 +699,7 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
                     #print self.TM_errors
     def acquire_errors(self, GEMROC_num, TIGER, pipe_in, reset):
         GEMROC = self.GEMROC_reading_dict[GEMROC_num]
+        GEMROC.GEM_COM.set_counter(int(TIGER), 1, 0)
         if reset:
             GEMROC.GEM_COM.reset_counter()
             time.sleep(1)

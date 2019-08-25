@@ -44,11 +44,11 @@ class noise_rate_measure ():
 
         self.start_frame=Frame(self.main_window)
         self.start_frame.pack()
-        self.queue = Queue.Queue()
-        self.getterino=Get_rate(self,self.queue)
-        GMAX=int(max(int(key.split(" ")[1]) for key in self.GEMROC_reading_dict.keys()))
-        self.count_matrix_channel = np.zeros((GMAX+1, 8, 64))
-        self.count_matrix_TIGER = np.zeros((GMAX+1, 8))
+        # self.queue = Queue.Queue()
+        # self.getterino=Get_rate(self,self.queue)
+        self.GMAX=int(max(int(key.split(" ")[1]) for key in self.GEMROC_reading_dict.keys()))
+        self.count_matrix_channel = np.zeros((self.GMAX+1, 8, 64))
+        self.count_matrix_TIGER = np.zeros((self.GMAX+1, 8))
         # self.rate_matrix_channel = np.zeros((GMAX+1, 8, 64))
         # self.rate_matrix_TIGER = np.zeros((GMAX+1, 8))
         self.GEMROC = StringVar(self.main_window)
@@ -59,9 +59,12 @@ class noise_rate_measure ():
         Label(self.all_sys_window, text=self.title, font=("Courier", 25)).grid(row=0, column=2, sticky=S, pady=4, columnspan=10)
         self.first_lane_frame=Frame(self.start_frame)
         self.first_lane_frame.grid(row=1, column=2, sticky=S, pady=4,columnspan=10)
-        self.start_button = Button(self.first_lane_frame, text="Start rate acquisition", command=self.start_acq)
+        self.start_button = Button(self.first_lane_frame, text="Acquire one cycle", command=self.start_acq)
         self.start_button.pack(side=LEFT)
-        Button(self.first_lane_frame, text="Stop rate acquisition", command=self.stop_acq ).pack(side=LEFT)
+        Button(self.first_lane_frame, text="Update plot", command=self.update_data ).pack(side=LEFT)
+        Button(self.first_lane_frame, text="Clear", command=self.clear ).pack(side=LEFT)
+
+        # Button(self.first_lane_frame, text="Stop rate acquisition", command=self.stop_acq ).pack(side=LEFT)
         fields_optionsG = self.GEMROC_reading_dict.keys()
         # fields_optionsG.append("All")
         OptionMenu(self.single_GEMROC, self.GEMROC, *fields_optionsG).grid(row=0, column=2, sticky=S, pady=4, columnspan=20)
@@ -105,6 +108,7 @@ class noise_rate_measure ():
         self.canvas_GEMROC.flush_events()
         self.toolbar_GEMROC = NavigationToolbar2Tk(self.canvas_GEMROC, self.plot_frame_GEMROC)
         self.toolbar_GEMROC.draw()
+        self.acquire_thread= Acquire_rate(self,self.GEMROC_reading_dict)
 
     def change_plot_G(self, sv):
         # print sv.get()
@@ -135,9 +139,6 @@ class noise_rate_measure ():
 
         self.canvas_total.draw()
         self.canvas_total.flush_events()
-    def change_plot_T(self, sv):
-        print sv.get()
-
 
     def _insert(self,name):
         self.tabControl.add(self.all_sys_window, text=name)  # Add the tab
@@ -153,24 +154,29 @@ class noise_rate_measure ():
         :return:
         """
         self.start_button["state"]="disabled"
-        self.acquire_thread= Acquire_rate(self,self.GEMROC_reading_dict, self.queue)
-        self.count_matrix_channel = np.zeros((20, 8, 64))
-        self.acquire_thread.number_of_cycles = np.zeros((20))
-        self.acquire_thread.running=True
-        self.acquire_thread.start()
+        self.acquire_thread.acquire()
+        self.start_button["state"]="normal"
 
-    def stop_acq(self):
+    # def stop_acq(self):
+    #     """
+    #     Stop rate acquisition
+    #     :return:
+    #     """
+    #     try:
+    #         if self.acquire_thread.running== True:
+    #             self.acquire_thread.running=False
+    #             self.start_button["state"]="normal"
+    #     except AttributeError:
+    #         pass
+
+
+    def clear(self):
         """
-        Stop rate acquisition
+        clear the matrix
         :return:
         """
-        try:
-            if self.acquire_thread.running== True:
-                self.acquire_thread.running=False
-                self.acquire_thread.join()
-                self.start_button["state"]="normal"
-        except AttributeError:
-            pass
+        self.count_matrix_channel = np.zeros((self.GMAX+1, 8, 64))
+        self.acquire_thread.number_of_cycles = 0
 
 
     def update_data(self):
@@ -179,7 +185,7 @@ class noise_rate_measure ():
                 for T in range (0,8):
                     G = key.split(" ")[1]
                     self.count_matrix_TIGER[int(G)][T] = np.sum(self.count_matrix_channel[int(G)][T])
-                    self.update_plot(np.divide(self.count_matrix_TIGER, self.acquire_thread.number_of_cycles[int(G)]),"tot")
+                    self.update_plot(self.count_matrix_TIGER/self.acquire_thread.number_of_cycles,"tot")
         if self.tabControl.index("current") ==1:
             self.update_plot(self.count_matrix_channel,"GEMROC")
 
@@ -190,8 +196,12 @@ class noise_rate_measure ():
             self.heatmap_total.set_data(data)
             self.canvas_total.draw()
             self.canvas_total.flush_events()
-            MIN_count=int(np.min(data))
-            MAX_count=int(np.max(data))
+            try:
+                MIN_count=int(np.min(data))
+                MAX_count=int(np.max(data))
+            except ValueError:
+                MIN_count=1
+                MAX_count=1
             self.cbar_total.set_clim(vmin=MIN_count, vmax=MAX_count)
             cbar_ticks = np.linspace(MIN_count, MAX_count, num=11, endpoint=True)
             self.cbar_total.set_ticks(cbar_ticks)
@@ -200,7 +210,7 @@ class noise_rate_measure ():
 
         if mode == "GEMROC":
             G = int(self.GEMROC.get().split(" ")[1])
-            data = data / self.acquire_thread.number_of_cycles[int(G)]
+            data = data / self.acquire_thread.number_of_cycles
             MIN_count = int(np.min(data))
             MAX_count = int(np.max(data))
 
@@ -240,58 +250,60 @@ class noise_rate_measure ():
         Handle the closing protocol stopping the acquisition
         :return:
         """
-        self.stop_acq()
+        # self.stop_acq()
         self.main_window.destroy()
 
 
-class Acquire_rate(Thread):
+class Acquire_rate():
     """
     Multhithread class to acquire rate while updating the plots
     """
-    def __init__(self, caller, GEMROC_handler, queue):
+    def __init__(self, caller, GEMROC_handler):
         self.caller=caller
-        self.queue = queue
-        self.count_matrix = np.zeros((20,8,64))
-        self.number_of_cycles = np.zeros((20))
+        self.count_matrix = np.zeros((self.caller.GMAX+1,8,64))
+        self.number_of_cycles = 0
         self.GEMROC_reading_dic = GEMROC_handler
         self.running = True
         for number, GEMROC in self.GEMROC_reading_dic.items():
             GEMROC.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["TL_nTM_ACQ"] = 0
-        Thread.__init__(self)
-    def run(self):
+
+    def acquire(self):
         # while self.running:
-            for key,GEMROC in self.GEMROC_reading_dic.items():
-                number = int(key.split(" ")[1])
-                self.number_of_cycles[number]+=1
-                GEMROC.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["TL_nTM_ACQ"] = 1
-                GEMROC.GEM_COM.DAQ_set_with_dict()
-                acquirer = GEM_ACQ.reader(number)
-                self.count_matrix[number] = acquirer.acquire_rate(1)
-                # print "GEMROC {}: {}".format(number, self.count_matrix[number])
-                # self.queue.put(self.count_matrix)
-                print "Number of cycles{}".format(self.number_of_cycles)
-            self.caller.count_matrix_channel += self.count_matrix
-            self.caller.update_data()
+        self.number_of_cycles += 1
+        for key,GEMROC in self.GEMROC_reading_dic.items():
+            number = int(key.split(" ")[1])
+            GEMROC.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["TL_nTM_ACQ"] = 1
+            GEMROC.GEM_COM.DAQ_set_with_dict()
+            acquirer = GEM_ACQ.reader(number)
+            self.count_matrix[number] = acquirer.acquire_rate(1)
+            # print "GEMROC {}: {}".format(number, self.count_matrix[number])
+            # self.queue.put(self.count_matrix)
+            print "Number of cycles{}".format(self.number_of_cycles)
+            GEMROC.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["TL_nTM_ACQ"] = 0
+            GEMROC.GEM_COM.DAQ_set_with_dict()
 
-class Get_rate(Thread):
-    """
-    Thread to get the numbers and update plots
-    """
-    def __init__(self,caller, queue):
-        self.queue = queue
-        self.caller=caller
-        Thread.__init__(self)
-
-    def run(self):
-        while True:
-            if not self.queue.empty():
-                print "Dimensione coda: {}".format(self.queue.qsize())
-                self.caller.count_matrix_channel += self.queue.get()
-                print "GEMROC {}: {}".format(0, self.caller.count_matrix_channel[0][0])
-
-                self.caller.update_data()
-            else:
-                time.sleep(0.2)
+        self.caller.count_matrix_channel += self.count_matrix
+        self.caller.update_data()
+#
+# class Get_rate(Thread):
+#     """
+#     Thread to get the numbers and update plots
+#     """
+#     def __init__(self,caller, queue):
+#         self.queue = queue
+#         self.caller=caller
+#         Thread.__init__(self)
+#
+#     def run(self):
+#         while True:
+#             if not self.queue.empty():
+#                 print "Dimensione coda: {}".format(self.queue.qsize())
+#                 self.caller.count_matrix_channel += self.queue.get()
+#                 print "GEMROC {}: {}".format(0, self.caller.count_matrix_channel[0][0])
+#
+#                 self.caller.update_data()
+#             else:
+#                 time.sleep(0.2)
 
 def heatmap(data, row_labels, col_labels, ax=None,
             cbar_kw={}, cbarlabel="",spawn_cb=True, **kwargs):

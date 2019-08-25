@@ -76,6 +76,7 @@ class menu():
 
     def toggle(self, GEMROC_number):
         sync_winz=Toplevel(self.error_window)
+        sync_winz.wm_title(GEMROC_number)
         Label(sync_winz, text='GEMROC {} error counters'.format(GEMROC_number), font=("Courier", 18)).pack()
         frame_counters=Frame(sync_winz)
         frame_counters.pack()
@@ -221,7 +222,6 @@ class menu():
             number_int=int(key.split()[1])
             GEMROC="GEMROC "+str(number_int)
             self.GEMROC_error_counters[GEMROC]+=int(value)
-
         for key,label in self.GEMROC_error_counters_display.items():
             label['text']=self.GEMROC_error_counters[key]
         for key,label in self.TIGER_error_counters_display.items():

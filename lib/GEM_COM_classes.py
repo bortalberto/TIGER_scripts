@@ -28,12 +28,13 @@ elif OS == 'linux2':
 else:
     print("ERROR: OS {} non compatible".format(OS))
     sys.exit()
-local_test = True
+local_test = False
 
 class communication:  ##The directory are declared here to avoid multiple declaration
 
     def __init__(self, gemroc_ID, feb_pwr_pattern, keep_cfg_log=False, keep_IVT_log=False):
         self.conf_folder = "conf"
+        self.lib_folder = "lib"
         self.Tscan_folder = "thr_scan"
         self.Escan_folder = "thr_scan_vth2"
         self.Noise_folder = "noise_scan"

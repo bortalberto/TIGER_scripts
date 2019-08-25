@@ -327,8 +327,9 @@ class menu():
         self.canvas2.configure(scrollregion=self.canvas2.bbox("all"), width=1200, height=900)
 
     def calculate_FC_thr(self):
-        file_T = ("." + sep + "conf" + sep + "advanced_threshold_setting" + sep + "Baseline_T" +".pickle")
-        file_E = ("." + sep + "conf" + sep + "advanced_threshold_setting" + sep + "Baseline_E" +".pickle")
+        file_T = ("." + sep + "conf" + sep + "advanced_threshold_setting" + sep + "real_baseline_T" +".pickle")
+        # file_E = ("." + sep + "conf" + sep + "advanced_threshold_setting" + sep + "Baseline_E" +".pickle")
+        file_E = ("." + sep + "conf" + sep + "advanced_threshold_setting" + sep + "real_baseline_E" +".pickle")
         list_t = []
         list_e = []
         with open (file_T, 'rb') as f:
@@ -340,21 +341,39 @@ class menu():
                 for ch in range (0,64):
                     Vth_T1 = GEMROC.c_inst.Channel_cfg_list[T][ch]["Vth_T1"]
                     Vth_T2 = GEMROC.c_inst.Channel_cfg_list[T][ch]["Vth_T2"]
-                    Baseline_T1 = baseline_T[number]["TIG{}".format(T)]["CH{}".format(ch)][1]
-                    Baseline_T2 = baseline_E[number]["TIG{}".format(T)]["CH{}".format(ch)][1]
-                    if Baseline_T1 != "Fail":
+                    Baseline_T1 = baseline_T[int(number.split(" ")[1])][T][ch] #Real baseline contains a pickle with a dictionary
+                    # Baseline_T1 = baseline_T[number]["TIG{}".format(T)]["CH{}".format(ch)][1]
+                    Baseline_T2 = baseline_E[int(number.split(" ")[1])][T][ch] #Real baseline contains a pickle with a dictionary
+
+                    # Baseline_T2 = baseline_E[number]["TIG{}".format(T)]["CH{}".format(ch)][1]
+                    if Baseline_T1 != "Fail" and ch!=62:  ##Valido per L2, #TODO da togliere quando facciamo per L1
                         # print (AN_CLASS.convert_to_fC(Baseline_T1-Vth_T1, 55))
                         list_t.append(AN_CLASS.convert_to_fC(Baseline_T1-Vth_T1, 55))
-                    if Baseline_T2 != "Fail":
+                    # if Baseline_T2 != "Fail":
+                    #     # print (AN_CLASS.convert_to_fC(Baseline_T2-Vth_T2, 55))
+                    #     list_e.append(AN_CLASS.convert_to_fC(Baseline_T2-Vth_T2, 55))
+
+                    if Baseline_T2 != 0 and ch!=62:
                         # print (AN_CLASS.convert_to_fC(Baseline_T2-Vth_T2, 55))
                         list_e.append(AN_CLASS.convert_to_fC(Baseline_T2-Vth_T2, 55))
-        print "T branch (0-4fC) {}/{}".format(len(list(x for x in list_t if 0 <= x <= 4)), len (list_t) )
-        print "E branch (0-4fC) {}/{}".format(len(list(x for x in list_e if 0 <= x <= 4)), len (list_e) )
+                        if AN_CLASS.convert_to_fC(Baseline_T2-Vth_T2, 55)>18:
+                            print "GEMROC {}, TIGER {}, CH {}, has threshold at {} fC".format(number, T, ch, AN_CLASS.convert_to_fC(Baseline_T2-Vth_T2, 55))
 
-        print "T branch (>4fC)  {}/{}".format(len(list(x for x in list_t if 4.01 <= x <= 100)), len (list_t) )
-        print "E branch (>4fC)  {}/{}".format(len(list(x for x in list_e if 4.01 <= x <= 100)), len (list_e) )
+        print "T branch (0-2fC) {}/{}".format(len(list(x for x in list_t if 0 < x <= 2)), len (list_t) )
+        print "E branch (0-2fC) {}/{}".format(len(list(x for x in list_e if 0 < x <= 2)), len (list_e) )
+
+        print "T branch (2-4fC) {}/{}".format(len(list(x for x in list_t if 2 < x <= 4)), len (list_t) )
+        print "E branch (2-4fC) {}/{}".format(len(list(x for x in list_e if 2 < x <= 4)), len (list_e) )
+
+        print "T branch (4-5fC) {}/{}".format(len(list(x for x in list_t if 4 < x <= 5)), len (list_t) )
+        print "E branch (4-5fC) {}/{}".format(len(list(x for x in list_e if 4 < x <= 5)), len (list_e) )
+
+        print "T branch (>5fC) {}/{}".format(len(list(x for x in list_t if 5 < x <= 100)), len (list_t) )
+        print "E branch (>5fC) {}/{}".format(len(list(x for x in list_e if 5 < x <= 100)), len (list_e) )
+
+        # print "T branch (>4fC)  {}/{}".format(len(list(x for x in list_t if 4.01 < x <= 100)), len (list_t) )
+        # print "E branch (>4fC)  {}/{}".format(len(list(x for x in list_e if 4.01 < x <= 100)), len (list_e) )
         self.plot_window = Toplevel(self.main_window)
-
         self.fig = Figure(figsize=(14, 8))
         self.thr_T = self.fig.add_subplot(121)
         self.thr_T.hist(list_t, bins=50)
@@ -465,8 +484,8 @@ class menu():
             self.entry_text.trace("w", lambda *args: character_limit(self.entry_text))
             self.Channel_IN.grid(row=1, column=2, sticky=W, pady=4)
             self.Go = Button(self.second_row_frame, text='Go', command=self.TIGER_CHANNEL_configurator)
-            self.Go.grid(row=1, column=5, sticky=NW, pady=4)
 
+            self.Go.grid(row=1, column=5, sticky=NW, pady=4)
         elif self.configure_MODE.get() == "LV and diagnostic":
             self.Go = Button(self.second_row_frame, text='Go', command=self.LV_diag)
             self.Go.grid(row=1, column=5, sticky=NW, pady=4)
@@ -475,9 +494,13 @@ class menu():
         for number, GEMROC in self.GEMROC_reading_dict.items():
             GEMROC.GEM_COM.FEBPwrEnPattern_set(255)
 
+        self.Launch_error_check['text'] = "FEB power ON"
+
     def power_off_FEBS(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():
             GEMROC.GEM_COM.FEBPwrEnPattern_set(0)
+
+        self.Launch_error_check['text'] = "FEB power OFF"
 
     def double_enable(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():
@@ -1654,17 +1677,22 @@ class menu():
                             channel_id = int(channel_key.split(" ")[1])
                             # print ("{} - {} - {}".format(gemroc_id[0], tiger_id[0], channel_id[0]))
                             try:
-                                self.GEMROC_reading_dict[GEMROC_key].c_inst.Channel_cfg_list[TIGER_id][channel_id] = dict3.copy()
+                                # self.GEMROC_reading_dict[GEMROC_key].c_inst.Channel_cfg_list[TIGER_id][channel_id] = dict3.copy()
+                                self.GEMROC_reading_dict[GEMROC_key].c_inst.Channel_cfg_list[TIGER_id][channel_id]["Vth_T1"] = dict3["Vth_T1"]
+                                self.GEMROC_reading_dict[GEMROC_key].c_inst.Channel_cfg_list[TIGER_id][channel_id]["Vth_T2"] = dict3["Vth_T2"]
+                                self.GEMROC_reading_dict[GEMROC_key].c_inst.Channel_cfg_list[TIGER_id][channel_id]["TriggerMode"] = dict3["TriggerMode"]
+
                             except KeyError as e:
                                 print 'I a KeyError - missing %s. Probably a GEMROC is offline '% str(e)
                                 break
                             # print self.GEMROC_reading_dict[GEMROC_key].c_inst.Channel_cfg_list[TIGER_id][channel_id]
             print ("Channel settings for {} loaded".format(GEMROC_key))
+
     def ToT(self):
         """
         Set parameters for the TOT mode in the whole system. Need to write the settings after that.
         :return: 
-        """""
+        """
         for GEMROC_KEY, GEMROC in self.GEMROC_reading_dict.items():
             for T in range (0,8):
                 for ch in range (0,64):

@@ -68,8 +68,6 @@ class noise_measure ():
         self.TD_scan_result={}
         number_list=[]
         i=0
-        self.first_row=Frame(self.error_window)
-        self.first_row.grid(row=1, column=1, sticky=S, pady=4,columnspan=10)
 
         self.plotting_gemroc = 0
         self.plotting_TIGER = 0
@@ -85,6 +83,15 @@ class noise_measure ():
         self.CHANNEL_num_first = IntVar(self.error_window)
         self.CHANNEL_num_last = IntVar(self.error_window)
 
+        fields_optionsG = self.GEMROC_reading_dict.keys()
+        fields_optionsG.append("All")
+        OptionMenu(self.second_row_frame, self.GEMROC_num, *fields_optionsG).pack(side=LEFT)
+
+        self.icon_worry  = PhotoImage(file="." + sep + 'icons' + sep + "gufi" + sep +   'worry.gif')
+        self.icon_OK     = PhotoImage(file="." + sep + 'icons' + sep + "gufi" + sep +   'OK.gif')
+        self.icon_cry    = PhotoImage(file="." + sep + 'icons' + sep + "gufi" + sep +   'cry.gif')
+        self.icon_sleep  = PhotoImage(file="." + sep + 'icons' + sep + "gufi" + sep +   'sleep.gif')
+        self.icon_mappa  = PhotoImage(file="." + sep + 'icons' + sep + 'mappa_mini.gif')
 
 
         Label(self.second_row_frame, text='First TIGER   ').pack(side=LEFT)
@@ -100,9 +107,6 @@ class noise_measure ():
         Entry(self.second_row_frame, width=4, textvariable=self.CHANNEL_num_last).pack(side=LEFT)
 
 
-        fields_optionsG = self.GEMROC_reading_dict.keys()
-        fields_optionsG.append("All")
-        OptionMenu(self.first_row, self.GEMROC_num, *fields_optionsG).pack(side=LEFT)
         self.third_row=Frame(self.error_window)
         self.third_row.grid(row=3, column=1, sticky=S, pady=4,columnspan=10)
         if self.title == "Noise_measure":
@@ -123,20 +127,25 @@ class noise_measure ():
 
             Button(self.third_row, text="Sampling time scan", command=self.sampling_time_scan).pack(side=LEFT,padx=25)
             Button(self.third_row, text="Save noise levels for thr setting", command=self.SAVE_noise_for_thr_setting).pack(side=LEFT,padx=2)
+            Button(self.third_row, text="Fast noise scan", command=self.fast_noise_scan).pack(side=LEFT, padx=2)
         if self.title == "Baseline estimation":
             Button(self.third_row, text="Save baseline levels for thr setting", command=self.SAVE_baseline).pack(side=LEFT,padx=2)
 
         #Button(self.third_row, text="Switch to TP distribution measurment", command=self.switch_to_tp_distr).pack(side=LEFT, padx=25)
+        with open ("."+sep+"lib"+sep+"mapping.pickle","rb") as filein:
+            self.mapping_matrix=pickle.load(filein)
+        self.master_frame=Frame(self.error_window)
+        self.master_frame.grid(row=4, column=2, sticky=N, pady=4,columnspan=1, rowspan=2)
 
-        self.corn0 = Frame(self.error_window)
-        self.corn0.grid(row=4, column=0, sticky=S, pady=4,columnspan=10)
+        self.corn0 = Frame(self.master_frame)
+        self.corn0.grid(row=4, column=0, sticky=S, pady=10,columnspan=1)
         self.LBOCC = Label(self.corn0, text='Threshold scan', font=("Times", 18))
         self.LBOCC.grid(row=0, column=1, sticky=S, pady=4)
         self.butleftG = Button(self.corn0, text='<', command=lambda: self.change_G_or_T(-1, "G")).grid(row=1, column=0, sticky=S, pady=4)
         self.LBGEM = Label(self.corn0, text='GEMROC {}'.format(self.plotting_gemroc), font=("Courier", 12))
         self.LBGEM.grid(row=1, column=1, sticky=S, pady=4)
         self.butrightG = Button(self.corn0, text='>', command=lambda: self.change_G_or_T(1, "G")).grid(row=1, column=2, sticky=S, pady=4)
-        self.butleftT = Button(self.corn0, text='<', command=lambda: self.change_G_or_T(-1, "T")).grid(row=2, column=0, sticky=S, pady=4)
+        self.butleftT = Button(self.corn0, text='<', command=lambda: self.change_G_or_T(-1, "T")).grid(row=2, column=0 , sticky=S, pady=4)
         self.LBTIG = Label(self.corn0, text='TIGER {}'.format(self.plotting_TIGER), font=("Courier", 12))
         self.LBTIG.grid(row=2, column=1, sticky=S, pady=4)
         self.butrightT = Button(self.corn0, text='>', command=lambda: self.change_G_or_T(1, "T")).grid(row=2, column=2, sticky=S, pady=4)
@@ -145,21 +154,35 @@ class noise_measure ():
         self.usefullframe.grid(row=3, column=1, sticky=S, pady=4)
         Button(self.usefullframe, text='<', command=lambda: self.change_G_or_T(-1, "C")).grid(row=0, column=0, sticky=S, pady=4)
 
+
+        self.corn2 = Frame(self.master_frame)
+        self.corn2.grid(row=4, column=1, sticky=N, pady=10,padx=50,columnspan=1)
+        Label(self.corn2, text='Strip', font=("Times", 18)).pack()
+        self.strip = Label(self.corn2, text="S-0", width=20)
+        self.strip.pack()
+
+        Label(self.corn2, text='FEB', font=("Times", 18)).pack()
+        self.FEB_label = Label(self.corn2, text="0", width=20)
+        self.FEB_label.pack()
+        Label(self.corn2, image=self.icon_mappa).pack()
+
         self.LBCH = Label(self.usefullframe, text='CHANNEL ', font=("Courier", 12))
         self.LBCH.grid(row=0, column=1, sticky=S, pady=4)
         self.CHentry=Entry(self.usefullframe,textvariable=self.plotting_Channel,width=4)
         self.CHentry.grid(row=0, column=2, sticky=S, pady=4)
         Button(self.usefullframe, text='Go', command=lambda: self.change_G_or_T(1, "GO")).grid(row=0, column=3, sticky=S, pady=4)
         Button(self.usefullframe, text='>', command=lambda: self.change_G_or_T(1, "C")).grid(row=0, column=4, sticky=S, pady=4)
-
+        if self.title == "Noise_measure":
+            self.gufo = Label(self.corn0, image=self.icon_sleep)
+            self.gufo.grid(row=4, column=1, sticky=S, pady=4)
         self.corn1 = Frame(self.error_window)
-        self.corn1.grid(row=12, column=1, sticky=S, pady=4,columnspan=100)
+        self.corn1.grid(row=5, column=6, sticky=S, pady=4,columnspan=10)
 
         # Plot
         x = np.arange(0, 64)
         v = np.zeros((64))
 
-        self.fig = Figure(figsize=(6,6))
+        self.fig = Figure(figsize=(9,7))
         self.plot_rate = self.fig.add_subplot(111)
         self.scatter, = self.plot_rate.plot(x, v, 'r+',label = "data")
 
@@ -167,7 +190,6 @@ class noise_measure ():
 
         self.plot_rate.set_title("TIGER {}, GEMROC {}".format(self.plotting_TIGER, self.plotting_gemroc))
         self.plot_rate.set_ylabel("Rate [Hz]", fontsize=14)
-
         self.plot_rate.set_xlabel("Threshold", fontsize=14)
         self.plot_rate.ticklabel_format(style='sci', scilimits=(-3, 4), axis='both')
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.corn1)
@@ -220,6 +242,28 @@ class noise_measure ():
     def _insert(self,name):
         self.tabControl.add(self.error_window, text=name)  # Add the tab
 
+    def fast_noise_scan(self):
+        self.start_TP()
+        self.load_TP_settings()
+        # self.TIGER_num_first.set(7)
+        # self.TIGER_num_last.set(0)
+        self.CHANNEL_num_last.set(15)
+        self.CHANNEL_num_first.set(10)
+        # self.noise_scan()
+        self.fit()
+        for GEMROC,dict0 in self.TPfits.items():
+            noise_list = []
+            for TIGER,dict1 in self.TPfits[GEMROC].items():
+                for CH,dictionary in self.TPfits[GEMROC][TIGER].items():
+                    parameters=self.TPfits[GEMROC][TIGER][CH]
+                    if parameters[0] != "Fail" and parameters[2]>TP_rate/5 and parameters[2]<TP_rate*5:
+                        noise = AN_CLASS.convert_to_fC(parameters[1], 55)
+                        cov = AN_CLASS.convert_to_fC(self.TPcovs[GEMROC][TIGER][CH][1][1], 55)
+                        noise_list.append(noise)
+                    else:
+                        noise=-1
+                        cov=9999
+            print "GEMROC: {}, average noise: {}".format(GEMROC,np.average(noise_list))
 
     def noise_scan(self,vth2=False):  # if GEMROC num=-1--> To all GEMROC, if TIGER_num=-1 --> To all TIGERs
         self.bar_win = Toplevel(self.error_window)
@@ -305,16 +349,21 @@ class noise_measure ():
 
         for T in range(first, last):  # TIGER
             for J in range(firstch, lastch):  # Channel
+                GEM_COM.Set_param_dict_channel(c_inst, "TP_disable_FE", T, J, 0)
+
                 self.efine_average["GEMROC {}".format(GEMROC_ID)]["TIG{}".format(T)]["CH{}".format(J)]=[]
                 self.efine_average["GEMROC {}".format(GEMROC_ID)]["TIG{}".format(T)]["CH{}".format(J)]=[]
-                for i in range(0, 11):
-                    print "Min Max integ time = {}".format(i)
+                print ("TIGER {},Ch: {}".format(T,J))
+                for i in range(5, 6):
+                    # print "Min Max integ time = {}".format(i)
                     GEM_COM.Set_param_dict_channel(c_inst, "MaxIntegTime", T,J, i)
                     GEM_COM.Set_param_dict_channel(c_inst, "MinIntegTime", T,J, i)
                     GEM_COM.SynchReset_to_TgtFEB()
                     average,stdv,total=test_r.acquire_Efine(J,T,0.5)
                     self.efine_average["GEMROC {}".format(GEMROC_ID)]["TIG{}".format(T)]["CH{}".format(J)].append(average)
                     self.efine_stdv["GEMROC {}".format(GEMROC_ID)]["TIG{}".format(T)]["CH{}".format(J)].append(stdv)
+                GEM_COM.Set_param_dict_channel(c_inst, "TP_disable_FE", T, J, 1)
+
 
     def noise_scan_process(self, number,  pipe_out,vth2):
         self.sampling_scan = False
@@ -378,7 +427,8 @@ class noise_measure ():
                 self.plotting_Channel = 63
         if G_or_T == "GO":
             self.plotting_Channel=int(self.CHentry.get())
-
+        self.strip["text"] = self.mapping_matrix[self.plotting_gemroc][self.plotting_TIGER][self.plotting_Channel]
+        self.FEB_label["text"] = int(round((self.plotting_TIGER+self.plotting_gemroc*8)/2))
         self.refresh_plot()
 
 
@@ -469,7 +519,17 @@ class noise_measure ():
                         translated_gas=AN_CLASS.gaus(np.arange(TPparameters[0],64,1.0),*Bas_parameters_fit)+TPparameters[2]
                         self.line_list.append( self.plot_rate.plot(np.arange(TPparameters[0],64,1.0),translated_gas , '--',label= "Gaussian baseline estimation"))
                     self.plot_rate.set_title("ROC {},TIG {}, CH {} , Sigma Noise={} fC".format(self.plotting_gemroc, self.plotting_TIGER, self.plotting_Channel, noise))
-
+                    if self.title == "Noise_measure":
+                        if noise=="Canno't fit":
+                            self.gufo["image"]=self.icon_sleep
+                        elif noise<0.6 and self.mapping_matrix[self.plotting_gemroc][self.plotting_TIGER][self.plotting_Channel].split("-")[0]=="X" :
+                            self.gufo["image"]=self.icon_worry
+                        elif noise < 0.25 and self.mapping_matrix[self.plotting_gemroc][self.plotting_TIGER][self.plotting_Channel].split("-")[0] == "V":
+                            self.gufo["image"] = self.icon_worry
+                        elif noise>2:
+                            self.gufo["image"]=self.icon_cry
+                        else:
+                            self.gufo["image"]=self.icon_OK
                     if self.title == "Baseline estimation":
                         if Bas_parameters_fit[0] != "Fail" :
                             self.line_list.append(self.plot_rate.plot(np.arange(0, 64, 1.0), AN_CLASS.gaus(np.arange(0,64,1.0), *Bas_parameters_fit), '--', label="Gaussian baseline estimation"))
@@ -479,6 +539,8 @@ class noise_measure ():
                 else:
                     self.plot_rate.set_title("GEMROC not active")
                     self.scatter.set_ydata(np.zeros((64)))
+
+
         self.canvas.draw()
         self.canvas.flush_events()
     def SAVE(self):

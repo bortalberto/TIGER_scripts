@@ -1033,11 +1033,17 @@ class analisys_read:
 
             if (time.time()-start_time) >run_time:
                 break
+
         average=np.mean(efine)
         sigma=np.std(efine)
         total=len(efine)
         self.dataSock.close()
-        print ("Total events: {2}, average Efine {0}, sigma {1}".format(average, sigma,total))
+        with open("calibration_FEB_5",'a+') as filein:
+            filein.write("TIG:{}, CH:{}\n".format(TIG,ch))
+            filein.write("Total events: {2}, average Efine {0}, sigma {1}\n".format(average, sigma,total))
+            filein.write("{}\n".format(efine))
+        print ("Total events: {2}, average Efine {0}, sigma {1}".format(average, sigma, total))
+        print ("{}".format(efine))
         return (average,sigma,total)
 
     def data_save_thr_scan_with_counter(self, ch, vth, TIG, frame_count, save_binout=False, save_txt=False):

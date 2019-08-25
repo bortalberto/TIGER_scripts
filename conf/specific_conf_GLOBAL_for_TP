@@ -21,7 +21,6 @@ ADD 2 4 IPostamp -3
 ADD 2 5 IPostamp -3
 ADD 2 6 IPostamp -3
 ADD 2 7 IPostamp -3
-ADD 2 0 IPostamp -3
 ##
 ADD 3 6 IPostamp -1
 ADD 3 6 TP_Vcal_ref -1
