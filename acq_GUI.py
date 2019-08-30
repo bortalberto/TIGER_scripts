@@ -24,7 +24,7 @@ else:
     print("ERROR: OS {} non compatible".format(OS))
     sys.exit()
 
-
+debug=True
 class menu():
     def __init__(self, std_alone=True, main_winz=None, GEMROC_reading_dict=None,father=None):
 
@@ -327,8 +327,11 @@ class menu():
     def relaunch_acq(self):
         self.stop_acq(True)
         if self.restart.get():
-
+            if debug:
+                print "Restarting"
             if self.PMT:
+                if debug:
+                    print "PMT down"
                 self.PMT_OFF()
             time.sleep(10)
             # self.father.reactivate_TIGERS()
@@ -342,9 +345,13 @@ class menu():
             time.sleep(1)
 
             self.father.Synch_reset()
+            if debug:
+                print "Setting pause"
             self.father.set_pause_mode(to_all=True,value=1)
 
             if self.PMT:
+                if debug:
+                    print "PMT ON"
                 self.PMT_on()
             time.sleep(20)
 
@@ -559,10 +566,12 @@ class menu():
         if not auto:
             self.restart.set(False)
         self.run_analysis.set(False)
+
         if self.simple_analysis.get():
             print "Stopping and analyzing"
         else:
             print "Stopping"
+
         self.but6.config(state='normal')
         if not self.std_alone:
             self.error_thread.running = False
@@ -572,7 +581,7 @@ class menu():
 
         for i in range(0, len(self.GEM)):
             if self.thread[i].isAlive():
-                self.thread[i].join()
+                self.thread[i].join(timeout=10)
         for i in self.GEM:
             if i.TIMED_out == True:
                 self.LED[int(i.GEMROC_ID)]['image'] = self.icon_bad
@@ -623,19 +632,22 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
             self.number_list.append(int(istance.GEMROC_ID))
         self.GEM=GEM
         Thread.__init__(self)
-        self.caller=caller
+        self.caller = caller
+
     def run(self):
         if self.caller.mode == 'TM':
             print "Acquiring for {:.2f} seconds".format(float(self.caller.time)*60)
         self.start_time=time.time()
-        stopper= Process(target=self.stopper)
-        stopper.run()
+        self.stopper_thr = stopper(self.caller,self.start_time,)
+        self.stopper_thr.start()
         while self.running:
+            # print ("CIao")
             # if (time.time()-self.start_time)>float(self.caller.time)*60:
             #     self.caller.relaunch_acq()
-            time.sleep(10)
+            time.sleep(12)
             if self.caller.run_analysis.get():
                 self.update_err_and_plot_onrun()
+                time.sleep(30)
             process_list = []
             pipe_list = []
             TIGER_LIST = [0, 1, 2, 3, 4, 5, 6, 7]
@@ -648,49 +660,28 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
                         process_list.append(p)
                         pipe_list.append(pipe_out)
                         p.start()
-                        time.sleep(0.001)
+                        time.sleep(0.01)
             for process, pipe_out in zip(process_list, pipe_list):
                 #if process.is_alive():
-                    process.join()
-                    key, value = pipe_out.recv()
-                    if key not in self.TIGER_error_counters.keys():
-                        self.TIGER_error_counters[key]=0
-                    # print ("{}".format(self.TIGER_error_counters[key]))
-                    # print  type(self.TIGER_error_counters[key])
-                    if value!=0 and int(self.TIGER_error_counters[key]) != 16777215:
-                        with open(self.caller.logfile, 'a') as f:
-                            f.write("{} -- {} : {} 8/10 bit errors since last reset\n".format(time.ctime(), key,value ))
-                            print("{} -- {} : {} 8/10 bit errors since last reset\n".format(time.ctime(), key,value ))
-
-                        #     GEMROC_numb = "GEMROC {}".format((key.split()[1]))
-                        #     TIGER_numb=int(key.split()[3])
-                        # self.caller.Change_Reading_Tigers((GEMROC_numb,TIGER_numb), ForceOff=True)
-                    # if value!=0 and (self.caller.GEMROC_reading_dict[key]):
-
-
-                        #self.caller.relaunch_acq()
-
-                        # GEMROC=self.GEMROC_reading_dict[number]
-                        # GEMROC.GEM_COM.SynchReset_to_TgtFEB()
-                        # GEMROC.GEM_COM.SynchReset_to_TgtTCAM()
-                    self.TIGER_error_counters[key] = value
-
+                    try:
+                        process.join(timeout=20)
+                        key, value = pipe_out.recv()
+                        if key not in self.TIGER_error_counters.keys():
+                            self.TIGER_error_counters[key] = 0
+                        if value != 0 and int(self.TIGER_error_counters[key]) != 16777215:
+                            with open(self.caller.logfile, 'a') as f:
+                                f.write("{} -- {} : {} 8/10 bit errors since last reset\n".format(time.ctime(), key, value))
+                                print("{} -- {} : {} 8/10 bit errors since last reset\n".format(time.ctime(), key, value))
+                        self.TIGER_error_counters[key] = value
+                    except Exception as e:
+                        print ("Error controller timeout: {}".format(e))
                     process.terminate()
             self.caller.refresh_8_10_counters_and_TimeOut()
             del process_list[:]
             del pipe_list[:]
-    def stopper(self):
-        while True:
-            if self.caller.mode=="TM":
-                time_max = float(self.caller.time)*60
-            else:
-                time_max = float(self.caller.time)
-            # print (time.time() - self.start_time)
-            # print (time_max)
-            if (time.time() - self.start_time) > (time_max):
-                self.caller.relaunch_acq()
-                return 0
-            time.sleep(1)
+        self.stopper_thr.running = False
+        if debug:
+            print "Error thread stopped"
     def update_err_and_plot_onrun(self):
         self.caller.build_errors()
         self.caller.refresh_error_status()
@@ -709,6 +700,35 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
         pipe_in.close()
 
 
+class stopper(Thread):  # In order to scan during configuration is mandatory to use multithreading
+    def __init__(self, caller,start_time):
+        self.running = True
+        Thread.__init__(self)
+        self.caller = caller
+        self.start_time=start_time
+        self.running=True
+    def run(self):
+        while self.running:
+            if self.caller.mode=="TM":
+                time_max = float(self.caller.time)*60
+            else:
+                time_max = float(self.caller.time)
+            if debug:
+                print"Elapsed time {}".format(time.time() - self.start_time)
+            # print (time_max)
+            if (time.time() - self.start_time) > (time_max):
+                if debug:
+                    print "Out of time"
+                try:
+                    if debug:
+                        print "Stopping and relaunching"
+                    self.caller.relaunch_acq()
+                except Exception as e:
+                    if debug:
+                        print "Something wrong: ".format(e)
+                    return 0
+                return 0
+            time.sleep(1)
 
 def all_children(window):
     _list = window.winfo_children()
