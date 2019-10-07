@@ -28,7 +28,7 @@ elif OS == 'linux2':
 else:
     print("ERROR: OS {} non compatible".format(OS))
     sys.exit()
-local_test = True
+local_test = False
 
 class communication:  ##The directory are declared here to avoid multiple declaration
 
@@ -2225,3 +2225,20 @@ class communication:  ##The directory are declared here to avoid multiple declar
         self.send_GEMROC_LV_CMD("CMD_GEMROC_LV_CFG_WR")
         echo = self.send_GEMROC_LV_CMD("CMD_GEMROC_LV_IVT_UPDATE")
         self.display_log_GEMROC_LV_CfgReg_readback(echo, display_enable_param=False,log_enable_param=False)
+
+    def change_all_threshold(self,ChCFGReg_setting_inst, delta, branch):
+        """
+        Function to traslate all the thresholds in one direction.
+        :param ChCFGReg_setting_inst:
+        :param delta:
+        :param branch:
+        :return:
+        """
+        for T in range (0,8):
+            for ch in range(0,64):
+                if branch == "T":
+                    if 0 < (ChCFGReg_setting_inst.Channel_cfg_list[T][ch]['Vth_T1'] + delta) < 64:
+                        ChCFGReg_setting_inst.Channel_cfg_list[T][ch]['Vth_T1'] = ChCFGReg_setting_inst.Channel_cfg_list[T][ch]['Vth_T1'] + delta
+                if branch == "E":
+                    if 0 < (ChCFGReg_setting_inst.Channel_cfg_list[T][ch]['Vth_T2'] + delta) < 64:
+                        ChCFGReg_setting_inst.Channel_cfg_list[T][ch]['Vth_T2'] = ChCFGReg_setting_inst.Channel_cfg_list[T][ch]['Vth_T2'] + delta

@@ -63,6 +63,12 @@ class noise_rate_measure ():
         self.start_button.pack(side=LEFT)
         Button(self.first_lane_frame, text="Update plot", command=self.update_data ).pack(side=LEFT)
         Button(self.first_lane_frame, text="Clear", command=self.clear ).pack(side=LEFT)
+        Label(self.first_lane_frame, text="Rate cap").pack(side=LEFT)
+        self.cap=Entry(self.first_lane_frame, width=6)
+        self.cap.pack(side=LEFT)
+        self
+        Button(self.first_lane_frame, text="Lower (T) ch above cap", command=lambda : self.thr_equalizing("a")).pack(side=LEFT)
+        Button(self.first_lane_frame, text="Rise (T) ch below cap", command=lambda : self.thr_equalizing("b")).pack(side=LEFT)
 
         # Button(self.first_lane_frame, text="Stop rate acquisition", command=self.stop_acq ).pack(side=LEFT)
         fields_optionsG = self.GEMROC_reading_dict.keys()
@@ -73,7 +79,6 @@ class noise_rate_measure ():
         # # fields_optionsT.append("All")
         # OptionMenu(self.single_TIGER, self.TIGER, *fields_optionsT).grid(row=0, column=0, sticky=S, pady=4, columnspan=20)
         # OptionMenu(self.single_TIGER, self.GEMROC, *fields_optionsG).grid(row=0, column=1, sticky=S, pady=4, columnspan=20)
-        #
         # # self.GEMROC.trace("w", lambda name, index, mode, sv=self.GEMROC: self.change_plot_G(sv))
         # self.TIGER.trace("w", lambda name, index, mode, sv=self.TIGER: self.change_plot_T(sv))
         """
@@ -177,7 +182,15 @@ class noise_rate_measure ():
         """
         self.count_matrix_channel = np.zeros((self.GMAX+1, 8, 64))
         self.acquire_thread.number_of_cycles = 0
-
+    def thr_equalizing(self, mode):
+        """
+        Lower all the channel threhsolds with the rate above/below a certain level.
+        :return:
+        """
+        if mode=="a":
+            self.acquire_thread.lower_thr_above(self.cap.get(), "T")
+        if mode=="b":
+            self.acquire_thread.rise_thr_below(self.cap.get(), "T")
 
     def update_data(self):
         if self.tabControl.index("current") ==0:
@@ -211,14 +224,14 @@ class noise_rate_measure ():
         if mode == "GEMROC":
             G = int(self.GEMROC.get().split(" ")[1])
             data = data / self.acquire_thread.number_of_cycles
-            MIN_count = int(np.min(data))
-            MAX_count = int(np.max(data))
+            MIN_count = int(np.min(np.transpose(data[G])))
+            MAX_count = int(np.max(np.transpose(data[G])))
 
             if self.logscale.get():
                 data=np.ma.log10(data)
                 data=data.filled(0)
-                MIN_count = int(np.min(data))
-                MAX_count = int(np.max(data))
+                MIN_count = int(np.min(np.transpose(data[G])))
+                MAX_count = int(np.max(np.transpose(data[G])))
 
             self.heatmap_GEMROC_A.set_data(np.transpose(data[G])[:32])
             self.heatmap_GEMROC_B.set_data(np.transpose(data[G])[32:])
@@ -260,7 +273,7 @@ class Acquire_rate():
     """
     def __init__(self, caller, GEMROC_handler):
         self.caller=caller
-        self.count_matrix = np.zeros((self.caller.GMAX+1,8,64))
+        self.count_matrix = np.zeros((self.caller.GMAX+1, 8, 64))
         self.number_of_cycles = 0
         self.GEMROC_reading_dic = GEMROC_handler
         self.running = True
@@ -284,6 +297,51 @@ class Acquire_rate():
 
         self.caller.count_matrix_channel += self.count_matrix
         self.caller.update_data()
+
+    def lower_thr_above(self, limit, branch):
+        """
+        Lower the thr above the given limit. No controll for -1 is given (su
+        :param limit:
+        :param branch:
+        :return:
+        """
+        for key,GEMROC in self.GEMROC_reading_dic.items():
+            number = int(key.split(" ")[1])
+            for T in range (0,8):
+                for ch in range(0,64):
+                    if self.count_matrix[number][T][ch] > int(limit):
+                        if branch == "T":
+                            GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] - 1
+                            print "G:{} T:{} Ch:{} Lowering T at {}".format(GEMROC.GEMROC_ID, T, ch, GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'])
+                        if branch == "E":
+                            GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] - 1
+                        if branch == "both":
+                            GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] - 1
+                            GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] - 1
+
+    def rise_thr_below(self, limit, branch):
+        """
+        Rise the thr below the given limit
+        :param limit:
+        :param branch:
+        :return:
+        """
+        #TODO aggiungere blocco per VTH=0
+        for key,GEMROC in self.GEMROC_reading_dic.items():
+            number = int(key.split(" ")[1])
+            for T in range (0,8):
+                for ch in range(0,64):
+                    if self.count_matrix[number][T][ch] < int(limit):
+                        if branch == "T":
+                            GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] + 1
+                            print "G:{} T:{} Ch:{} Rising T at {}".format(GEMROC.GEMROC_ID, T, ch, GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'])
+                        if branch == "E":
+                            GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] + 1
+                        if branch == "both":
+                            GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] + 1
+                            GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] + 1
+
+
 #
 # class Get_rate(Thread):
 #     """

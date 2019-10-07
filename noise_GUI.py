@@ -11,8 +11,7 @@ from multiprocessing import Pool
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
-
-from lib import GEM_ANALYSIS_classes as AN_CLASS
+from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
 
 OS = sys.platform
 if OS == 'win32':
@@ -243,27 +242,35 @@ class noise_measure ():
         self.tabControl.add(self.error_window, text=name)  # Add the tab
 
     def fast_noise_scan(self):
+        #Tbranch test pulses
         self.start_TP()
-        self.load_TP_settings()
-        # self.TIGER_num_first.set(7)
-        # self.TIGER_num_last.set(0)
-        self.CHANNEL_num_last.set(15)
-        self.CHANNEL_num_first.set(10)
-        # self.noise_scan()
-        self.fit()
-        for GEMROC,dict0 in self.TPfits.items():
-            noise_list = []
-            for TIGER,dict1 in self.TPfits[GEMROC].items():
-                for CH,dictionary in self.TPfits[GEMROC][TIGER].items():
-                    parameters=self.TPfits[GEMROC][TIGER][CH]
-                    if parameters[0] != "Fail" and parameters[2]>TP_rate/5 and parameters[2]<TP_rate*5:
-                        noise = AN_CLASS.convert_to_fC(parameters[1], 55)
-                        cov = AN_CLASS.convert_to_fC(self.TPcovs[GEMROC][TIGER][CH][1][1], 55)
-                        noise_list.append(noise)
-                    else:
-                        noise=-1
-                        cov=9999
-            print "GEMROC: {}, average noise: {}".format(GEMROC,np.average(noise_list))
+        self.load__fast_TP_settings()
+        self.noise_scan()
+        self.unload_TP_settings()
+        File_name = "T_branch_with_TP.ns"
+        with  open(File_name, 'wb') as f:
+            pickle.dump(self.scan_matrixs,f)
+
+        self.load__fast_TP_settings(branch="E")
+        self.noise_scan()
+        self.unload_TP_settings()
+        File_name = "E_branch_with_TP.ns"
+        with  open(File_name, 'wb') as f:
+            pickle.dump(self.scan_matrixs,f)
+
+        self.load__fast_TP_settings(branch="T",TP=False)
+        self.noise_scan()
+        self.unload_TP_settings()
+        File_name = "Baseline_T.ns"
+        with  open(File_name, 'wb') as f:
+            pickle.dump(self.scan_matrixs,f)
+
+        self.load__fast_TP_settings(branch="E",TP=False)
+        self.noise_scan()
+        self.unload_TP_settings()
+        File_name = "Baseline_E.ns"
+        with  open(File_name, 'wb') as f:
+            pickle.dump(self.scan_matrixs,f)
 
     def noise_scan(self,vth2=False):  # if GEMROC num=-1--> To all GEMROC, if TIGER_num=-1 --> To all TIGERs
         self.bar_win = Toplevel(self.error_window)
@@ -520,9 +527,9 @@ class noise_measure ():
                         self.line_list.append( self.plot_rate.plot(np.arange(TPparameters[0],64,1.0),translated_gas , '--',label= "Gaussian baseline estimation"))
                     self.plot_rate.set_title("ROC {},TIG {}, CH {} , Sigma Noise={} fC".format(self.plotting_gemroc, self.plotting_TIGER, self.plotting_Channel, noise))
                     if self.title == "Noise_measure":
-                        if noise=="Canno't fit":
+                        if noise=="Canno't fit" or self.mapping_matrix[self.plotting_gemroc][self.plotting_TIGER][self.plotting_Channel] == "0":
                             self.gufo["image"]=self.icon_sleep
-                        elif noise<0.6 and self.mapping_matrix[self.plotting_gemroc][self.plotting_TIGER][self.plotting_Channel].split("-")[0]=="X" :
+                        elif noise<0.6 and self.mapping_matrix[self.plotting_gemroc][self.plotting_TIGER][self.plotting_Channel].split("-")[0]=="X":
                             self.gufo["image"]=self.icon_worry
                         elif noise < 0.25 and self.mapping_matrix[self.plotting_gemroc][self.plotting_TIGER][self.plotting_Channel].split("-")[0] == "V":
                             self.gufo["image"] = self.icon_worry
@@ -554,7 +561,7 @@ class noise_measure ():
         with  open(filename, 'rb') as f:
             self.scan_matrixs=pickle.load(f)
 
-    def load_TP_settings(self):
+    def load_TP_settings(self,branch="T", TP=True):
         filename = "." + sep + "conf" + sep + "TP_conf.pickle"
         with open(filename, 'rb') as f:
            TP_cof_dict = pickle.load(f)
@@ -563,9 +570,54 @@ class noise_measure ():
                 GEMROC.g_inst.load_TP_cal(TP_cof_dict)
             except KeyError:
                 pass
-            GEMROC.g_inst.load_specif_settings(GEMROC.GEM_COM.conf_folder+sep+"specific_conf_GLOBAL_for_TP")
+            if branch=="T":
+             GEMROC.g_inst.load_specif_settings(GEMROC.GEM_COM.conf_folder+sep+"specific_conf_GLOBAL_for_TP")
+            else:
+                GEMROC.g_inst.load_specif_settings(GEMROC.GEM_COM.conf_folder + sep + "specific_conf_GLOBAL_for_TP_E_branch")
             for T in range (0,8):
-                GEMROC.GEM_COM.Set_param_dict_global(GEMROC.g_inst, "FE_TPEnable", T, 1)
+                if TP:
+                    GEMROC.GEM_COM.Set_param_dict_global(GEMROC.g_inst, "FE_TPEnable", T, 1)
+                else:
+                    GEMROC.GEM_COM.Set_param_dict_global(GEMROC.g_inst, "FE_TPEnable", T, 0)
+        print("TP settings loaded")
+
+    def load__fast_TP_settings(self,branch="T", TP=True):
+        filename = "." + sep + "conf" + sep + "TP_conf.pickle"
+        with open(filename, 'rb') as f:
+           TP_cof_dict = pickle.load(f)
+        for number,GEMROC in self.GEMROC_reading_dict.items():
+            try:
+                GEMROC.g_inst.load_TP_cal(TP_cof_dict)
+            except KeyError:
+                pass
+            if branch=="T":
+                GEMROC.g_inst.load_specif_settings(GEMROC.GEM_COM.conf_folder+sep+"fast_TP_scan_settings")
+
+            else:
+                GEMROC.g_inst.load_specif_settings(GEMROC.GEM_COM.conf_folder + sep + "fast_TP_scan_settings")
+            for T in range (0,8):
+                if TP:
+                    GEMROC.GEM_COM.Set_param_dict_global(GEMROC.g_inst, "FE_TPEnable", T, 1)
+                else:
+                    GEMROC.GEM_COM.Set_param_dict_global(GEMROC.g_inst, "FE_TPEnable", T, 0)
+                for ch in range(0,64):
+                    if branch=="T":
+                        GEMROC.GEM_COM.Set_param_dict_channel(GEMROC.c_inst,"TriggerMode2B", T,ch, 0)
+                        GEMROC.GEM_COM.Set_param_dict_channel(GEMROC.c_inst,"TriggerMode2Q", T,ch, 0)
+                        GEMROC.GEM_COM.Set_param_dict_channel(GEMROC.c_inst,"TriggerMode2E", T,ch, 0)
+                        GEMROC.GEM_COM.Set_param_dict_channel(GEMROC.c_inst,"TriggerMode2T", T,ch, 0)
+                    if branch=="E":
+                        GEMROC.GEM_COM.Set_param_dict_channel(GEMROC.c_inst,"TriggerMode2B", T,ch, 1)
+                        GEMROC.GEM_COM.Set_param_dict_channel(GEMROC.c_inst,"TriggerMode2Q", T,ch, 1)
+                        GEMROC.GEM_COM.Set_param_dict_channel(GEMROC.c_inst,"TriggerMode2E", T,ch, 1)
+                        GEMROC.GEM_COM.Set_param_dict_channel(GEMROC.c_inst,"TriggerMode2T", T,ch, 1)
+                        GEMROC.GEM_COM.Set_param_dict_channel(GEMROC.c_inst,"Vth_T1", T,ch, 63)
+
+        print("TP settings loaded")
+    def   unload_TP_settings(self):
+        for number, GEMROC in self.GEMROC_reading_dict.items():
+            default_g_inst_settigs_filename = GEMROC.GEM_COM.conf_folder + sep + "TIGER_def_g_cfg_2018.txt"
+            GEMROC.g_inst= GEM_CONF.g_reg_settings(int(number.split(" ")[1]), default_g_inst_settigs_filename)
         print("TP settings loaded")
 
     def fit(self):

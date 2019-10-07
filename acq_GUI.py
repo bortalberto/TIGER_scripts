@@ -56,6 +56,8 @@ class menu():
 
         self.master_window.wm_title("GEMROC acquisition")
         self.restart=BooleanVar(self.master_window)
+        self.error_GEMROC=BooleanVar(self.master_window)
+        self.error_GEMROC.set(True)
         self.save_conf_every_run = BooleanVar(self.master_window)
         self.simple_analysis = IntVar(self.master_window)
         self.run_analysis = IntVar(self.master_window)
@@ -106,6 +108,7 @@ class menu():
         Checkbutton(self.start_frame, text="On run analysis", variable=self.run_analysis).grid(row=0, column=3, sticky=NW, pady=4)
         Checkbutton(self.start_frame, text="Restart", variable=self.restart).grid(row=0, column=4, sticky=NW, pady=4)
         Checkbutton(self.start_frame, text="Save conf. at every subrun", variable=self.save_conf_every_run).grid(row=0, column=5, sticky=NW, pady=4)
+        Checkbutton(self.start_frame, text="Save GEMROC global errors at the end", variable=self.error_GEMROC).grid(row=0, column=5, sticky=NW, pady=4)
 
         a_frame = Frame(self.master)
         a_frame.pack()
@@ -327,6 +330,7 @@ class menu():
     def relaunch_acq(self):
         self.stop_acq(True)
         if self.restart.get():
+            time.sleep(5)
             if debug:
                 print "Restarting"
             if self.PMT:
@@ -337,12 +341,13 @@ class menu():
             # self.father.reactivate_TIGERS()
             self.refresh_but_TIGERs()
             self.father.Synch_reset()
+            time.sleep(1)
             self.father.Synch_reset()
+            time.sleep(1)
 
             # self.father.Synch_reset()
             # self.father.load_default_config()
             # self.father.Synch_reset()
-            time.sleep(1)
 
             self.father.Synch_reset()
             if debug:
@@ -581,7 +586,7 @@ class menu():
 
         for i in range(0, len(self.GEM)):
             if self.thread[i].isAlive():
-                self.thread[i].join(timeout=10)
+                self.thread[i].join(timeout=26)
         for i in self.GEM:
             if i.TIMED_out == True:
                 self.LED[int(i.GEMROC_ID)]['image'] = self.icon_bad
@@ -590,8 +595,8 @@ class menu():
         if self.simple_analysis.get() or self.run_analysis.get():
             self.build_errors()
         self.refresh_error_status()
-        self.refresh_plot()
-        self.save_GEMROC_errors()
+        if self.error_GEMROC:
+            self.save_GEMROC_errors()
         self.but7.config(state='normal')
     def save_GEMROC_errors(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():
@@ -726,6 +731,8 @@ class stopper(Thread):  # In order to scan during configuration is mandatory to 
                 except Exception as e:
                     if debug:
                         print "Something wrong: ".format(e)
+                    time.sleep(20)
+                    self.caller.relaunch_acq()
                     return 0
                 return 0
             time.sleep(1)

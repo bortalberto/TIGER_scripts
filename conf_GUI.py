@@ -95,7 +95,7 @@ class menu():
         Label(Title_frame2, text="GUFI software",font=("Times", 25)).pack(side=LEFT)
         Label(Title_frame2, image=self.icon_GUFI2).pack(side=LEFT)
 
-        Label(Title_frame, text="             v.3.1 -- 2019 -- INFN-TO (abortone@to.infn.it)",font=("Times", 10, "italic")).pack(anchor=SE, side=RIGHT)
+        Label(Title_frame, text="             v.3.2 -- 2019 -- INFN-TO (abortone@to.infn.it)",font=("Times", 10, "italic")).pack(anchor=SE, side=RIGHT)
         Title_frame2.pack(anchor=S)
         Title_frame.pack(fill=BOTH)
 
@@ -397,7 +397,7 @@ class menu():
         self.scan_wind = scan_GUI.menu(self.main_window, self.GEMROC_reading_dict)
     def open_rate_window(self):
         """
-        Open a window to asser the noise rate condition of the setup
+        Open a window to assert the noise rate condition of the setup
         :return:
         """
         self.rate_window = rate_interface.menu(self.main_window, self.GEMROC_reading_dict)
@@ -1604,6 +1604,7 @@ class menu():
                 except:
                     self.error_led_update()
                 self.write_CHANNEL(GEMROC, TIGER, 64, False)
+        self.Synch_reset()
 
     def Synch_reset(self, to_all=1):
         if to_all == 1:

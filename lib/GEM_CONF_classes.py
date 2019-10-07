@@ -440,7 +440,6 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
                        else:
                            print ("Command {} not recognized".format(command))
 
-
    def search_for_Q(self,conf_dict, Q):
        if conf_dict["TP_calib"] != 'NA':
            distance = 1000
