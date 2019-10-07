@@ -102,7 +102,6 @@ class menu():
         self.tabControl = ttk.Notebook(self.select_window)  # Create Tab Control
         self.select_frame = Frame(self.select_window)
         Tante_frame = Frame(self.select_window)
-
         self.tabControl.add(self.select_frame,text = "Selection")
         self.tabControl.add(Tante_frame,text = "Operations")
 
