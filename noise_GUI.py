@@ -7,7 +7,7 @@ import ttk
 from Tkinter import *
 from multiprocessing import Process, Pipe
 from ttk import Progressbar
-from multiprocessing import Pool
+import datetime
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
@@ -22,7 +22,6 @@ else:
 	print("ERROR: OS {} non compatible".format(OS))
 	sys.exit()
 
-TP_rate = 49000
 
 
 
@@ -59,6 +58,7 @@ class noise_measure ():
         self.sampling_scan=False
         self.GEMROC_reading_dict=gemroc_handler
         self.error_window=Frame(self.main_window)
+        self.TP_rate = 49000
 
     def _init_windows(self):
         Label(self.error_window,text=self.title,font=("Courier", 25)).grid(row=0, column=2, sticky=S, pady=4,columnspan=10)
@@ -75,13 +75,26 @@ class noise_measure ():
         self.second_row_frame=Frame(self.error_window)
         self.second_row_frame.grid(row=2, column=1, sticky=S, pady=4,columnspan=10)
 
+        self.T_with_tp=BooleanVar(self.error_window)
+        self.E_with_tp=BooleanVar(self.error_window)
+        self.T_without_tp=BooleanVar(self.error_window)
+        self.E_without_tp=BooleanVar(self.error_window)
+
+        self.T_with_tp.set(True)
+        self.E_with_tp.set(True)
+        self.T_without_tp.set(True)
+        self.E_without_tp.set(True)
 
         self.GEMROC_num = StringVar(self.error_window)
         self.TIGER_num_first = IntVar(self.error_window)
         self.TIGER_num_last = IntVar(self.error_window)
         self.CHANNEL_num_first = IntVar(self.error_window)
         self.CHANNEL_num_last = IntVar(self.error_window)
-
+        self.scan_period= DoubleVar(self.error_window)
+        self.TP_rate = IntVar(self.error_window)
+        self.TP_rate.set(49000)
+        self.number_of_TP = IntVar(self.error_window)
+        self.number_of_TP.set(2)
         fields_optionsG = self.GEMROC_reading_dict.keys()
         fields_optionsG.append("All")
         OptionMenu(self.second_row_frame, self.GEMROC_num, *fields_optionsG).pack(side=LEFT)
@@ -105,6 +118,11 @@ class noise_measure ():
         Label(self.second_row_frame, text='Last Channel   ').pack(side=LEFT)
         Entry(self.second_row_frame, width=4, textvariable=self.CHANNEL_num_last).pack(side=LEFT)
 
+        Label(self.second_row_frame, text='TP rate (Hz)   ').pack(side=LEFT)
+        Entry(self.second_row_frame, textvariable=self.TP_rate,width=8,).pack(side=LEFT)
+        Label(self.second_row_frame, text='TP per frameword').pack(side=LEFT)
+        fields_optionsr = (1,2,3,4,5,6,7,8)
+        OptionMenu(self.second_row_frame, self.number_of_TP, *fields_optionsr).pack(side=LEFT)
 
         self.third_row=Frame(self.error_window)
         self.third_row.grid(row=3, column=1, sticky=S, pady=4,columnspan=10)
@@ -125,8 +143,11 @@ class noise_measure ():
             Button(self.third_row, text="Load TP settings", command=self.load_TP_settings).pack(side=LEFT,padx=2)
 
             Button(self.third_row, text="Sampling time scan", command=self.sampling_time_scan).pack(side=LEFT,padx=25)
-            Button(self.third_row, text="Save noise levels for thr setting", command=self.SAVE_noise_for_thr_setting).pack(side=LEFT,padx=2)
+            # Button(self.third_row, text="Save noise levels for thr setting", command=self.SAVE_noise_for_thr_setting).pack(side=LEFT,padx=2)
+            Button(self.third_row, text="Periodic scan ", command=self.periodic_scan_win).pack(side=LEFT, padx=2)
+
             Button(self.third_row, text="Fast noise scan", command=self.fast_noise_scan).pack(side=LEFT, padx=2)
+            Button(self.third_row, text="2D scan", command=self.squared_noise_scan).pack(side=LEFT, padx=2)
         if self.title == "Baseline estimation":
             Button(self.third_row, text="Save baseline levels for thr setting", command=self.SAVE_baseline).pack(side=LEFT,padx=2)
 
@@ -244,33 +265,87 @@ class noise_measure ():
     def fast_noise_scan(self):
         #Tbranch test pulses
         self.start_TP()
-        self.load__fast_TP_settings()
-        self.noise_scan()
-        self.unload_TP_settings()
-        File_name = "T_branch_with_TP.ns"
-        with  open(File_name, 'wb') as f:
-            pickle.dump(self.scan_matrixs,f)
+        if self.T_with_tp.get():
 
-        self.load__fast_TP_settings(branch="E")
-        self.noise_scan()
-        self.unload_TP_settings()
-        File_name = "E_branch_with_TP.ns"
-        with  open(File_name, 'wb') as f:
-            pickle.dump(self.scan_matrixs,f)
+            self.load__fast_TP_settings()
+            self.noise_scan()
+            self.unload_TP_settings()
+            File_name = "T_branch_with_TP_{}.ns".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
+            with  open(File_name, 'wb') as f:
+                pickle.dump(self.scan_matrixs,f)
+        if self.E_with_tp.get():
+            self.load__fast_TP_settings(branch="E")
+            self.noise_scan(True)
+            self.unload_TP_settings()
+            File_name = "E_branch_with_TP_{}.ns".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
+            with  open(File_name, 'wb') as f:
+                pickle.dump(self.scan_matrixs,f)
 
-        self.load__fast_TP_settings(branch="T",TP=False)
-        self.noise_scan()
-        self.unload_TP_settings()
-        File_name = "Baseline_T.ns"
-        with  open(File_name, 'wb') as f:
-            pickle.dump(self.scan_matrixs,f)
+        if self.T_without_tp.get():
+            self.load__fast_TP_settings(branch="T",TP=False)
+            self.noise_scan()
+            self.unload_TP_settings()
+            File_name = "Baseline_T_{}.ns".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
+            with  open(File_name, 'wb') as f:
+                pickle.dump(self.scan_matrixs,f)
 
-        self.load__fast_TP_settings(branch="E",TP=False)
-        self.noise_scan()
-        self.unload_TP_settings()
-        File_name = "Baseline_E.ns"
-        with  open(File_name, 'wb') as f:
-            pickle.dump(self.scan_matrixs,f)
+        if self.E_without_tp.get():
+            self.load__fast_TP_settings(branch="E",TP=False)
+            self.noise_scan(True)
+            self.unload_TP_settings()
+            File_name = "Baseline_E_{}.ns".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
+            with  open(File_name, 'wb') as f:
+                pickle.dump(self.scan_matrixs,f)
+
+    def periodic_scan_win(self):
+        per_wind=Toplevel(self.error_window)
+        per_wind.wm_title("Periodic scan")
+        first_row=Frame(per_wind)
+        first_row.grid(row=0, column=1, sticky=S, pady=4)
+        second_row=Frame(per_wind)
+        second_row.grid(row=2, column=1, sticky=S, pady=4)
+        Label(first_row, text='Scan every [hours]:   ').pack(side=LEFT)
+        Entry(first_row, width=4, textvariable=self.scan_period).pack(side=LEFT)
+        Button(first_row,text="Launch periodic scan", command= self.periodic_scan_start).pack(side=LEFT)
+        Button(first_row,text="Stop periodic scan", command= self.periodic_scan_stop).pack(side=LEFT)
+        Checkbutton(second_row,text="Scan TP T", variable=self.T_with_tp).pack(side=LEFT,padx=2)
+        Checkbutton(second_row,text="Scan no TP T", variable=self.T_without_tp).pack(side=LEFT,padx=2)
+        Checkbutton(second_row,text="Scan TP E", variable=self.E_with_tp).pack(side=LEFT,padx=2)
+        Checkbutton(second_row,text="Scan no TP E", variable=self.E_without_tp).pack(side=LEFT,padx=2)
+
+    def periodic_scan_start(self):
+        self.periodic_scan_process=Process(target=self.periodic_scan_processer())
+        self.periodic_scan_process.run()
+
+    def periodic_scan_processer(self):
+        self.running=True
+        while self.running:
+            print ("Launching scan")
+            self.fast_noise_scan()
+            if self.running:
+                print ("Scan finisched, waiting {} hours".format(self.scan_period.get()))
+                time.sleep(5)
+    def periodic_scan_stop(self):
+        self.running=False
+        print ("Scan stopped".format(self.scan_period.get()))
+
+    def squared_noise_scan(self):
+        GEMROC_n=self.GEMROC_num.get()
+        dictio = {}
+        dictio["{}".format(GEMROC_n)] = self.GEMROC_reading_dict[GEMROC_n]
+        for number, GEMROC_number in dictio.items():
+            GEMROC = self.GEMROC_reading_dict[number]
+            GEM_COM = GEMROC.GEM_COM
+            c_inst = GEMROC.c_inst
+            g_inst = GEMROC.g_inst
+            test_c = AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst)
+            test_r = AN_CLASS.analisys_read(GEM_COM, c_inst)
+            first = self.TIGER_num_first.get()
+            last = self.TIGER_num_last.get() + 1
+            firstch = self.CHANNEL_num_first.get()
+            lastch = self.CHANNEL_num_last.get() + 1
+            GEMROC_ID = GEM_COM.GEMROC_ID
+            test_c.both_vth_scan(first, firstch)
 
     def noise_scan(self,vth2=False):  # if GEMROC num=-1--> To all GEMROC, if TIGER_num=-1 --> To all TIGERs
         self.bar_win = Toplevel(self.error_window)
@@ -449,9 +524,10 @@ class noise_measure ():
     def start_TP(self):
         for number, GEMROC_number in self.GEMROC_reading_dict.items():
             GEMROC_number.GEM_COM.Soft_TP_generate()
-            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TP_period'] = 800
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TL_nTM_ACQ'] = 0
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TP_period'] = 900
             GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['Periodic_TP_EN_pattern'] = 15
-            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['number_of_repetitions'] = 512+16
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['number_of_repetitions'] = 512+self.number_of_TP.get()
             GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TP_width'] = 10
             GEMROC_number.GEM_COM.DAQ_set_with_dict()
     def plotta(self):
@@ -591,10 +667,16 @@ class noise_measure ():
             except KeyError:
                 pass
             if branch=="T":
-                GEMROC.g_inst.load_specif_settings(GEMROC.GEM_COM.conf_folder+sep+"fast_TP_scan_settings")
-
+                if TP==True:
+                    GEMROC.g_inst.load_specif_settings(GEMROC.GEM_COM.conf_folder + sep + "fast_TP_scan_settings_TP_T")
+                else:
+                    GEMROC.g_inst.load_specif_settings(GEMROC.GEM_COM.conf_folder + sep + "fast_TP_scan_settings_BS_T")
             else:
-                GEMROC.g_inst.load_specif_settings(GEMROC.GEM_COM.conf_folder + sep + "fast_TP_scan_settings")
+                if TP==True:
+                    GEMROC.g_inst.load_specif_settings(GEMROC.GEM_COM.conf_folder + sep + "fast_TP_scan_settings_TP_E")
+                else:
+                    GEMROC.g_inst.load_specif_settings(GEMROC.GEM_COM.conf_folder + sep + "fast_TP_scan_settings_BS_E")
+
             for T in range (0,8):
                 if TP:
                     GEMROC.GEM_COM.Set_param_dict_global(GEMROC.g_inst, "FE_TPEnable", T, 1)
@@ -618,7 +700,9 @@ class noise_measure ():
         for number, GEMROC in self.GEMROC_reading_dict.items():
             default_g_inst_settigs_filename = GEMROC.GEM_COM.conf_folder + sep + "TIGER_def_g_cfg_2018.txt"
             GEMROC.g_inst= GEM_CONF.g_reg_settings(int(number.split(" ")[1]), default_g_inst_settigs_filename)
-        print("TP settings loaded")
+            for T in range (0,8):
+                write = GEMROC.GEM_COM.write_G_conf_on_TIGER(GEMROC.g_inst, T)
+        print("TP settings unloaded")
 
     def fit(self):
         start = time.time()
@@ -628,7 +712,7 @@ class noise_measure ():
                     if any(matrix[TIG][channel]) != 0:
                         print ("%s TIG%s CH%s"%(GEMROC,TIG,channel))
                         self.baseline_pos[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)] = AN_CLASS.find_baseline(matrix[TIG][channel])
-                        values = AN_CLASS.error_fit(matrix[TIG][channel],TP_rate, Ebranch=self.E_branch.get())
+                        values = AN_CLASS.error_fit(matrix[TIG][channel], int(self.TP_rate.get()), Ebranch=self.E_branch.get())
                         self.fits[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[0]
                         self.covs[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[1]
                         self.TPfits[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=values[2]
@@ -661,7 +745,7 @@ class noise_measure ():
                 for TIGER,dict1 in self.TPfits[GEMROC].items():
                     for CH,dictionary in self.TPfits[GEMROC][TIGER].items():
                         parameters=self.TPfits[GEMROC][TIGER][CH]
-                        if parameters[0] != "Fail" and parameters[2]>TP_rate/5 and parameters[2]<TP_rate*5:
+                        if parameters[0] != "Fail" and parameters[2]>int(self.TP_rate.get())/5 and parameters[2]<int(self.TP_rate.get())*5:
                             noise = AN_CLASS.convert_to_fC(parameters[1], 55)
                             cov = AN_CLASS.convert_to_fC(self.TPcovs[GEMROC][TIGER][CH][1][1], 55)
                         else:
@@ -729,6 +813,6 @@ def squared_sum(A,B):
     else:
         raise Exception("A and B not same size")
 
-def process_image(data):
-    values =AN_CLASS.error_fit(data,TP_rate, Ebranch=True)
-    return values
+# def process_image(data):
+#     values =AN_CLASS.error_fit(data,self.TP_rate, Ebranch=True)
+#     return values

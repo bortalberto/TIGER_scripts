@@ -1469,12 +1469,13 @@ class menu():
         for key in self.label_array:
             self.GEMROC_reading_dict['{}'.format(GEMROC)].g_inst.Global_cfg_list[TIGER][key['text'].rstrip('\n')] = int(self.input_array[i].get())
             i += 1
-        write = self.GEMROC_reading_dict['{}'.format(GEMROC)].GEM_COM.Set_param_dict_global(self.GEMROC_reading_dict[GEMROC].g_inst, "TxDDR", TIGER, 0)
+        write = self.GEMROC_reading_dict['{}'.format(GEMROC)].GEM_COM.write_G_conf_on_TIGER(self.GEMROC_reading_dict[GEMROC].g_inst,TIGER)
         read = self.GEMROC_reading_dict['{}'.format(GEMROC)].GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(self.GEMROC_reading_dict[GEMROC].g_inst, TIGER)
         read = self.GEMROC_reading_dict['{}'.format(GEMROC)].GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(self.GEMROC_reading_dict[GEMROC].g_inst, TIGER)
         try:
             self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.global_set_check(write, read)
-        except:
+        except Exception as E:
+            print E
             self.error_led_update()
 
     def write_TIGER_GLOBAL_allGEM(self):
@@ -1658,6 +1659,8 @@ class menu():
         for number, GEMROC in self.GEMROC_reading_dict.items():
             GEMROC.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"] = 255
             GEMROC.GEM_COM.DAQ_set_register()
+
+
     def import_old_conf(self):
         """
         Funcion to import the channel configuration from old RUNS. Needs the pickle containing the data

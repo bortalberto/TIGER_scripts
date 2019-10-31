@@ -4,6 +4,10 @@ import binascii
 import os
 import socket
 import sys
+# from mpl_toolkits.mplot3d import Axes3D
+# import matplotlib.pyplot as plt
+# from matplotlib import cm
+# from matplotlib.ticker import LinearLocator, FormatStrFormatter
 
 import matplotlib
 import numpy as np
@@ -315,6 +319,49 @@ class analisys_conf: #Analysis class used for configurations10
                 self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 3)
 
         return thr_scan_matrix
+    def both_vth_scan(self,T,j):
+        scan_matrix=np.zeros((64,64))
+        self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode", T, j, 0)
+        self.GEM_COM.Set_param_dict_channel(self.c_inst,"TP_disable_FE", T, j, 0)
+        for Vth_t in range (0,64):
+            self.GEM_COM.Set_param_dict_channel(self.c_inst, "Vth_T1", T, j, Vth_t)
+            for Vth_e in range (0,64):
+                self.GEM_COM.Set_param_dict_channel(self.c_inst, "Vth_T1", T, j, Vth_e)
+
+                self.GEM_COM.set_counter(T, 0, j)
+                self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
+                # self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
+                # self.GEM_COM.Access_diagn_DPRAM_read_and_log(1,0)
+                self.GEM_COM.reset_counter()
+                time.sleep(0.1)
+                scan_matrix[Vth_t , Vth_e] = self.GEM_COM.GEMROC_counter_get()
+                print (scan_matrix[Vth_t , Vth_e])
+        print scan_matrix
+        np.savetxt('test.out', scan_matrix, delimiter=',')
+        # fig = plt.figure()
+        # ax = fig.gca(projection='3d')
+        #
+        # # Make data.
+        # X = np.arange(64)
+        # Y = np.arange(64)
+        # X, Y = np.meshgrid(X, Y)
+        # Z =  scan_matrix[X , Y]
+        #
+        # # Plot the surface.
+        # surf = ax.plot_surface(X, Y, Z,  linewidth=0, antialiased=False)
+        #
+        # # Customize the z axis.
+        # ax.zaxis.set_major_locator(LinearLocator(10))
+        # ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
+        #
+        # # Add a color bar which maps values to colors.
+        # fig.colorbar(surf, shrink=0.5, aspect=5)
+        #
+        # plt.show()
+        # self.GEM_COM.Set_param_dict_channel(self.c_inst, "TriggerMode", T, j, 3)
+        # self.GEM_COM.Set_param_dict_channel(self.c_inst, "TP_disable_FE", T, j, 1)
+
+        return scan_matrix
 
     def noise_scan_using_GEMROC_COUNTERS_progress_bar(self, T,j,i, print_to_screen=True,vth2=False):
 

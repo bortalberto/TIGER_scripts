@@ -1176,6 +1176,19 @@ class communication:  ##The directory are declared here to avoid multiple declar
                                                         self.DEST_PORT_NO)
         return command_echo
 
+    def write_G_conf_on_TIGER(self, GCFGReg_setting_inst, TIGER_ID):
+        GCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
+        GCFGReg_setting_inst.set_target_TIGER(TIGER_ID)
+        # time.sleep(1)
+        COMMAND_STRING = 'WR'
+        GCFGReg_setting_inst.set_command_code(COMMAND_STRING)
+        GCFGReg_setting_inst.update_command_words()
+        array_to_send = GCFGReg_setting_inst.command_words
+        command_echo = self.send_TIGER_GCFG_Reg_CMD_PKT(TIGER_ID, COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
+                                                        self.DEST_PORT_NO)
+        return command_echo
+
+
     def Set_param_dict_channel(self, ChCFGReg_setting_inst, field, TIGER_ID, channel, value, send_command=True):
         ChCFGReg_setting_inst.set_target_GEMROC(self.GEMROC_ID)
         ChCFGReg_setting_inst.set_target_TIGER(TIGER_ID)
@@ -1994,7 +2007,6 @@ class communication:  ##The directory are declared here to avoid multiple declar
         command_sent = command_echo_param
         command_reply = command_read_param
         if (int(binascii.b2a_hex(command_sent), 16)) != ((int(binascii.b2a_hex(command_reply), 16)) - 2048):
-            print "!!! ERROR IN CONFIGURATION  GEMROC{},TIGER {}!!!".format(Gemroc, Tiger)
             raise Exception("!!! ERROR IN CONFIGURATION  GEMROC{},TIGER {}!!!".format(Gemroc, Tiger))
 
     def channel_set_check_GUI(self, command_echo_param, command_read_param):
