@@ -1875,17 +1875,59 @@ class communication:  ##The directory are declared here to avoid multiple declar
         command_echo = self.send_GEMROC_DAQ_CMD(gemroc_inst_param, COMMAND_STRING)
         return command_echo
 
-    def Load_VTH_fromfile(self, ChCFGReg_setting_inst, TIGER_ID_param, number_sigma_T, number_sigma_E, offset, save_on_LOG=False, send_command=True):
+    def load_thr_max_from_file(self):
+        """
+        Load the position of the maximum in the thr scan (can be used like baseline)
+        :return:
+        """
+        max_matrix=np.zeros((8,64,2))
+        for T in range(0,1):
+            file_T = self.conf_folder + sep + "thr" + sep + "GEMROC{}_Chip{}_T.thr".format(self.GEMROC_ID, T)
+            file_E = self.conf_folder + sep + "thr" + sep + "GEMROC{}_Chip{}_E.thr".format(self.GEMROC_ID, T)
+            thr0_T = np.loadtxt(file_T, usecols=2)
+            thr0_E = np.loadtxt(file_E, usecols=2)
+            max_matrix[T,:,0]=thr0_T
+            max_matrix[T,:,1]=thr0_E
+        return max_matrix
+    def save_current_VTH(self,ChCFGReg_setting_inst,filename="default"):
+        """
+        Function created to save VTH from 2-D tuning
+        :return:
+        """
+        if filename=="default":
+            filename = self.conf_folder + sep + "thr" + sep + "GEMROC{}_saved_vth".format(self.GEMROC_ID)
+        with open(filename,'w') as f:
+            pass
+        for T in range(0,8):
+            for ch in range(0,64):
+                with open(filename, 'a') as f:
+                    f.write("T:{} CH:{} VTH1:{} VTH2:{} \n".format(T,ch,ChCFGReg_setting_inst.Channel_cfg_list[T][ch]['Vth_T1'],ChCFGReg_setting_inst.Channel_cfg_list[T][ch]['Vth_T2']))
+
+    def load_vth(self,ChCFGReg_setting_inst,filename="default"):
+        """
+        Function created to load VTH from 2-D tuning
+        :return:
+        """
+        if filename=="default":
+            filename = self.conf_folder + sep + "thr" + sep + "GEMROC{}_saved_vth".format(self.GEMROC_ID)
+        with open(filename,'r') as f:
+            for line in f.readlines():
+                splitted=line.replace(" ",":").split(":")
+                ChCFGReg_setting_inst.Channel_cfg_list[int(splitted[1])][int(splitted[3])]['Vth_T1'] = int(splitted[5])
+                ChCFGReg_setting_inst.Channel_cfg_list[int(splitted[1])][int(splitted[3])]['Vth_T2'] = int(splitted[7])
+
+    def Load_VTH_from_scan_file(self, ChCFGReg_setting_inst, TIGER_ID_param, number_sigma_T, number_sigma_E, offset, save_on_LOG=False, send_command=True):
         file_T = self.conf_folder + sep + "thr" + sep + "GEMROC{}_Chip{}_T.thr".format(self.GEMROC_ID, TIGER_ID_param)
         file_E = self.conf_folder + sep + "thr" + sep + "GEMROC{}_Chip{}_E.thr".format(self.GEMROC_ID, TIGER_ID_param)
+
 
         self.log_file.write("Setting VTH on both VTH from file in GEMROC {}, TIGER {}, {}(T) and {}(E) sigmas\n".format(self.GEMROC_ID, TIGER_ID_param, number_sigma_T, number_sigma_E))
         print "Setting VTH on both VTH from file in GEMROC {}, TIGER {}, {}(T) and {}(E) sigmas\n".format(self.GEMROC_ID, TIGER_ID_param, number_sigma_T, number_sigma_E)
 
-        thr0_T = np.loadtxt(file_T, )
+        thr0_T = np.loadtxt(file_T )
         thr_T = np.zeros(64)
         for ch in range(0, 64):
-            med, sigma = thr0_T[ch, :]
+            med, sigma = (thr0_T[ch, 0],thr0_T[ch, 1])
             if (sigma * number_sigma_T) < 1:
                 print ("Sigma on ch {} (T branch) to low, setting threshold at 0.6 instead".format(ch))
                 shift = 1
@@ -1893,10 +1935,10 @@ class communication:  ##The directory are declared here to avoid multiple declar
                 shift = sigma * number_sigma_T
             thr_T[ch] = np.rint(med - shift) + offset
 
-        thr0_E = np.loadtxt(file_E, )
+        thr0_E = np.loadtxt(file_E )
         thr_E = np.zeros(64)
         for ch in range(0, 64):
-            med, sigma = thr0_E[ch, :]
+            med, sigma = (thr0_E[ch, 0],thr0_E[ch, 1])
             if (sigma * number_sigma_E) < 1:
                 shift = 1
             else:
@@ -1934,7 +1976,7 @@ class communication:  ##The directory are declared here to avoid multiple declar
         self.log_file.write("\n Setting VTH from file autotuned in  TIGER {}\n".format(TIGER_ID_param))
         print "Setting VTH from file in  TIGER {}, autotuned\n".format(TIGER_ID_param)
 
-        thr = np.loadtxt(file_p, )
+        thr = np.load(file_p, )
 
         for c in range(0, 64):
             if thr[c] < 0 or thr[c] == 0:

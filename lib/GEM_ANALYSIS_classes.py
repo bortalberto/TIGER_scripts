@@ -4,10 +4,7 @@ import binascii
 import os
 import socket
 import sys
-# from mpl_toolkits.mplot3d import Axes3D
-# import matplotlib.pyplot as plt
-# from matplotlib import cm
-# from matplotlib.ticker import LinearLocator, FormatStrFormatter
+
 
 import matplotlib
 import numpy as np
@@ -315,28 +312,26 @@ class analisys_conf: #Analysis class used for configurations10
                             os.system('clear')
                             string="SCANNING [TIGER={}, VTh={}, CH={}]\n".format(T,i,j)
                             sys.stdout.write(string)
-
                 self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 3)
 
         return thr_scan_matrix
-    def both_vth_scan(self,T,j):
+    def both_vth_scan(self, T, j, extreme_t=(0, 64), extreme_e=(0, 64),acq_time=0.1):
         scan_matrix=np.zeros((64,64))
         self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode", T, j, 0)
         self.GEM_COM.Set_param_dict_channel(self.c_inst,"TP_disable_FE", T, j, 0)
-        for Vth_t in range (0,64):
+        for Vth_t in range(extreme_t[0],extreme_t[1]+1):
             self.GEM_COM.Set_param_dict_channel(self.c_inst, "Vth_T1", T, j, Vth_t)
-            for Vth_e in range (0,64):
-                self.GEM_COM.Set_param_dict_channel(self.c_inst, "Vth_T1", T, j, Vth_e)
-
+            for Vth_e in range(extreme_e[0],extreme_e[1]+1):
+                self.GEM_COM.Set_param_dict_channel(self.c_inst, "Vth_T2", T, j, Vth_e)
                 self.GEM_COM.set_counter(T, 0, j)
                 self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
                 # self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
                 # self.GEM_COM.Access_diagn_DPRAM_read_and_log(1,0)
                 self.GEM_COM.reset_counter()
-                time.sleep(0.1)
+                time.sleep(acq_time)
                 scan_matrix[Vth_t , Vth_e] = self.GEM_COM.GEMROC_counter_get()
-                print (scan_matrix[Vth_t , Vth_e])
-        print scan_matrix
+                print ("vth_t:{},vth_e:{}".format(Vth_t,Vth_e))
+                print ("rate {}".format(scan_matrix[Vth_t, Vth_e]/acq_time))
         np.savetxt('test.out', scan_matrix, delimiter=',')
         # fig = plt.figure()
         # ax = fig.gca(projection='3d')
@@ -358,8 +353,8 @@ class analisys_conf: #Analysis class used for configurations10
         # fig.colorbar(surf, shrink=0.5, aspect=5)
         #
         # plt.show()
-        # self.GEM_COM.Set_param_dict_channel(self.c_inst, "TriggerMode", T, j, 3)
-        # self.GEM_COM.Set_param_dict_channel(self.c_inst, "TP_disable_FE", T, j, 1)
+        self.GEM_COM.Set_param_dict_channel(self.c_inst, "TriggerMode", T, j, 3)
+        self.GEM_COM.Set_param_dict_channel(self.c_inst, "TP_disable_FE", T, j, 1)
 
         return scan_matrix
 
@@ -971,7 +966,7 @@ class analisys_read:
         self.vthr_matrix=np.ones((8,64))
         self.thr_scan_rate = np.zeros((8, 64, 64))
         self.thr_scan_rate_norm = np.zeros((8, 64, 64))
-        self.thresholds = np.zeros((8, 64, 2))
+        self.thresholds = np.zeros((8, 64, 3))
 
     def start_socket(self):
         self.dataSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -1157,35 +1152,44 @@ class analisys_read:
         return 0
 
     def save_scan_on_file(self,branch=1):
+        """
+        Changed in a loadable format
+        :param branch:
+        :return:
+        """
         if branch==1:
-            f = open(self.scan_path_T, 'w')
+            np.save(file=self.scan_path_T,arr=self.thr_scan_matrix)
         else:
-            f = open(self.scan_path_E, 'w')
-
-        for T in range(0, 8):
-            f.write("Tiger {}".format(T))
-            f.write("Frames\n")
-            for i in range(0, 64):
-                f.write("\nChannel {}\n".format(i))
-
-                for j in range (0,64):
-                    if self.thr_scan_frames[T, i, j]:
-                        f.write("{},".format(self.thr_scan_frames[T, i, j]))
-                    else:
-                        f.write("0,")
-
-            f.write("\nEvents\n")
-            for i in range(0, 64):
-                f.write("\nChannel {}\n".format(i))
-
-                for j in range (0,64):
-                    if self.thr_scan_frames[T, i, j]:
-                        f.write("{},".format(self.thr_scan_matrix[T, i, j]))
-                    else:
-                        f.write("0,")
-            f.write("\n")
-
-        f.close()
+            np.save(file=self.scan_path_E, arr=self.thr_scan_matrix)
+        # if branch==1:
+        #     f = open(self.scan_path_T, 'w')
+        # else:
+        #     f = open(self.scan_path_E, 'w')
+        #
+        # for T in range(0, 8):
+        #     f.write("Tiger {}".format(T))
+        #     f.write("Frames\n")
+        #     for i in range(0, 64):
+        #         f.write("\nChannel {}\n".format(i))
+        #
+        #         for j in range (0,64):
+        #             if self.thr_scan_frames[T, i, j]:
+        #                 f.write("{},".format(self.thr_scan_frames[T, i, j]))
+        #             else:
+        #                 f.write("0,")
+        #
+        #     f.write("\nEvents\n")
+        #     for i in range(0, 64):
+        #         f.write("\nChannel {}\n".format(i))
+        #
+        #         for j in range (0,64):
+        #             if self.thr_scan_frames[T, i, j]:
+        #                 f.write("{},".format(self.thr_scan_matrix[T, i, j]))
+        #             else:
+        #                 f.write("0,")
+        #     f.write("\n")
+        #
+        # f.close()
 
     def make_rate(self):
         self.thr_scan_rate = self.thr_scan_matrix / self.thr_scan_frames
@@ -1288,11 +1292,12 @@ class analisys_read:
 
                 self.thresholds[T, ch, 0] = x
                 self.thresholds[T, ch, 1] = k
+                self.thresholds[T, ch, 2] = np.argmax(self.thr_scan_matrix[T,ch])
 
                 #print("\n CHANNEL ={} x={} k={}".format(ch, x, k))
 
                 with open(thr_file_path, 'a') as f:
-                    f.write("{}     {}\n".format(self.thresholds[T, ch, 0], self.thresholds[T, ch, 1]))
+                    f.write("{}     {}      {}\n".format(self.thresholds[T, ch, 0], self.thresholds[T, ch, 1],self.thresholds[T, ch, 2]))
 
     def sfit(self, ydata, showplot=True):
         guess = np.array([35, 1, 0.35])

@@ -9,7 +9,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 import matplotlib
 import matplotlib.pyplot as plt
-import math
+from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
 OS = sys.platform
 if OS == 'win32':
     sep = '\\'
@@ -21,12 +21,13 @@ else:
 
 
 class menu():
-    def __init__(self,main_menu,gemroc_handler):
+    def __init__(self,main_menu,gemroc_handler,main_menu_istance):
+
         self.error_window_main = Toplevel(main_menu)
         self.error_window_main.wm_title("Noise and thresholds")
         self.tabControl = ttk.Notebook(self.error_window_main)  # Create Tab Control
 
-        rate_tab=noise_rate_measure(self.error_window_main ,gemroc_handler,self.tabControl)
+        rate_tab=noise_rate_measure(self.error_window_main ,gemroc_handler,self.tabControl,main_menu_istance)
         rate_tab._insert("All system")
         rate_tab._init_windows()
         self.error_window_main.protocol("WM_DELETE_WINDOW", rate_tab.close_stopping)
@@ -34,7 +35,8 @@ class menu():
         self.tabControl.pack(expand=1, fill="both")  # Pack to make visible
 
 class noise_rate_measure ():
-    def __init__(self,main_window,gemroc_handler,tab_control):
+    def __init__(self,main_window,gemroc_handler,tab_control,main_menu_istance):
+        self.main_menu = main_menu_istance
         self.title="Noise rate measure"
         self.tabControl=tab_control
         self.main_window=main_window
@@ -66,7 +68,6 @@ class noise_rate_measure ():
         Label(self.first_lane_frame, text="Rate cap").pack(side=LEFT)
         self.cap=Entry(self.first_lane_frame, width=6)
         self.cap.pack(side=LEFT)
-        self
         Button(self.first_lane_frame, text="Lower (T) ch above cap", command=lambda : self.thr_equalizing("a")).pack(side=LEFT)
         Button(self.first_lane_frame, text="Rise (T) ch below cap", command=lambda : self.thr_equalizing("b")).pack(side=LEFT)
 
@@ -114,6 +115,7 @@ class noise_rate_measure ():
         self.toolbar_GEMROC = NavigationToolbar2Tk(self.canvas_GEMROC, self.plot_frame_GEMROC)
         self.toolbar_GEMROC.draw()
         self.acquire_thread= Acquire_rate(self,self.GEMROC_reading_dict)
+        Button(self.first_lane_frame, text="Autotune thr", command=self.acquire_thread.procedural_scan).pack(side=LEFT)
 
     def change_plot_G(self, sv):
         # print sv.get()
@@ -291,7 +293,7 @@ class Acquire_rate():
             self.count_matrix[number] = acquirer.acquire_rate(1)
             # print "GEMROC {}: {}".format(number, self.count_matrix[number])
             # self.queue.put(self.count_matrix)
-            print "Number of cycles{}".format(self.number_of_cycles)
+            # print "Number of cycles{}".format(self.number_of_cycles)
             GEMROC.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["TL_nTM_ACQ"] = 0
             GEMROC.GEM_COM.DAQ_set_with_dict()
 
@@ -340,9 +342,117 @@ class Acquire_rate():
                         if branch == "both":
                             GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] + 1
                             GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] + 1
+    def procedural_scan(self, des_rate=3500, number_of_cycle=2, square_size=5,acq_time=0.1):
+        """
+        Scan in a square around the current thr, then set the threshold to the value more near to the desidered value
+        :param des_rate:
+        :param number_of_cycle:
+        :param square_size:
+        :return:
+        """
+        for cycle in range(number_of_cycle):
+            for key, GEMROC in self.GEMROC_reading_dic.items():
+                GEM_COM = GEMROC.GEM_COM
+                maximum_matrix = GEM_COM.load_thr_max_from_file()
+                for T in range(0,2):
+                    for ch in range(0,64):
+                        vt1_current= GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1']
+                        vt2_current= GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2']
+                        c_inst = GEMROC.c_inst
+                        g_inst = GEMROC.g_inst
+                        test_c = AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst)
+                        scan_matrix=test_c.both_vth_scan(T, ch, extreme_t=(vt1_current-(square_size-1)/2,vt1_current+(square_size-1)/2), extreme_e=((vt2_current-(square_size-1)/2,vt2_current+(square_size-1)/2)),acq_time=acq_time)
+                        scan_matrix=scan_matrix*(1/(acq_time))
+                        # scan_matrix=np.loadtxt("test_TP.out",delimiter=",")
+                        diff_matrix=abs(scan_matrix-des_rate)
+                        vt1, vt2 = (np.argmin(diff_matrix)//64, np.argmin(diff_matrix)%64)
+                        print "set vth1 {}, set vth 2 {}".format(vt1,vt2)
+                        GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] = vt1
+                        GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = vt2
+            self.caller.main_menu.load_default_config(set_check=False)
+
+    def diagonal_walk(self, limit=(3000, 4500), number_of_cycle=45):
+        ch_status={}
+        for key, GEMROC in self.GEMROC_reading_dic.items():
+            ch_status[key]={}
+            for T in range (0,8):
+                ch_status[key][T]={}
+                for k in range (0,64):
+                    ch_status[key][T][k]={"last_br" : "E",
+                                       # "last_last_br":"T",
+                                       "last_move":1,
+                                       # "last_last_move": 1,
+                                       "done": False}
+        for cycle in range(number_of_cycle):
+            for key, GEMROC in self.GEMROC_reading_dic.items():
+                number = int(key.split(" ")[1])
+                for T in range(0, 2):
+                    for ch in range(0, 64):
+                        status=ch_status[key][T][ch]
+                        if T==0 and ch ==51:
+                            # print ("----\nTIGER {} CH {}:\n, rate : {}".format(T,ch, self.count_matrix[number][T][ch]))
+                            # print (status)
+                            print "Vth1: {} , VTh2: {}".format(GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'],GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'])
+                            print self.count_matrix[number][T][ch]
+                        if not status["done"]:
+                            if self.count_matrix[number][T][ch] < limit[0]:
+
+                                if status["last_move"]==-1:#If i arrive here coming back from a change in the other direction,
+                                    # status["last_last_br"] = status["last_br"] #Save last last br
+                                    self.change_thr(GEMROC, T, ch, status["last_br"], 1)  #undo_last_op
+                                    status["last_br"] = self.swap_branch(status["last_br"])  # Change branch
+                                    self.change_thr(GEMROC, T, ch, status["last_br"], -1)  # Move on the other branch in the opposite direction
+                                    status["last_move"] = 1
+                                else:
+                                    # Standard
+                                    # status["last_last_br"] = status["last_br"] #Save last last br
+                                    status["last_br"] = self.swap_branch( status["last_br"]) #Change branch
+                                    self.change_thr(GEMROC,T,ch,status["last_br"],1) #Move on the other branch
+                                    status["last_move"]=1
+
+                            elif self.count_matrix[number][T][ch] > limit[1]:
+
+                                if status["last_move"]==1: #If i arrive here coming back from a change in the other direction,
+                                    # status["last_last_br"] = status["last_br"] #Save last last br
+                                    self.change_thr(GEMROC, T, ch, status["last_br"], -1)  #undo_last_op
+                                    status["last_br"] = self.swap_branch(status["last_br"])  # Change branch
+                                    self.change_thr(GEMROC, T, ch, status["last_br"], 1)  # Move on the other branch in the opposite direction
+                                    status["last_move"] = -1
+                                else:
+                                    # Standard
+                                    # status["last_last_br"] = status["last_br"] #Save last last br
+                                    status["last_br"] = self.swap_branch(status["last_br"])  # Change branch
+                                    self.change_thr(GEMROC, T, ch, status["last_br"], -1)  # Move on the other branch
+                                    # status["last_last_move"] = status["last_move"]
+                                    status["last_move"] = -1
+                            else:
+                                status["done"] = True
+                        else:
+                            if self.count_matrix[number][T][ch] < limit[0]/3 or self.count_matrix[number][T][ch] > limit[1]*3:
+                                status["done"] = False
 
 
-#
+            self.caller.main_menu.load_default_config(set_check=False)
+            self.caller.clear()
+            self.acquire()
+
+    def change_thr(self,GEMROC,T,ch,branch,move):
+        if branch == "E":
+            if GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2']+move<63:
+                GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] + move
+            if GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2']+move<1:
+                GEMROC.c_inst.Channel_cfg_list[T][ch]['TriggerMode']=3
+        if branch == "T":
+            if GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1']+move<63:
+                GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] + move
+            if GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1']+move<1:
+                GEMROC.c_inst.Channel_cfg_list[T][ch]['TriggerMode']=3
+        return branch,move
+
+    def swap_branch(self, last_branch):
+        if last_branch=="E":
+            return "T"
+        return "E"
 # class Get_rate(Thread):
 #     """
 #     Thread to get the numbers and update plots

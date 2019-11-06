@@ -328,8 +328,11 @@ class noise_measure ():
     def periodic_scan_stop(self):
         self.running=False
         print ("Scan stopped".format(self.scan_period.get()))
-
     def squared_noise_scan(self):
+        """
+        Scans both threshold at the same time (one channel)
+        :return:
+        """
         GEMROC_n=self.GEMROC_num.get()
         dictio = {}
         dictio["{}".format(GEMROC_n)] = self.GEMROC_reading_dict[GEMROC_n]

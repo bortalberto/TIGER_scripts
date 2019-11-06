@@ -485,12 +485,12 @@ def Menu_and_prompt():
                     elif input_array[0].lower() == 'vthr_load':
                         if len(input_array) == 3:
                             if int(input_array[1])!=8:
-                                GEM_COM1.Load_VTH_fromfile(c_inst, int(input_array[1]) & 0xFF, int(input_array[2]), 0, True)
+                                GEM_COM1.Load_VTH_from_scan_file(c_inst, int(input_array[1]) & 0xFF, int(input_array[2]), 0, True)
                                 print ("\nVth Loaded on chip {}").format (int(input_array[1]))
                                 time.sleep(1)
                             else:
                                 for T in range (0,8):
-                                    GEM_COM1.Load_VTH_fromfile(c_inst, T, int(input_array[2]), 0, True)
+                                    GEM_COM1.Load_VTH_from_scan_file(c_inst, T, int(input_array[2]), 0, True)
                                     print ("\nVth Loaded on chip {}").format (T)
                                     time.sleep(1)
                             os.system('clear')
@@ -528,7 +528,7 @@ def Menu_and_prompt():
                         #         test_r = AN_CLASS.analisys_read(GEM_COM1, c_inst)
                         #
                         #         auto_tune_C = AN_CLASS.analisys_conf(GEM_COM1, c_inst, g_inst)
-                        #         GEM_COM1.Load_VTH_fromfile(c_inst, T, 2, 0)
+                        #         GEM_COM1.Load_VTH_from_scan_file(c_inst, T, 2, 0)
                         #         print "\nVth Loaded on TIGER {}".format(T)
                         #         auto_tune_C.fill_VTHR_matrix(3, 0, T)
                         #
@@ -542,7 +542,7 @@ def Menu_and_prompt():
                         #             test_r = AN_CLASS.analisys_read(GEM_COM1, c_inst)
                         #
                         #             auto_tune_C = AN_CLASS.analisys_conf(GEM_COM1, c_inst, g_inst)
-                        #             GEM_COM1.Load_VTH_fromfile(c_inst, T, 2, 0)
+                        #             GEM_COM1.Load_VTH_from_scan_file(c_inst, T, 2, 0)
                         #             print "\nVth Loaded on TIGER {}".format(T)
                         #             auto_tune_C.fill_VTHR_matrix(3, 0, T)
                         #
@@ -559,7 +559,7 @@ def Menu_and_prompt():
                                 test_r = AN_CLASS.analisys_read(GEM_COM1, c_inst)
 
                                 auto_tune_C = AN_CLASS.analisys_conf(GEM_COM1, c_inst, g_inst)
-                                GEM_COM1.Load_VTH_fromfile(c_inst, T, 2, 0)
+                                GEM_COM1.Load_VTH_from_scan_file(c_inst, T, 2, 0)
                                 print "\nVth Loaded on TIGER {}".format(T)
                                 auto_tune_C.fill_VTHR_matrix(3, 0, T)
 
@@ -576,7 +576,7 @@ def Menu_and_prompt():
                                     test_r = AN_CLASS.analisys_read(GEM_COM1, c_inst)
 
                                     auto_tune_C = AN_CLASS.analisys_conf(GEM_COM1,c_inst,g_inst )
-                                    GEM_COM1.Load_VTH_fromfile(c_inst, T, 2, 0)
+                                    GEM_COM1.Load_VTH_from_scan_file(c_inst, T, 2, 0)
                                     print "\nVth Loaded on TIGER {}".format(T)
                                     auto_tune_C.fill_VTHR_matrix(3, 0, T)
 

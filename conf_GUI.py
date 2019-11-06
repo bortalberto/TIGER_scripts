@@ -224,6 +224,8 @@ class menu():
         Label(self.advanced_threshold_settings,text="---Calculate thr fC from thr set---").pack(anchor=N)
         Button(self.advanced_threshold_settings, text="Calculate",command= self.calculate_FC_thr).pack(anchor=N)
         Button(self.advanced_threshold_settings, text = "Import thresholds from old run", command =self.import_old_conf).pack(anchor=N)
+        Button(self.advanced_threshold_settings, text = "Save current thr", command =self.save_current_thr).pack(anchor=N)
+        Button(self.advanced_threshold_settings, text = "Load thr", command =self.load_thr_from_file).pack(anchor=N)
         if COM_class.local_test == True:
             for G in range (0,11):
                 self.toggle(G)
@@ -399,7 +401,7 @@ class menu():
         Open a window to assert the noise rate condition of the setup
         :return:
         """
-        self.rate_window = rate_interface.menu(self.main_window, self.GEMROC_reading_dict)
+        self.rate_window = rate_interface.menu(self.main_window, self.GEMROC_reading_dict,self)
 
 
     def launch_controller(self):
@@ -582,6 +584,9 @@ class menu():
         GEM_COM = GEMROC.GEM_COM
         c_inst = GEMROC.c_inst
         g_inst = GEMROC.g_inst
+
+        GEMROC.GEM_COM.set_ToT_mode(c_inst)
+
         test_c = AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst)
         test_r = AN_CLASS.analisys_read(GEM_COM, c_inst)
         test_c.thr_preconf()
@@ -615,6 +620,7 @@ class menu():
             test_r.global_sfit(first, last, branch=1)
         else:
             test_r.global_sfit(first, last, branch=2)
+        GEMROC.GEM_COM.set_sampleandhold_mode(c_inst)
 
         print ("GEMROC {} done".format(GEMROC_ID))
         pipe_out.send(0)
@@ -695,7 +701,7 @@ class menu():
             test_r = AN_CLASS.analisys_read(GEM_COM, c_inst)
 
             auto_tune_C = AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst)
-            GEM_COM.Load_VTH_fromfile(c_inst, TIGER, 2, 1, 0)
+            GEM_COM.Load_VTH_from_scan_file(c_inst, TIGER, 2, 1, 0)
             print ("\nVth Loaded on TIGER {}".format(TIGER))
             auto_tune_C.fill_VTHR_matrix(3, 0, TIGER)
 
@@ -711,7 +717,7 @@ class menu():
                 test_r = AN_CLASS.analisys_read(GEM_COM, c_inst)
 
                 auto_tune_C = AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst)
-                GEM_COM.Load_VTH_fromfile(c_inst, T, 2, 1, 0)
+                GEM_COM.Load_VTH_from_scan_file(c_inst, T, 2, 1, 0)
                 print ("\nVth Loaded on TIGER {}".format(T))
                 auto_tune_C.fill_VTHR_matrix(3, 0, T)
 
@@ -796,8 +802,9 @@ class menu():
             self.thr_sigma_E.pack(side=LEFT)
             OptionMenu(thr_frame, thr_target, *["This TIGER", "All TIGERs", "All TIGERs in all GEMROCs"]).pack(side=LEFT)
             Button(thr_frame, text="Load scan threshold", command=lambda: self.load_thr_Handling(thr_target, "scan")).pack(side=LEFT)
-            Button(thr_frame, text="Load auto threshold", command=lambda: self.load_thr_Handling(thr_target, "auto")).pack(side=LEFT)
-            Button(thr_frame, text="Launch THR scan on this TIGER", command=lambda: self.thr_Scan(self.showing_GEMROC.get(), int(self.showing_TIGER.get()))).pack(side=LEFT)
+            # Button(thr_frame, text="Load auto threshold", command=lambda: self.load_thr_Handling(thr_target, "auto")).pack(side=LEFT)
+            Button(thr_frame, text="Launch THR-T scan on this TIGER", command=lambda: self.thr_Scan(self.showing_GEMROC.get(), int(self.showing_TIGER.get()))).pack(side=LEFT)
+            Button(thr_frame, text="Launch THR-E scan on this TIGER", command=lambda: self.thr_Scan(self.showing_GEMROC.get(), int(self.showing_TIGER.get()),branch=2)).pack(side=LEFT)
 
     def TIGER_GLOBAL_configurator(self):
         self.third_row_frame.destroy()
@@ -1524,7 +1531,7 @@ class menu():
                 print ("TIGER {}".format(TIGER))
                 self.write_CHANNEL(self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())], TIGER, CHANNEL)
 
-    def write_CHANNEL(self, GEMROC, TIGER, CHANNEL, update_fields=True):
+    def write_CHANNEL(self, GEMROC, TIGER, CHANNEL, update_fields=True,set_check=True):
         TIGER = int(TIGER)
         CHANNEL = int(CHANNEL)
         if update_fields == True:
@@ -1557,7 +1564,7 @@ class menu():
                     failed = True
                     # print "!!! ERROR IN CONFIGURATION  GEMROC {},TIGER {},CHANNEL {}!!!".format(GEMROC.GEM_COM.GEMROC_ID, TIGER, CH)
 
-            if failed:
+            if failed and set_check:
                 print ("!!! ERROR IN CHANNEL CONFIGURATION  GEMROC {},TIGER {}!!!".format(GEMROC.GEM_COM.GEMROC_ID, TIGER))
 
     def load_thr_Handling(self, thr_target_entry, mode):
@@ -1577,6 +1584,7 @@ class menu():
                     self.write_CHANNEL(gemroc, T,64)
 
     def load_thr(self, to_all=False, source="auto", sigma_T=3.0, sigma_E=2.0, offset=0, first=0, last=8):
+        # print sigma_T,sigma_E
         if not to_all:
             GEMROC = self.GEMROC_reading_dict[self.showing_GEMROC.get()]
             print (GEMROC)
@@ -1584,26 +1592,41 @@ class menu():
                 if source == "auto":
                     GEMROC.GEM_COM.Load_VTH_fromfile_autotuned(GEMROC.c_inst, T)
                 if source == "scan":
-                    GEMROC.GEM_COM.Load_VTH_fromfile(GEMROC.c_inst, T, sigma_T, sigma_E, offset)
+                    GEMROC.GEM_COM.Load_VTH_from_scan_file(GEMROC.c_inst, T, sigma_T, sigma_E, offset)
         else:
             for number, GEMROC in self.GEMROC_reading_dict.items():
                 for T in range(first, last):
                     if source == "auto":
                         GEMROC.GEM_COM.Load_VTH_fromfile_autotuned(GEMROC.c_inst, T)
                     if source == "scan":
-                        GEMROC.GEM_COM.Load_VTH_fromfile(GEMROC.c_inst, T, sigma_T, sigma_E, offset, send_command=False)
+                        GEMROC.GEM_COM.Load_VTH_from_scan_file(GEMROC.c_inst, T, sigma_T, sigma_E, offset, send_command=False)
+    def save_current_thr(self):
+        """
+        Save current thresholds, used mostly for the 2-d thr autotune
+        :return:
+        """
+        for number, GEMROC in self.GEMROC_reading_dict.items():
+            GEMROC.GEM_COM.save_current_VTH(GEMROC.c_inst)
+    def load_thr_from_file(self):
+        """
+        Load thresholds, used mostly for the 2-d thr autotune
+        :return:
+        """
+        for number, GEMROC in self.GEMROC_reading_dict.items():
+            GEMROC.GEM_COM.load_vth(GEMROC.c_inst)
 
-    def load_default_config(self):
+    def load_default_config(self,set_check=True):
         for number, GEMROC in self.GEMROC_reading_dict.items():
             for TIGER in range(0, 8):
                 write = GEMROC.GEM_COM.Set_param_dict_global(GEMROC.g_inst, "TxDDR", int(TIGER), 0)
                 read = GEMROC.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(GEMROC.g_inst, int(TIGER))
                 read = GEMROC.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(GEMROC.g_inst, int(TIGER))
-                try:
-                    GEMROC.GEM_COM.global_set_check(write, read)
-                except:
-                    self.error_led_update()
-                self.write_CHANNEL(GEMROC, TIGER, 64, False)
+                if set_check:
+                    try:
+                        GEMROC.GEM_COM.global_set_check(write, read)
+                    except:
+                        self.error_led_update()
+                self.write_CHANNEL(GEMROC, TIGER, 64, False,set_check)
         self.Synch_reset()
 
     def Synch_reset(self, to_all=1):
