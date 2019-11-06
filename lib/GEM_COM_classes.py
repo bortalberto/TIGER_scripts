@@ -17,7 +17,7 @@ import time
 
 import numpy as np
 
-import GEM_CONF_classes as GEM_CONF_classes  # acr 2018-02-19 import GEMconf_classes_2018
+import GEM_CONF_classes as GEM_CONF_classes  # acr 2018-02-19 import GEMcnf_classes_2018
 import classes_test_functions
 
 OS = sys.platform
