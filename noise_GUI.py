@@ -342,12 +342,8 @@ class noise_measure ():
             c_inst = GEMROC.c_inst
             g_inst = GEMROC.g_inst
             test_c = AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst)
-            test_r = AN_CLASS.analisys_read(GEM_COM, c_inst)
             first = self.TIGER_num_first.get()
-            last = self.TIGER_num_last.get() + 1
             firstch = self.CHANNEL_num_first.get()
-            lastch = self.CHANNEL_num_last.get() + 1
-            GEMROC_ID = GEM_COM.GEMROC_ID
             test_c.both_vth_scan(first, firstch)
 
     def noise_scan(self,vth2=False):  # if GEMROC num=-1--> To all GEMROC, if TIGER_num=-1 --> To all TIGERs
@@ -450,7 +446,7 @@ class noise_measure ():
                 GEM_COM.Set_param_dict_channel(c_inst, "TP_disable_FE", T, J, 1)
 
 
-    def noise_scan_process(self, number,  pipe_out,vth2):
+    def noise_scan_process(self, number,  pipe_out, vth2):
         self.sampling_scan = False
         scan_matrix=np.zeros((8,64,64))
         GEMROC = self.GEMROC_reading_dict[number]

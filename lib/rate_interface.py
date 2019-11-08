@@ -3,7 +3,7 @@ from Tkinter import *
 from lib import GEM_ACQ_classes as GEM_ACQ
 import numpy as np
 import ttk
-import time
+from multiprocessing import Process, Pipe
 import Queue
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
@@ -115,7 +115,7 @@ class noise_rate_measure ():
         self.toolbar_GEMROC = NavigationToolbar2Tk(self.canvas_GEMROC, self.plot_frame_GEMROC)
         self.toolbar_GEMROC.draw()
         self.acquire_thread= Acquire_rate(self,self.GEMROC_reading_dict)
-        Button(self.first_lane_frame, text="Autotune thr", command=self.acquire_thread.procedural_scan).pack(side=LEFT)
+        Button(self.first_lane_frame, text="Autotune thr", command=lambda : self.acquire_thread.procedural_scan_handler(self.GEMROC_reading_dict)).pack(side=LEFT)
 
     def change_plot_G(self, sv):
         # print sv.get()
@@ -342,6 +342,7 @@ class Acquire_rate():
                         if branch == "both":
                             GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] + 1
                             GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] + 1
+
     def procedural_scan(self, des_rate=3500, number_of_cycle=2, square_size=5,acq_time=0.1):
         """
         Scan in a square around the current thr, then set the threshold to the value more near to the desidered value
@@ -354,7 +355,7 @@ class Acquire_rate():
             for key, GEMROC in self.GEMROC_reading_dic.items():
                 GEM_COM = GEMROC.GEM_COM
                 maximum_matrix = GEM_COM.load_thr_max_from_file()
-                for T in range(0,2):
+                for T in range(0,8):
                     for ch in range(0,64):
                         vt1_current= GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1']
                         vt2_current= GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2']
@@ -363,13 +364,77 @@ class Acquire_rate():
                         test_c = AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst)
                         scan_matrix=test_c.both_vth_scan(T, ch, extreme_t=(vt1_current-(square_size-1)/2,vt1_current+(square_size-1)/2), extreme_e=((vt2_current-(square_size-1)/2,vt2_current+(square_size-1)/2)),acq_time=acq_time)
                         scan_matrix=scan_matrix*(1/(acq_time))
-                        # scan_matrix=np.loadtxt("test_TP.out",delimiter=",")
                         diff_matrix=abs(scan_matrix-des_rate)
                         vt1, vt2 = (np.argmin(diff_matrix)//64, np.argmin(diff_matrix)%64)
-                        print "set vth1 {}, set vth 2 {}".format(vt1,vt2)
+                        print "Ch {} -set vth1 {}, set vth 2 {}".format(ch,vt1,vt2)
                         GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] = vt1
                         GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = vt2
-            self.caller.main_menu.load_default_config(set_check=False)
+                        GEMROC.GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg(c_inst,T,ch)
+
+
+    def procedural_scan_handler(self,GEMROC_DICT,des_rate=3500,number_of_cycle=2,square_size=5,acq_time=0.1):
+        process_list = []
+        pipe_list = []
+        for key, GEMROC in GEMROC_DICT.items():
+            pipe_in, pipe_out = Pipe()
+            p = Process(target=self.procedural_scan_process, args=(GEMROC, pipe_out,des_rate,number_of_cycle,square_size,acq_time))
+            process_list.append(p)
+            pipe_list.append(pipe_in)
+            p.start()
+        while True:
+            for process,pipe in zip(process_list,pipe_list):
+                scan_out = []
+                scan_out.append(pipe.recv())
+                if int(scan_out[0])!=65:
+
+                    scan_out.append(pipe.recv())
+                    scan_out.append(pipe.recv())
+                    scan_out.append(pipe.recv())
+                    scan_out.append(pipe.recv())
+
+                    GEMROC=GEMROC_DICT["GEMROC {}".format(int(scan_out[0]))]
+                    GEMROC.c_inst.Channel_cfg_list[int(scan_out[1])][int(scan_out[2])]['Vth_T1'] = int(scan_out[3])
+                    GEMROC.c_inst.Channel_cfg_list[int(scan_out[1])][int(scan_out[2])]['Vth_T2'] = int(scan_out[4])
+                    print "GEMROC {}, TIGER {}, CH {}".format(scan_out[0],scan_out[1],scan_out[2])
+                if int(scan_out[0])==65:
+                    process_list.remove(process)
+                    pipe_list.remove(pipe)
+    def procedural_scan_process(self,GEMROC, pipeout, des_rate=3500, number_of_cycle=2, square_size=5,acq_time=0.1):
+        """
+        Procedural scan with multiprocess
+        :param GEMROC:
+        :param pipeout:
+        :param des_rate:
+        :param number_of_cycle:
+        :param square_size:
+        :param acq_time:
+        :return:
+        """
+        GEM_COM = GEMROC.GEM_COM
+        for cycle in range(number_of_cycle):
+                # maximum_matrix = GEM_COM.load_thr_max_from_file()
+                for T in range(0,8):
+                    for ch in range(0,64):
+                        vt1_current= GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1']
+                        vt2_current= GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2']
+                        c_inst = GEMROC.c_inst
+                        g_inst = GEMROC.g_inst
+                        test_c = AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst)
+                        scan_matrix=test_c.both_vth_scan(T, ch, extreme_t=(vt1_current-(square_size-1)/2,vt1_current+(square_size-1)/2), extreme_e=((vt2_current-(square_size-1)/2,vt2_current+(square_size-1)/2)),acq_time=acq_time)
+                        scan_matrix=scan_matrix*(1/(acq_time))
+                        diff_matrix=abs(scan_matrix-des_rate)
+                        vt1, vt2 = (np.argmin(diff_matrix)//64, np.argmin(diff_matrix)%64)
+                        # print "T {} Ch {} -set vth1 {}, set vth 2 {}".format(T,ch,vt1,vt2)
+                        GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] = vt1
+                        GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = vt2
+                        GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg(c_inst,T,ch)
+                        pipeout.send(GEM_COM.GEMROC_ID)
+                        pipeout.send(T)
+                        pipeout.send(ch)
+                        pipeout.send(vt1)
+                        pipeout.send(vt2)
+        pipeout.send(65)
+        return
 
     def diagonal_walk(self, limit=(3000, 4500), number_of_cycle=45):
         ch_status={}

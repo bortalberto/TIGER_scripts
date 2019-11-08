@@ -28,7 +28,7 @@ elif OS == 'linux2':
 else:
     print("ERROR: OS {} non compatible".format(OS))
     sys.exit()
-local_test = False
+local_test = True
 
 class communication:  ##The directory are declared here to avoid multiple declaration
 

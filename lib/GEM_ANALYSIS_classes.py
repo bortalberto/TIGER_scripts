@@ -315,7 +315,7 @@ class analisys_conf: #Analysis class used for configurations10
                 self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 3)
 
         return thr_scan_matrix
-    def both_vth_scan(self, T, j, extreme_t=(0, 64), extreme_e=(0, 64),acq_time=0.1):
+    def both_vth_scan(self, T, j, extreme_t=(0, 63), extreme_e=(0, 63),acq_time=0.1):
         scan_matrix=np.zeros((64,64))
         self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode", T, j, 0)
         self.GEM_COM.Set_param_dict_channel(self.c_inst,"TP_disable_FE", T, j, 0)
@@ -330,8 +330,8 @@ class analisys_conf: #Analysis class used for configurations10
                 self.GEM_COM.reset_counter()
                 time.sleep(acq_time)
                 scan_matrix[Vth_t , Vth_e] = self.GEM_COM.GEMROC_counter_get()
-                print ("vth_t:{},vth_e:{}".format(Vth_t,Vth_e))
-                print ("rate {}".format(scan_matrix[Vth_t, Vth_e]/acq_time))
+                # print ("vth_t:{},vth_e:{}".format(Vth_t,Vth_e))
+                # print ("rate {}".format(scan_matrix[Vth_t, Vth_e]/acq_time))
         np.savetxt('test.out', scan_matrix, delimiter=',')
         # fig = plt.figure()
         # ax = fig.gca(projection='3d')

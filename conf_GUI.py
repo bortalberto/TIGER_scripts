@@ -1555,7 +1555,7 @@ class menu():
             failed = False
 
             for CH in range(0, 64):
-                write = GEMROC.GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg(GEMROC.c_inst, TIGER, CH)
+                write = GEMROC.GEM_COM.cWriteTgtGEMROC_TIGER_ChCfgReg(GEMROC.c_inst, TIGER, CH)
                 read = GEMROC.GEM_COM.ReadTgtGEMROC_TIGER_ChCfgReg(GEMROC.c_inst, TIGER, CH)
                 try:
                     GEMROC.GEM_COM.channel_set_check_GUI(write, read)
