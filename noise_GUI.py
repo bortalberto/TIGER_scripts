@@ -12,22 +12,22 @@ import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
-import conf_GUI as mainpage
 
 OS = sys.platform
 if OS == 'win32':
-	sep = '\\'
+    sep = '\\'
 elif OS == 'linux2':
-	sep = '/'
+    sep = '/'
 else:
-	print("ERROR: OS {} non compatible".format(OS))
-	sys.exit()
+    print("ERROR: OS {} non compatible".format(OS))
+    sys.exit()
 
 
 
 
 class menu():
     def __init__(self,main_menu,gemroc_handler,main_menu_istance):
+
         self.error_window_main = Toplevel(main_menu)
         self.error_window_main.wm_title("Noise and thresholds")
         self.tabControl = ttk.Notebook(self.error_window_main)  # Create Tab Control
@@ -388,7 +388,7 @@ class noise_measure ():
             else:
                 dictio["{}".format(GEMROC_n)] = self.scan_matrixs[GEMROC_n]
 
-            for key in sorted(dictio.keys(),cmp = mainpage.sort_by_number):
+            for key in sorted(dictio.keys(),cmp = sort_by_number):
                 for T in range(0,8):
                     for ch in range(0,64):
                         for vth in range(0,64):
@@ -934,7 +934,19 @@ def squared_sum(A,B):
         return np.sum(C)
     else:
         raise Exception("A and B not same size")
+def sort_by_number(stringa1,stringa2):
+    number1=find_number(stringa1)
+    number2=find_number(stringa2)
+    return number1-number2
 
+
+def find_number(stringa):
+    if type(stringa) != tuple:
+        number = int(stringa.split(" ")[1])
+    else:
+        number = int(stringa[0].split(" ")[1])
+
+    return number
 # def process_image(data):
 #     values =AN_CLASS.error_fit(data,self.TP_rate, Ebranch=True)
 #     return values
