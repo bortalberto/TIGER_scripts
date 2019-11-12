@@ -12,6 +12,7 @@ import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
+import conf_GUI as mainpage
 
 OS = sys.platform
 if OS == 'win32':
@@ -26,24 +27,25 @@ else:
 
 
 class menu():
-    def __init__(self,main_menu,gemroc_handler):
+    def __init__(self,main_menu,gemroc_handler,main_menu_istance):
         self.error_window_main = Toplevel(main_menu)
         self.error_window_main.wm_title("Noise and thresholds")
         self.tabControl = ttk.Notebook(self.error_window_main)  # Create Tab Control
 
-        noise_measure_=noise_measure(self.error_window_main ,gemroc_handler,self.tabControl)
+        noise_measure_=noise_measure(self.error_window_main ,gemroc_handler,self.tabControl,main_menu_istance)
         noise_measure_._insert("Noise measure")
         noise_measure_._init_windows()
-        baseline_exit_= baseline_exit(noise_measure,self.error_window_main ,gemroc_handler,self.tabControl)
+        baseline_exit_= baseline_exit(noise_measure,self.error_window_main ,gemroc_handler,self.tabControl,main_menu_istance)
         baseline_exit_._insert("Baseline estimation")
         baseline_exit_._init_windows()
         self.tabControl.pack(expand=1, fill="both")  # Pack to make visible
 
 class noise_measure ():
-    def __init__(self,main_window,gemroc_handler,tab_control):
+    def __init__(self,main_window,gemroc_handler,tab_control,main_menu_istance):
         self.title="Noise_measure"
         self.tabControl=tab_control
         self.main_window=main_window
+        self.main_menu_istance=main_menu_istance
         self.scan_matrixs={}
         self.fits={}
         self.TPfits={}
@@ -79,7 +81,9 @@ class noise_measure ():
         self.E_with_tp=BooleanVar(self.error_window)
         self.T_without_tp=BooleanVar(self.error_window)
         self.E_without_tp=BooleanVar(self.error_window)
-
+        self.save_in_txt = BooleanVar(self.error_window)
+        self.save_in_txt.set(False)
+        
         self.T_with_tp.set(True)
         self.E_with_tp.set(True)
         self.T_without_tp.set(True)
@@ -221,7 +225,8 @@ class noise_measure ():
         self.line_list=[]
         # for number, GEMROC_number in self.GEMROC_reading_dict.items():
         #     print number
-        for i in range (0,21):
+
+        for i in range (0,len(self.GEMROC_reading_dict)):
             number="GEMROC {}".format(i)
             self.scan_matrixs[number]=np.zeros((8,64,64))
             self.fits[number]={}
@@ -262,40 +267,92 @@ class noise_measure ():
     def _insert(self,name):
         self.tabControl.add(self.error_window, text=name)  # Add the tab
 
-    def fast_noise_scan(self):
+    def fast_noise_scan(self, log=False):
         #Tbranch test pulses
+        logfile="periodic_noise_scan"+sep+"scan_log.txt"
+        if log:
+            with open(logfile,'a+') as fi:
+                fi.write("{} Starting scan cycle\n".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")))
         self.start_TP()
+
         if self.T_with_tp.get():
 
+            self.log_T(init=True,inbranch="T")
+
+            with open(logfile,'a+') as fi:
+                fi.write("{} Scanning branch T with TP\n".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")))
             self.load__fast_TP_settings()
             self.noise_scan()
             self.unload_TP_settings()
-            File_name = "T_branch_with_TP_{}.ns".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
-            with  open(File_name, 'wb') as f:
-                pickle.dump(self.scan_matrixs,f)
+            File_name = "periodic_noise_scan"+sep+"T_branch_with_TP_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
+
+            if not self.save_in_txt.get():
+                with  open(File_name+".ns", 'wb') as f:
+                    pickle.dump(self.scan_matrixs,f)
+            else:
+                self.save_txt(File_name+".txt")
+                
+            with open(logfile, 'a+') as fi:
+                fi.write("{} Finished scan branch T with TP\n".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")))
+            self.log_T(init=False,inbranch="T")
+
         if self.E_with_tp.get():
+            self.log_T(init=True,inbranch="E")
+
+            with open(logfile, 'a+') as fi:
+                fi.write("{} Scanning branch E with TP\n".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")))
             self.load__fast_TP_settings(branch="E")
             self.noise_scan(True)
             self.unload_TP_settings()
-            File_name = "E_branch_with_TP_{}.ns".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
-            with  open(File_name, 'wb') as f:
-                pickle.dump(self.scan_matrixs,f)
+            File_name = "periodic_noise_scan"+sep+"E_branch_with_TP_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
+
+            if not self.save_in_txt.get():
+                with  open(File_name+".ns", 'wb') as f:
+                    pickle.dump(self.scan_matrixs,f)
+            else:
+                self.save_txt(File_name+".txt")
+                
+            with open(logfile, 'a+') as fi:
+                fi.write("{} Finished scan E with TP\n".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")))
+            self.log_T(init=False,inbranch="E")
 
         if self.T_without_tp.get():
+            self.log_T(init=True,inbranch="T")
+
+            with open(logfile, 'a+') as fi:
+                fi.write("{} Scanning branch T without TP\n".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")))
             self.load__fast_TP_settings(branch="T",TP=False)
             self.noise_scan()
             self.unload_TP_settings()
-            File_name = "Baseline_T_{}.ns".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
-            with  open(File_name, 'wb') as f:
-                pickle.dump(self.scan_matrixs,f)
+            File_name = "periodic_noise_scan"+sep+"Baseline_T_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
+
+            if not self.save_in_txt.get():
+                with  open(File_name+".ns", 'wb') as f:
+                    pickle.dump(self.scan_matrixs,f)
+            else:
+                self.save_txt(File_name+".txt")
+            with open(logfile, 'a+') as fi:
+                fi.write("{} Finished scan T without TP\n".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")))
+            self.log_T(init=False,inbranch="T")
 
         if self.E_without_tp.get():
+            self.log_T(init=True,inbranch="E")
+
+            with open(logfile, 'a+') as fi:
+                fi.write("{} Scanning branch E without TP\n".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")))
             self.load__fast_TP_settings(branch="E",TP=False)
             self.noise_scan(True)
             self.unload_TP_settings()
-            File_name = "Baseline_E_{}.ns".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
-            with  open(File_name, 'wb') as f:
-                pickle.dump(self.scan_matrixs,f)
+            File_name = "periodic_noise_scan"+sep+"Baseline_E_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
+            
+            if not self.save_in_txt.get():
+                with  open(File_name+".ns", 'wb') as f:
+                    pickle.dump(self.scan_matrixs,f)
+            else:
+                self.save_txt(File_name+".txt")
+            with open(logfile, 'a+') as fi:
+                fi.write("{} Finished scan E without TP\n".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")))
+            self.log_T(init=False,inbranch="E")
 
     def periodic_scan_win(self):
         per_wind=Toplevel(self.error_window)
@@ -307,24 +364,90 @@ class noise_measure ():
         Label(first_row, text='Scan every [hours]:   ').pack(side=LEFT)
         Entry(first_row, width=4, textvariable=self.scan_period).pack(side=LEFT)
         Button(first_row,text="Launch periodic scan", command= self.periodic_scan_start).pack(side=LEFT)
-        Button(first_row,text="Stop periodic scan", command= self.periodic_scan_stop).pack(side=LEFT)
+        Button(first_row,text="Launch continous scan", command= lambda : self.periodic_scan_start(True)).pack(side=LEFT)
+
+        Button(first_row,text="Stop scan", command= self.periodic_scan_stop).pack(side=LEFT)
         Checkbutton(second_row,text="Scan TP T", variable=self.T_with_tp).pack(side=LEFT,padx=2)
         Checkbutton(second_row,text="Scan no TP T", variable=self.T_without_tp).pack(side=LEFT,padx=2)
         Checkbutton(second_row,text="Scan TP E", variable=self.E_with_tp).pack(side=LEFT,padx=2)
         Checkbutton(second_row,text="Scan no TP E", variable=self.E_without_tp).pack(side=LEFT,padx=2)
+        Checkbutton(second_row,text="Save_txt", variable=self.save_in_txt).pack(side=LEFT,padx=2)
 
-    def periodic_scan_start(self):
-        self.periodic_scan_process=Process(target=self.periodic_scan_processer())
+    def save_txt(self,filename):
+        """
+        To save scans in TXT
+        :param filename: 
+        :return: 
+        """
+        with open(filename, 'w') as fi:
+
+            GEMROC_n=self.GEMROC_num.get()
+            dictio={}
+            if GEMROC_n == "All":
+                dictio = self.scan_matrixs.copy()
+            else:
+                dictio["{}".format(GEMROC_n)] = self.scan_matrixs[GEMROC_n]
+
+            for key in sorted(dictio.keys(),cmp = mainpage.sort_by_number):
+                for T in range(0,8):
+                    for ch in range(0,64):
+                        for vth in range(0,64):
+                                fi.write("{}\n".format(self.scan_matrixs[key][T][ch][vth]))
+
+
+    def periodic_scan_start(self,cont=False):
+        self.periodic_scan_process=Process(target=self.periodic_scan_processer(cont))
         self.periodic_scan_process.run()
 
-    def periodic_scan_processer(self):
+    def periodic_scan_processer(self,cont=False):
         self.running=True
         while self.running:
             print ("Launching scan")
-            self.fast_noise_scan()
+            self.fast_noise_scan(log=True)
+
             if self.running:
-                print ("Scan finisched, waiting {} hours".format(self.scan_period.get()))
-                time.sleep(5)
+                if not cont:
+                    print ("Scan finisched, waiting {} hours".format(self.scan_period.get()))
+                if cont:
+                    time.sleep(2)
+                else:
+                    time.sleep(int(self.scan_period.get()))
+    def log_T(self,init,inbranch):
+        """
+         Save the temperature (avoiding the bug)
+        :param init:
+        :param branch:
+        :return:
+        """
+
+        T_lof_filename="periodic_noise_scan"+sep+"temp_log.txt"
+        GEMROC_n = self.GEMROC_num.get()
+
+        if GEMROC_n == "All":
+            return
+        GEMROC=self.GEMROC_reading_dict[GEMROC_n]
+        IVT_dict = GEMROC.GEM_COM.save_IVT()
+        date=datetime.datetime.now().strftime("%d/%m")
+        hour=datetime.datetime.now().strftime("%H:%M")
+        branch=inbranch
+        itemp0= IVT_dict['status']['FEB0']["TEMP[degC]"]
+        itemp1= IVT_dict['status']['FEB1']["TEMP[degC]"]
+        itemp2= IVT_dict['status']['FEB2']["TEMP[degC]"]
+        itemp3= IVT_dict['status']['FEB3']["TEMP[degC]"]
+        if init:
+            endl="	"
+        else:
+            endl="\n"
+
+        with open (T_lof_filename,'a') as T_log_file:
+            T_log_file.write("{0}	{1}	{2}	{3:.1f}	{4:.1f}	{5:.1f}	{6:.1f}{7}".format(date,hour,branch,itemp0,itemp1,itemp2,itemp3,endl))
+
+        self.main_menu_istance.power_off_FEBS()
+        time.sleep(1)
+        self.main_menu_istance.power_on_FEBS()
+        self.main_menu_istance.load_default_config(set_check=False)
+
+
     def periodic_scan_stop(self):
         self.running=False
         print ("Scan stopped".format(self.scan_period.get()))
@@ -785,8 +908,8 @@ class noise_measure ():
 
 
 class baseline_exit(noise_measure):
-    def __init__(self, noise_measure,main_window, gemroc_handler,tab_control):
-        noise_measure.__init__(self,gemroc_handler=gemroc_handler, main_window=main_window,tab_control=tab_control)
+    def __init__(self, noise_measure,main_window, gemroc_handler,tab_control,main_menu_istance):
+        noise_measure.__init__(self,gemroc_handler=gemroc_handler, main_window=main_window,tab_control=tab_control,main_menu_istance=main_menu_istance)
         self.title="Baseline estimation"
     def fit(self):
         for GEMROC, matrix in self.scan_matrixs.items():
