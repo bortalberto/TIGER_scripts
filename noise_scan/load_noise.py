@@ -73,7 +73,7 @@ class reader:
         rootFile.Close()
 
 GEMROC_NUM = (0,20)
-filename= sys.argv[0]
+filename= sys.argv[1]
 filename_noise = "noise.n"
 
 print ("Decoding: \n" + filename)

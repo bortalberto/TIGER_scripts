@@ -125,7 +125,7 @@ class noise_measure ():
         Label(self.second_row_frame, text='TP rate (Hz)   ').pack(side=LEFT)
         Entry(self.second_row_frame, textvariable=self.TP_rate,width=8,).pack(side=LEFT)
         Label(self.second_row_frame, text='TP per frameword').pack(side=LEFT)
-        fields_optionsr = (1,2,3,4,5,6,7,8)
+        fields_optionsr = (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15)
         OptionMenu(self.second_row_frame, self.number_of_TP, *fields_optionsr).pack(side=LEFT)
 
         self.third_row=Frame(self.error_window)
@@ -226,8 +226,8 @@ class noise_measure ():
         # for number, GEMROC_number in self.GEMROC_reading_dict.items():
         #     print number
 
-        for i in range (0,20):
-            number="GEMROC {}".format(i)
+        for key in self.GEMROC_reading_dict.keys():
+            number=key
             self.scan_matrixs[number]=np.zeros((8,64,64))
             self.fits[number]={}
             self.TPfits[number]={}
@@ -487,7 +487,7 @@ class noise_measure ():
         for number, GEMROC_number in dictio.items():
             Label(self.bar_win, text='{}'.format(number)).pack()
             progress_list.append(IntVar())
-            maxim = ((self.CHANNEL_num_last.get()-self.CHANNEL_num_first.get())+1)*(self.TIGER_num_last.get()-self.TIGER_num_first.get()+1)
+            maxim = (((self.CHANNEL_num_last.get()-self.CHANNEL_num_first.get())+1)*(self.TIGER_num_last.get()-self.TIGER_num_first.get()+1))*64
             progress_bars.append(Progressbar(self.bar_win, maximum=maxim, orient=HORIZONTAL, variable=progress_list[i], length=200, mode='determinate'))
             progress_bars[i].pack()
 
@@ -591,8 +591,8 @@ class noise_measure ():
                 for i in range (0,64):#THR
                     scan_matrix[T,J,i]=test_c.noise_scan_using_GEMROC_COUNTERS_progress_bar(T,J, i,False,vth2)
 
-                position = ((T-first) * (lastch-firstch+1)) + (J)
-                pipe_out.send(position)
+                    position = ((T-first) * (lastch-firstch+1))*64 + (J)*64 + i
+                    pipe_out.send(position)
 
 
         test_r.thr_scan_matrix=scan_matrix
@@ -648,9 +648,10 @@ class noise_measure ():
         for number, GEMROC_number in self.GEMROC_reading_dict.items():
             GEMROC_number.GEM_COM.Soft_TP_generate()
             GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TL_nTM_ACQ'] = 0
-            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TP_period'] = 900
             GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['Periodic_TP_EN_pattern'] = 15
             GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['number_of_repetitions'] = 512+self.number_of_TP.get()
+            period=8190/self.number_of_TP.get()
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TP_period'] = period
             GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TP_width'] = 10
             GEMROC_number.GEM_COM.DAQ_set_with_dict()
     def plotta(self):
