@@ -226,7 +226,7 @@ class noise_measure ():
         # for number, GEMROC_number in self.GEMROC_reading_dict.items():
         #     print number
 
-        for i in range (0,len(self.GEMROC_reading_dict)):
+        for i in range (0,20):
             number="GEMROC {}".format(i)
             self.scan_matrixs[number]=np.zeros((8,64,64))
             self.fits[number]={}
@@ -487,7 +487,7 @@ class noise_measure ():
         for number, GEMROC_number in dictio.items():
             Label(self.bar_win, text='{}'.format(number)).pack()
             progress_list.append(IntVar())
-            maxim = ((self.CHANNEL_num_last.get()-self.CHANNEL_num_first.get()))*(self.TIGER_num_last.get()-self.TIGER_num_first.get())+1
+            maxim = ((self.CHANNEL_num_last.get()-self.CHANNEL_num_first.get())+1)*(self.TIGER_num_last.get()-self.TIGER_num_first.get()+1)
             progress_bars.append(Progressbar(self.bar_win, maximum=maxim, orient=HORIZONTAL, variable=progress_list[i], length=200, mode='determinate'))
             progress_bars[i].pack()
 
@@ -590,7 +590,8 @@ class noise_measure ():
             for J in range (firstch,lastch):#Channel
                 for i in range (0,64):#THR
                     scan_matrix[T,J,i]=test_c.noise_scan_using_GEMROC_COUNTERS_progress_bar(T,J, i,False,vth2)
-                position = ((T-first) * (lastch-firstch)+1) + (J)
+
+                position = ((T-first) * (lastch-firstch+1)) + (J)
                 pipe_out.send(position)
 
 
@@ -725,16 +726,19 @@ class noise_measure ():
                         self.line_list.append( self.plot_rate.plot(np.arange(TPparameters[0],64,1.0),translated_gas , '--',label= "Gaussian baseline estimation"))
                     self.plot_rate.set_title("ROC {},TIG {}, CH {} , Sigma Noise={} fC".format(self.plotting_gemroc, self.plotting_TIGER, self.plotting_Channel, noise))
                     if self.title == "Noise_measure":
-                        if noise=="Canno't fit" or self.mapping_matrix[self.plotting_gemroc][self.plotting_TIGER][self.plotting_Channel] == "0":
-                            self.gufo["image"]=self.icon_sleep
-                        elif noise<0.6 and self.mapping_matrix[self.plotting_gemroc][self.plotting_TIGER][self.plotting_Channel].split("-")[0]=="X":
-                            self.gufo["image"]=self.icon_worry
-                        elif noise < 0.25 and self.mapping_matrix[self.plotting_gemroc][self.plotting_TIGER][self.plotting_Channel].split("-")[0] == "V":
-                            self.gufo["image"] = self.icon_worry
-                        elif noise>2:
-                            self.gufo["image"]=self.icon_cry
-                        else:
-                            self.gufo["image"]=self.icon_OK
+                        try:
+                            if noise=="Canno't fit" or self.mapping_matrix[self.plotting_gemroc][self.plotting_TIGER][self.plotting_Channel] == "0":
+                                self.gufo["image"]=self.icon_sleep
+                            elif noise<0.6 and self.mapping_matrix[self.plotting_gemroc][self.plotting_TIGER][self.plotting_Channel].split("-")[0]=="X":
+                                self.gufo["image"]=self.icon_worry
+                            elif noise < 0.25 and self.mapping_matrix[self.plotting_gemroc][self.plotting_TIGER][self.plotting_Channel].split("-")[0] == "V":
+                                self.gufo["image"] = self.icon_worry
+                            elif noise>2:
+                                self.gufo["image"]=self.icon_cry
+                            else:
+                                self.gufo["image"]=self.icon_OK
+                        except:
+                            pass
                     if self.title == "Baseline estimation":
                         if Bas_parameters_fit[0] != "Fail" :
                             self.line_list.append(self.plot_rate.plot(np.arange(0, 64, 1.0), AN_CLASS.gaus(np.arange(0,64,1.0), *Bas_parameters_fit), '--', label="Gaussian baseline estimation"))
@@ -902,7 +906,7 @@ class noise_measure ():
                 pickle.dump(self.baseline_pos, f,protocol=2)
             else:
                 pickle.dump(self.baseline, f,protocol=2)
-        print (self.E_branch.get())
+        # print (self.E_branch.get())
     def switch_to_tp_distr(self):   
         self.strart_button["text"] = "Acquire test pulses"
 

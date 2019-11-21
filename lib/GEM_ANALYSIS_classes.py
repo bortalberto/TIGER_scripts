@@ -319,6 +319,10 @@ class analisys_conf: #Analysis class used for configurations10
         scan_matrix=np.zeros((64,64))
         self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode", T, j, 0)
         self.GEM_COM.Set_param_dict_channel(self.c_inst,"TP_disable_FE", T, j, 0)
+        if extreme_t[1]>63:
+            extreme_t[1]=63
+        if extreme_e[1]>63:
+            extreme_e[1]=63
         for Vth_t in range(extreme_t[0],extreme_t[1]+1):
             self.GEM_COM.Set_param_dict_channel(self.c_inst, "Vth_T1", T, j, Vth_t)
             for Vth_e in range(extreme_e[0],extreme_e[1]+1):

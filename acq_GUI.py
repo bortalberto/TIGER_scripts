@@ -58,6 +58,8 @@ class menu():
         self.restart=BooleanVar(self.master_window)
         self.error_GEMROC=BooleanVar(self.master_window)
         self.error_GEMROC.set(True)
+        self.online_monitor=BooleanVar(self.master_window)
+        self.online_monitor.set(True)
         self.save_conf_every_run = BooleanVar(self.master_window)
         self.simple_analysis = IntVar(self.master_window)
         self.run_analysis = IntVar(self.master_window)
@@ -109,6 +111,7 @@ class menu():
         Checkbutton(self.start_frame, text="Restart", variable=self.restart).grid(row=0, column=4, sticky=NW, pady=4)
         Checkbutton(self.start_frame, text="Save conf. at every subrun", variable=self.save_conf_every_run).grid(row=0, column=5, sticky=NW, pady=4)
         Checkbutton(self.start_frame, text="Save GEMROC global errors at the end", variable=self.error_GEMROC).grid(row=0, column=5, sticky=NW, pady=4)
+        Checkbutton(self.start_frame, text="Online monitor", variable=self.online_monitor).grid(row=0, column=5, sticky=NW, pady=4)
 
         a_frame = Frame(self.master)
         a_frame.pack()

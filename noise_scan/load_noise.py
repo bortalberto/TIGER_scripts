@@ -72,17 +72,16 @@ class reader:
         rootFile.Write()
         rootFile.Close()
 
-
-if len(sys.argv) < 1:
-    print ("specify GEMROC number or interval with - (remember spaces)")
-if "-" not in sys.argv:
-    GEMROC_NUM = int(sys.argv[1])
-else:
-    GEMROC_NUM = (int(sys.argv[1]), int(sys.argv[3]))
-filename = "noise.n"
+GEMROC_NUM = (0,20)
+filename= sys.argv[0]
+filename_noise = "noise.n"
 
 print ("Decoding: \n" + filename)
 
 GEM5 = reader()
 GEM5.write_root(GEMROC_NUM)
-print ("Done")
+os.system("mv noise.root ~/Noise_analysis/")
+os.chdir("/home/alb/Noise_analysis/")
+os.system("root -l convert.cxx")
+os.system("mv noise_new.root {}.root".format(filename))
+os.system("root -l  'export_noise_Fabio.cxx"+'("{}.root")'.format(filename)+"'")
