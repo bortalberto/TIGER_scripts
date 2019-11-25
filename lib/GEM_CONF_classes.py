@@ -427,16 +427,26 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
                     value = int(value)
                     if gemroc != "ALL":
                         gemroc = int(gemroc)
+                    if tiger != "ALL":
+                        tiger = int(tiger)
                    except Exception as E:
                        print ("Parsing Error: {}".format(E))
                        return
                    if gemroc == self.TARGET_GEMROC_ID or gemroc == "ALL":
-
-                       print gemroc
                        if command == "ADD":
-                           self.Global_cfg_list[tiger][field] = self.Global_cfg_list[tiger][field]+value
+                           if tiger!="ALL":
+                                self.Global_cfg_list[tiger][field] = self.Global_cfg_list[tiger][field]+value
+                           else:
+                               for T in range(0,8):
+                                   self.Global_cfg_list[T][field] = self.Global_cfg_list[T][field] + value
+
                        elif command == "SET":
-                           self.Global_cfg_list[tiger][field] = value
+                           if tiger!="ALL":
+                                    self.Global_cfg_list[tiger][field] = value
+                           else:
+                               for T in range(0,8):
+                                    self.Global_cfg_list[T][field] = value
+
                        else:
                            print ("Command {} not recognized".format(command))
 

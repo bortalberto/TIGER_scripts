@@ -381,7 +381,7 @@ class Acquire_rate():
             process_list.append(p)
             pipe_list.append(pipe_in)
             p.start()
-        while True:
+        while len(process_list)>0:
             for process,pipe in zip(process_list,pipe_list):
                 scan_out = []
                 scan_out.append(pipe.recv())

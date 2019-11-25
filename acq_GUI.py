@@ -111,7 +111,7 @@ class menu():
         Checkbutton(self.start_frame, text="Restart", variable=self.restart).grid(row=0, column=4, sticky=NW, pady=4)
         Checkbutton(self.start_frame, text="Save conf. at every subrun", variable=self.save_conf_every_run).grid(row=0, column=5, sticky=NW, pady=4)
         Checkbutton(self.start_frame, text="Save GEMROC global errors at the end", variable=self.error_GEMROC).grid(row=0, column=5, sticky=NW, pady=4)
-        Checkbutton(self.start_frame, text="Online monitor", variable=self.online_monitor).grid(row=0, column=5, sticky=NW, pady=4)
+        Checkbutton(self.start_frame, text="Online monitor", variable=self.online_monitor).grid(row=0, column=6, sticky=NW, pady=4)
 
         a_frame = Frame(self.master)
         a_frame.pack()
@@ -178,7 +178,7 @@ class menu():
         # self.plot_window.geometry('900x800')
         self.corn0 = Frame(self.plot_window)
         self.corn0.pack()
-        self.LBOCC = Label(self.corn0, text='Channel occupancy', font=("Times", 18))
+        self.LBOCC = Label(self.corn0, text='Channel counts', font=("Times", 18))
         self.LBOCC.grid(row=0, column=1, sticky=S, pady=4)
         self.butleftG = Button(self.corn0, text='<', command=lambda: self.change_G_or_T(-1, "G")).grid(row=1, column=0, sticky=S, pady=4)
         self.LBGEM = Label(self.corn0, text='GEMROC {}'.format(self.plotting_gemroc), font=("Courier", 14))
@@ -652,10 +652,10 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
             # print ("CIao")
             # if (time.time()-self.start_time)>float(self.caller.time)*60:
             #     self.caller.relaunch_acq()
-            time.sleep(12)
+            time.sleep(5)
             if self.caller.run_analysis.get():
                 self.update_err_and_plot_onrun()
-                time.sleep(30)
+                time.sleep(10)
             process_list = []
             pipe_list = []
             TIGER_LIST = [0, 1, 2, 3, 4, 5, 6, 7]
