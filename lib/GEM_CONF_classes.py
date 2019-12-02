@@ -423,7 +423,6 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
                if line[0]!="#":
                    try:
                     command, gemroc, tiger, field, value = line.split(" ")
-                    tiger = int(tiger)
                     value = int(value)
                     if gemroc != "ALL":
                         gemroc = int(gemroc)

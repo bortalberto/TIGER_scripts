@@ -28,9 +28,9 @@ elif OS == 'linux2':
 else:
     print("ERROR: OS {} non compatible".format(OS))
     sys.exit()
-local_test = True
+local_test = False
 
-class communication:  ##The directory are declared here to avoid multiple declaration
+class communication:  #The directory are declared here to avoid multiple declaration
 
     def __init__(self, gemroc_ID, feb_pwr_pattern, keep_cfg_log=False, keep_IVT_log=False):
         self.conf_folder = "conf"
@@ -2049,7 +2049,7 @@ class communication:  ##The directory are declared here to avoid multiple declar
         command_sent = command_echo_param
         command_reply = command_read_param
         if (int(binascii.b2a_hex(command_sent), 16)) != ((int(binascii.b2a_hex(command_reply), 16)) - 2048):
-            raise Exception("!!! ERROR IN CONFIGURATION  GEMROC{},TIGER {}!!!".format(Gemroc, Tiger))
+            raise Exception("!!! ERROR IN GLOBAL CONFIGURATION  GEMROC {},TIGER {}!!!".format(Gemroc, Tiger))
 
     def channel_set_check_GUI(self, command_echo_param, command_read_param):
         L_array = array.array('I')  # L is an array of unsigned long
@@ -2061,7 +2061,7 @@ class communication:  ##The directory are declared here to avoid multiple declar
         command_sent = command_echo_param
         command_reply = command_read_param
         if (int(binascii.b2a_hex(command_sent), 16)) != ((int(binascii.b2a_hex(command_reply), 16)) - 2048):
-            raise Exception("!!! ERROR IN CONFIGURATION")
+            raise Exception("!!! ERROR IN CONFIGURATION GEMROC {} TIGER {} CHANNEL {}".format(self.GEMROC_ID, Tiger, Channel))
 
     def Channel_set_check(self, command_echo_param, command_read_param, log):  # check for differnces between configuration and lecture
         L_array = array.array('I')  # L is an array of unsigned long

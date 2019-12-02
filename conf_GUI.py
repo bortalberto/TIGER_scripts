@@ -38,7 +38,8 @@ class menu():
         self.configuring_gemroc = 0
         # main window
         self.main_window = Tk()
-
+        if OS == 'linux2':
+            self.main_window.wm_iconbitmap('@'+"." + sep + 'icons' + sep +'CONF_ICON.xbm')
         self.icon_on = PhotoImage(file="." + sep + 'icons' + sep + 'on.gif')
         self.icon_off = PhotoImage(file="." + sep + 'icons' + sep + 'off.gif')
         self.icon_bad = PhotoImage(file="." + sep + 'icons' + sep + 'bad.gif')
@@ -87,6 +88,9 @@ class menu():
         self.TP_num = IntVar(self.main_window)
         ##Select window
         self.select_window = Toplevel(self.main_window, height=400, width = 900)
+        if OS == 'linux2':
+            self.select_window.wm_iconbitmap('@'+"." + sep + 'icons' + sep +'GUFO_ICON2.xbm')
+
         Title_frame = Frame (self.select_window)
         Title_frame2 = Frame(self.select_window)
         Label(Title_frame2, text="         ",font=("Times", 10, "italic")).pack(side=LEFT)
@@ -95,7 +99,7 @@ class menu():
         Label(Title_frame2, text="GUFI software",font=("Times", 25)).pack(side=LEFT)
         Label(Title_frame2, image=self.icon_GUFI2).pack(side=LEFT)
 
-        Label(Title_frame, text="             v.3.2 -- 2019 -- INFN-TO (abortone@to.infn.it)",font=("Times", 10, "italic")).pack(anchor=SE, side=RIGHT)
+        Label(Title_frame, text="             v.3.3 -- 2019 -- INFN-TO (abortone@to.infn.it)",font=("Times", 10, "italic")).pack(anchor=SE, side=RIGHT)
         Title_frame2.pack(anchor=S)
         Title_frame.pack(fill=BOTH)
 
@@ -151,7 +155,7 @@ class menu():
         Button(first_row_coperations, text="Set trigger-matched to all", command=lambda: self.change_acquisition_mode(True, 0), activeforeground="#f77f00").pack(side=LEFT)
         Tantissime_frame = Frame(Tante_frame)
         Tantissime_frame.grid(row=3, column=5, sticky=N, pady=5,columnspan=20)
-        Button(Tantissime_frame, text="Write configuration", command=self.load_default_config, activeforeground="#f77f00").pack(side=LEFT)
+        Button(Tantissime_frame, text="Write configuration", command=self.load_default_config_parallel, activeforeground="#f77f00").pack(side=LEFT)
         Button(Tantissime_frame, text="Open communication error interface", command=self.open_communicaton_GUI, activeforeground="#f77f00").pack(side=LEFT)
         Button(Tantissime_frame, text="Rate measure", command=self.open_rate_window, activeforeground="#f77f00").pack(side=LEFT)
         Button(Tantissime_frame, text="Run prearation (TD + both scans)", command=self.run_prep, activeforeground="#f77f00").pack(side=LEFT)
@@ -191,13 +195,13 @@ class menu():
         TROPPii_frame = LabelFrame(basic_operation_frame, padx=5, pady=5,background="#cce6ff")
         TROPPii_frame.pack(side=LEFT)
         Button(TROPPii_frame, text="Sync Reset to all", command=self.Synch_reset, activeforeground="blue").pack(side=LEFT)
-        Button(TROPPii_frame, text="Write configuration", command=self.load_default_config, activeforeground="blue").pack(side=LEFT)
+        Button(TROPPii_frame, text="Write configuration", command=self.load_default_config_parallel, activeforeground="blue").pack(side=LEFT)
         Frame(basic_operation_frame,width=90).pack(side=LEFT)  # Spacer
         TROPPi_frame = LabelFrame(basic_operation_frame, padx=5, pady=5,background="#cce6ff")
         TROPPi_frame.pack(side=LEFT)
         Button(TROPPi_frame, text="Run controller", command=self.launch_controller, activeforeground="blue").pack(side=RIGHT)
         Button(TROPPi_frame, text="Fast configuration", command=self.fast_configuration, activeforeground="blue").pack(side=RIGHT)
-        Button(TROPPi_frame, text="Enable double thr", command=self.double_enable, activeforeground="blue").pack(side=RIGHT)
+        # Button(TROPPi_frame, text="Enable double thr", command=self.double_enable, activeforeground="blue").pack(side=RIGHT)
         self.LED = []
         for i in range(0, len(self.GEM_to_config)):
             if i < 10:
@@ -225,7 +229,10 @@ class menu():
         Button(self.advanced_threshold_settings, text="Calculate",command= self.calculate_FC_thr).pack(anchor=N)
         Button(self.advanced_threshold_settings, text = "Import thresholds from old run", command =self.import_old_conf).pack(anchor=N)
         Button(self.advanced_threshold_settings, text = "Save current thr", command =self.save_current_thr).pack(anchor=N)
-        Button(self.advanced_threshold_settings, text = "Load thr", command =self.load_thr_from_file).pack(anchor=N)
+        Button(self.advanced_threshold_settings, text = "Save reference thr", command =self.save_reference_thr).pack(anchor=N)
+        Button(self.advanced_threshold_settings, text = "Load saved thr", command =self.load_thr_from_file).pack(anchor=N)
+        Button(self.advanced_threshold_settings, text = "Load reference thr", command =self.load_thr_reference).pack(anchor=N)
+
         if COM_class.local_test == True:
             for G in range (0,11):
                 self.toggle(G)
@@ -1607,6 +1614,24 @@ class menu():
         """
         for number, GEMROC in self.GEMROC_reading_dict.items():
             GEMROC.GEM_COM.save_current_VTH(GEMROC.c_inst)
+
+    def save_reference_thr(self):
+        """
+        Save current thresholds, used mostly for the 2-d thr autotune
+        :return:
+        """
+        for number, GEMROC in self.GEMROC_reading_dict.items():
+            GEMROC.GEM_COM.save_current_VTH(GEMROC.c_inst,filename=GEMROC.GEM_COM.conf_folder + sep + "thr" + sep + "GEMROC{}_reference_vth".format(GEMROC.GEM_COM.GEMROC_ID))
+
+    def load_thr_reference(self):
+        """
+        Load reference thr
+        :return:
+        """
+        for number, GEMROC in self.GEMROC_reading_dict.items():
+            GEMROC.GEM_COM.load_vth(GEMROC.c_inst,filename=GEMROC.GEM_COM.conf_folder + sep + "thr" + sep + "GEMROC{}_reference_vth".format(GEMROC.GEM_COM.GEMROC_ID))
+
+
     def load_thr_from_file(self):
         """
         Load thresholds, used mostly for the 2-d thr autotune
@@ -1618,17 +1643,71 @@ class menu():
     def load_default_config(self,set_check=True):
         for number, GEMROC in self.GEMROC_reading_dict.items():
             for TIGER in range(0, 8):
+                time.sleep(1)
                 write = GEMROC.GEM_COM.Set_param_dict_global(GEMROC.g_inst, "TxDDR", int(TIGER), 0)
                 read = GEMROC.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(GEMROC.g_inst, int(TIGER))
                 read = GEMROC.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(GEMROC.g_inst, int(TIGER))
                 if set_check:
                     try:
                         GEMROC.GEM_COM.global_set_check(write, read)
-                    except:
+                    except Exception as E:
                         self.error_led_update()
+                        print (E)
                 self.write_CHANNEL(GEMROC, TIGER, 64, False,set_check)
         self.Synch_reset()
 
+    def load_default_config_parallel(self,set_check=True):
+        proc_list=[]
+        pip_list=[]
+        for number,GEMROC in self.GEMROC_reading_dict.items():
+            pipe_in, pipe_out = Pipe()
+
+            p=Process(target=self.load_config_process, args=(GEMROC,pipe_out,set_check))
+            p.start()
+
+
+            proc_list.append(p)
+            pip_list.append(pipe_in)
+        for pipeout in pip_list:
+            result = pipeout.recv()
+            if result!="ok":
+                print result
+                self.error_led_update()
+                self.Launch_error_check['text'] = "Some error occurred in TIGER configuration, check terminal"
+                self.main_window.update()
+            else:
+                self.Launch_error_check['text'] = "Configuration done with no errors"
+                self.main_window.update()
+
+        self.Synch_reset()
+
+
+    def load_config_process(self, GEMROC, pipe_out, set_check=True,):
+        Errors=""
+        for TIGER in range(0,8):
+            write = GEMROC.GEM_COM.Set_param_dict_global(GEMROC.g_inst, "TxDDR", int(TIGER), 0)
+            read = GEMROC.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(GEMROC.g_inst, int(TIGER))
+            if set_check:
+                try:
+                    GEMROC.GEM_COM.global_set_check(write, read)
+                except Exception as E:
+                    Errors = Errors + "{}\n".format(E)
+                    self.error_led_update()
+            self.write_CHANNEL(GEMROC, TIGER, 64, False, set_check)
+            printed = False
+            for CH in range(0, 64):
+                write = GEMROC.GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg(GEMROC.c_inst, TIGER, CH)
+                read = GEMROC.GEM_COM.ReadTgtGEMROC_TIGER_ChCfgReg(GEMROC.c_inst, TIGER, CH)
+                try:
+                    GEMROC.GEM_COM.channel_set_check_GUI(write, read)
+                except Exception as E:
+                    if not printed:
+                        Errors = Errors + "{}\n".format(E)
+                        printed=True
+                    # print "!!! ERROR IN CONFIGURATION  GEMROC {},TIGER {},CHANNEL {}!!!".format(GEMROC.GEM_COM.GEMROC_ID, TIGER, CH)
+        if len(Errors)<2:
+            Errors="ok"
+        pipe_out.send(Errors)
     def Synch_reset(self, to_all=1):
         if to_all == 1:
             for number, GEMROC in self.GEMROC_reading_dict.items():
@@ -1651,15 +1730,15 @@ class menu():
             self.ERROR_LED["image"] = self.icon_off
 
     def fast_configuration(self):
-        self.power_on_FEBS()
+        self.double_enable()
         self.Synch_reset(1)
         self.change_acquisition_mode(True, 0)
         self.change_trigger_mode(value=0, to_all=True)
         self.load_thr(True, "scan", 3, 2, 0, 0, 8)
         self.specific_channel_fast_setting()
-        self.load_default_config()
+        self.load_default_config_parallel()
         self.Synch_reset(1)
-        self.load_default_config()
+        self.load_default_config_parallel()
         self.Synch_reset(1)
         self.Synch_reset(1)
         self.Synch_reset(1)
@@ -1677,6 +1756,11 @@ class menu():
         for number, GEMROC in self.GEMROC_reading_dict.items():
             for T in range(0, 8):
                 GEMROC.c_inst.Channel_cfg_list[T][62]["TriggerMode"] = 1
+            if int(number.split()[1])>3 and int(number.split()[1])<11:
+                GEMROC.c_inst.Channel_cfg_list[T][61]["TriggerMode"] = 3
+                GEMROC.c_inst.Channel_cfg_list[T][63]["TriggerMode"] = 3
+
+
 
     def reactivate_TIGERS(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():

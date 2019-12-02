@@ -27,6 +27,8 @@ class menu():
     def __init__(self, main_menu, gemroc_handler, main_menu_istance):
         self.error_window_main = Toplevel(main_menu)
         self.error_window_main.wm_title("Noise and thresholds")
+        if OS == 'linux2':
+            self.error_window_main.wm_iconbitmap('@'+"." + sep + 'icons' + sep +'NOISE_ICON.xbm')
         self.tabControl = ttk.Notebook(self.error_window_main)  # Create Tab Control
 
         noise_measure_ = noise_measure(self.error_window_main, gemroc_handler, self.tabControl, main_menu_istance)
@@ -440,9 +442,9 @@ class noise_measure():
             T_log_file.write("{0}	{1}	{2}	{3:.1f}	{4:.1f}	{5:.1f}	{6:.1f}{7}".format(date, hour, branch, itemp0, itemp1, itemp2, itemp3, endl))
 
         self.main_menu_istance.power_off_FEBS()
-        time.sleep(1)
+        time.sleep(0.2)
         self.main_menu_istance.power_on_FEBS()
-        self.main_menu_istance.load_default_config(set_check=False)
+        self.main_menu_istance.load_default_config_parallel(set_check=False)
 
     def periodic_scan_stop(self):
         self.running = False
@@ -484,7 +486,7 @@ class noise_measure():
         for number, GEMROC_number in dictio.items():
             Label(self.bar_win, text='{}'.format(number)).pack()
             progress_list.append(IntVar())
-            maxim = (((self.CHANNEL_num_last.get() - self.CHANNEL_num_first.get()) + 1) * (self.TIGER_num_last.get() - self.TIGER_num_first.get() + 1)) * 64
+            maxim = ((self.CHANNEL_num_last.get() - self.CHANNEL_num_first.get() + 1) * (self.TIGER_num_last.get() - self.TIGER_num_first.get() + 1)) * 64
             progress_bars.append(Progressbar(self.bar_win, maximum=maxim, orient=HORIZONTAL, variable=progress_list[i], length=200, mode='determinate'))
             progress_bars[i].pack()
 
@@ -585,7 +587,7 @@ class noise_measure():
                 for i in range(0, 64):  # THR
                     scan_matrix[T, J, i] = test_c.noise_scan_using_GEMROC_COUNTERS_progress_bar(T, J, i, False, vth2)
 
-                    position = ((T - first) * (lastch - firstch)) * 64 + (J) * 64 + i
+                    position = ((T - first) * (lastch - firstch)) * 64 + (J-firstch) * 64 + i
                     pipe_out.send(position)
 
         test_r.thr_scan_matrix = scan_matrix
@@ -698,7 +700,6 @@ class noise_measure():
                     self.scatter.set_ydata(self.scan_matrixs[number][self.plotting_TIGER, self.plotting_Channel])
                     self.plot_rate.set_ylim(top=np.max(self.scan_matrixs[number][self.plotting_TIGER, self.plotting_Channel]) + np.max(self.scan_matrixs[number][self.plotting_TIGER, self.plotting_Channel]) * 0.2)
                     self.plot_rate.set_xlim(right=65)
-                    print self.fits.keys()
                     parameters = self.fits[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)]
                     TPparameters = self.TPfits[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)]
                     Bas_parameters_fit = self.baseline[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)]

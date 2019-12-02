@@ -1,12 +1,8 @@
 from Tkinter import *
-import numpy as np
-from lib import GEM_COM_classes as COM_class
-import binascii
 from multiprocessing import Process,Pipe
 import time
 from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
 import sys
-import array
 
 
 
@@ -21,6 +17,7 @@ else:
 class menu():
     def __init__(self,main_window,gemroc_handler):
         self.GEMROC_reading_dict=gemroc_handler
+
         self.error_window = Toplevel(main_window)
         Label(self.error_window,text='Communication Errors',font=("Courier", 25)).pack()
         self.error_window.wm_title('Communication Errors')
@@ -35,6 +32,8 @@ class menu():
         self.TD_scan_result={}
         number_list=[]
         i=0
+        if OS == 'linux2':
+            self.error_window.wm_iconbitmap('@'+"." + sep + 'icons' + sep +'810_ICON.xbm')
         for number, GEMROC in self.GEMROC_reading_dict.items():
             number_int=int(number.split()[1])
             number_list.append(number_int)

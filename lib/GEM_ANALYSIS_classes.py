@@ -315,17 +315,20 @@ class analisys_conf: #Analysis class used for configurations10
                 self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 3)
 
         return thr_scan_matrix
+
     def both_vth_scan(self, T, j, extreme_t=(0, 63), extreme_e=(0, 63),acq_time=0.1):
         scan_matrix=np.zeros((64,64))
         self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode", T, j, 0)
         self.GEM_COM.Set_param_dict_channel(self.c_inst,"TP_disable_FE", T, j, 0)
-        if extreme_t[1]>63:
-            extreme_t[1]=63
-        if extreme_e[1]>63:
-            extreme_e[1]=63
-        for Vth_t in range(extreme_t[0],extreme_t[1]+1):
+        E_T=[extreme_t[0],extreme_e[1]]
+        E_E=[extreme_t[0],extreme_e[1]]
+        if E_T[1]>63:
+            E_T[1]=63
+        if E_E[1]>63:
+            E_E[1]=63
+        for Vth_t in range(E_T[0],E_T[1]+1):
             self.GEM_COM.Set_param_dict_channel(self.c_inst, "Vth_T1", T, j, Vth_t)
-            for Vth_e in range(extreme_e[0],extreme_e[1]+1):
+            for Vth_e in range(E_E[0],E_E[1]+1):
                 self.GEM_COM.Set_param_dict_channel(self.c_inst, "Vth_T2", T, j, Vth_e)
                 self.GEM_COM.set_counter(T, 0, j)
                 self.GEM_COM.SynchReset_to_TgtFEB(0, 1)

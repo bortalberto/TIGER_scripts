@@ -134,7 +134,6 @@ class noise_rate_measure ():
             self.axe_total.set_yticks(np.arange(self.count_matrix_TIGER.shape[0]))
             self.axe_total.set_xticklabels(["GEMROC {}".format(gem_num) for gem_num in range(0, 20)])
             self.axe_total.set_yticklabels(["TIGER {}".format(tig_num) for tig_num in range(0, 11)])
-
         else:
             gem_num=int(sv.get().split(" ")[1])
             print gem_num
@@ -143,7 +142,6 @@ class noise_rate_measure ():
             self.axe_total.set_xticklabels(["TIGER {}".format(tig_num) for tig_num in range(0, 11)])
             self.axe_total.set_yticklabels(["Ch {}".format(tig_num) for tig_num in range(0, 64)])
 
-
         self.canvas_total.draw()
         self.canvas_total.flush_events()
 
@@ -151,7 +149,6 @@ class noise_rate_measure ():
         self.tabControl.add(self.all_sys_window, text=name)  # Add the tab
         self.single_GEMROC=Frame(self.main_window)
         self.single_TIGER=Frame(self.main_window)
-
         self.tabControl.add(self.single_GEMROC, text="Single GEMROC")  # Add the tab
         # self.tabControl.add(self.single_TIGER, text="Single TIGER")  # Add the tab
 
@@ -497,7 +494,7 @@ class Acquire_rate():
                                 status["done"] = False
 
 
-            self.caller.main_menu.load_default_config(set_check=False)
+            self.caller.main_menu.load_default_config_parallel(set_check=False)
             self.caller.clear()
             self.acquire()
 
