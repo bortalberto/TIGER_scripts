@@ -19,7 +19,6 @@ def create_folder(dirName):
     else:
         print("Directory ", dirName, " already exists")
 
-
 create_folder("log_folder")
 create_folder("thr_scan")
 create_folder("thr_scan_vth2")
