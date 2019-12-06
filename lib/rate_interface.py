@@ -10,6 +10,7 @@ from matplotlib.figure import Figure
 import matplotlib
 import matplotlib.pyplot as plt
 from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
+
 OS = sys.platform
 if OS == 'win32':
     sep = '\\'
@@ -18,7 +19,7 @@ elif OS == 'linux2':
 else:
     print("ERROR: OS {} non compatible".format(OS))
     sys.exit()
-
+debug=True
 
 class menu():
     def __init__(self,main_menu,gemroc_handler,main_menu_istance):
@@ -27,10 +28,10 @@ class menu():
         self.error_window_main.wm_title("Noise and thresholds")
         self.tabControl = ttk.Notebook(self.error_window_main)  # Create Tab Control
 
-        rate_tab=noise_rate_measure(self.error_window_main ,gemroc_handler,self.tabControl,main_menu_istance)
-        rate_tab._insert("All system")
-        rate_tab._init_windows()
-        self.error_window_main.protocol("WM_DELETE_WINDOW", rate_tab.close_stopping)
+        self.rate_tab=noise_rate_measure(self.error_window_main ,gemroc_handler,self.tabControl,main_menu_istance)
+        self.rate_tab._insert("All system")
+        self.rate_tab._init_windows()
+        self.error_window_main.protocol("WM_DELETE_WINDOW", self.rate_tab.close_stopping)
 
         self.tabControl.pack(expand=1, fill="both")  # Pack to make visible
 
@@ -57,6 +58,7 @@ class noise_rate_measure ():
         self.TIGER = StringVar(self.main_window)
         self.logscale = BooleanVar(self.main_window)
         # self.getterino.start()
+
     def _init_windows(self):
         Label(self.all_sys_window, text=self.title, font=("Courier", 25)).grid(row=0, column=2, sticky=S, pady=4, columnspan=10)
         self.first_lane_frame=Frame(self.start_frame)
@@ -260,11 +262,17 @@ class noise_rate_measure ():
     def close_stopping(self):
         """
         Handle the closing protocol stopping the acquisition
-        :return:
         """
         # self.stop_acq()
         self.main_window.destroy()
 
+
+    def rework_window(self):
+        self.plot_frame_total.destroy()
+        self.first_lane_frame.destroy()
+        self.start_frame.destroy()
+
+        self.main_window.update()
 
 class Acquire_rate():
     """
@@ -369,7 +377,7 @@ class Acquire_rate():
                         GEMROC.GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg(c_inst,T,ch)
 
 
-    def procedural_scan_handler(self,GEMROC_DICT,des_rate=3500,number_of_cycle=2,square_size=5,acq_time=0.1):
+    def procedural_scan_handler(self,GEMROC_DICT,des_rate=5000,number_of_cycle=1,square_size=5,acq_time=0.1):
         process_list = []
         pipe_list = []
         for key, GEMROC in GEMROC_DICT.items():
@@ -382,7 +390,7 @@ class Acquire_rate():
             for process,pipe in zip(process_list,pipe_list):
                 scan_out = []
                 scan_out.append(pipe.recv())
-                if int(scan_out[0])!=65:
+                if int(scan_out[0]) != 65:
 
                     scan_out.append(pipe.recv())
                     scan_out.append(pipe.recv())
@@ -392,10 +400,12 @@ class Acquire_rate():
                     GEMROC=GEMROC_DICT["GEMROC {}".format(int(scan_out[0]))]
                     GEMROC.c_inst.Channel_cfg_list[int(scan_out[1])][int(scan_out[2])]['Vth_T1'] = int(scan_out[3])
                     GEMROC.c_inst.Channel_cfg_list[int(scan_out[1])][int(scan_out[2])]['Vth_T2'] = int(scan_out[4])
-                    print "GEMROC {}, TIGER {}, CH {}".format(scan_out[0],scan_out[1],scan_out[2])
-                if int(scan_out[0])==65:
+
+                if int(scan_out[0]) == 65:
                     process_list.remove(process)
                     pipe_list.remove(pipe)
+
+
     def procedural_scan_process(self,GEMROC, pipeout, des_rate=3500, number_of_cycle=2, square_size=5,acq_time=0.1):
         """
         Procedural scan with multiprocess
@@ -408,14 +418,23 @@ class Acquire_rate():
         :return:
         """
         GEM_COM = GEMROC.GEM_COM
+        if debug:
+            with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "w+") as logfile:
+                logfile.write("Aiming at {}, {} cycles".format(des_rate, number_of_cycle))
+            print ("Starting")
         for cycle in range(number_of_cycle):
                 # maximum_matrix = GEM_COM.load_thr_max_from_file()
                 for T in range(0,8):
                     for ch in range(0,64):
+                        if debug:
+                            with open ("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID),"a+") as logfile:
+                                logfile.write("T {} ch{}\n".format(T,ch))
                         vt1_current= GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1']
                         vt2_current= GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2']
                         c_inst = GEMROC.c_inst
                         g_inst = GEMROC.g_inst
+                        with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
+                            logfile.write("Current VT1-{} VT2-{}\n".format(vt1_current, vt2_current))
                         test_c = AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst)
                         scan_matrix=test_c.both_vth_scan(T, ch, extreme_t=(vt1_current-(square_size-1)/2,vt1_current+(square_size-1)/2), extreme_e=((vt2_current-(square_size-1)/2,vt2_current+(square_size-1)/2)),acq_time=acq_time)
                         scan_matrix=scan_matrix*(1/(acq_time))
@@ -424,12 +443,18 @@ class Acquire_rate():
                         # print "T {} Ch {} -set vth1 {}, set vth 2 {}".format(T,ch,vt1,vt2)
                         GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] = vt1
                         GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = vt2
+                        if debug:
+                            with open ("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID),"a+") as logfile:
+                                logfile.write("VT1 = {}, VT2 = {}\n".format(vt1,vt2))
                         GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg(c_inst,T,ch)
                         pipeout.send(GEM_COM.GEMROC_ID)
                         pipeout.send(T)
                         pipeout.send(ch)
                         pipeout.send(vt1)
                         pipeout.send(vt2)
+                    print ("T {} done".format(T))
+
+
         pipeout.send(65)
         return
 

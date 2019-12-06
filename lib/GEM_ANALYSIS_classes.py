@@ -317,15 +317,25 @@ class analisys_conf: #Analysis class used for configurations10
         return thr_scan_matrix
 
     def both_vth_scan(self, T, j, extreme_t=(0, 63), extreme_e=(0, 63),acq_time=0.1):
+        DEBUG=False
         scan_matrix=np.zeros((64,64))
         self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode", T, j, 0)
-        self.GEM_COM.Set_param_dict_channel(self.c_inst,"TP_disable_FE", T, j, 0)
-        E_T=[extreme_t[0],extreme_e[1]]
-        E_E=[extreme_t[0],extreme_e[1]]
+        self.GEM_COM.Set_param_dict_channel(self.c_inst,"TP_disable_FE", T, j, 1)
+        E_T=[extreme_t[0],extreme_t[1]]
+        E_E=[extreme_e[0],extreme_e[1]]
+        if DEBUG:
+            with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(self.GEMROC_ID), "a") as logfile:
+                logfile.write("Scan T from {} to {}, E from {} to {}\n".format(E_T[0], E_T[1], E_E[0], E_E[1]))
         if E_T[1]>63:
             E_T[1]=63
         if E_E[1]>63:
             E_E[1]=63
+        if E_T[0]<0:
+            E_T[0]=0
+        if E_E[0]<0:
+            E_E[0]=0
+	
+
         for Vth_t in range(E_T[0],E_T[1]+1):
             self.GEM_COM.Set_param_dict_channel(self.c_inst, "Vth_T1", T, j, Vth_t)
             for Vth_e in range(E_E[0],E_E[1]+1):
@@ -336,10 +346,13 @@ class analisys_conf: #Analysis class used for configurations10
                 # self.GEM_COM.Access_diagn_DPRAM_read_and_log(1,0)
                 self.GEM_COM.reset_counter()
                 time.sleep(acq_time)
-                scan_matrix[Vth_t , Vth_e] = self.GEM_COM.GEMROC_counter_get()
-                # print ("vth_t:{},vth_e:{}".format(Vth_t,Vth_e))
+                value = self.GEM_COM.GEMROC_counter_get()
+                scan_matrix[Vth_t , Vth_e] = value
+                if DEBUG:
+                    with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(self.GEMROC_ID), "a") as logfile:
+                        logfile.write("THR T{}, THR E{}  rate: {}\n".format(Vth_t, Vth_e, value/acq_time))                # print ("vth_t:{},vth_e:{}".format(Vth_t,Vth_e))
                 # print ("rate {}".format(scan_matrix[Vth_t, Vth_e]/acq_time))
-        np.savetxt('test.out', scan_matrix, delimiter=',')
+        # np.savetxt('test.out', scan_matrix, delimiter=',')
         # fig = plt.figure()
         # ax = fig.gca(projection='3d')
         #

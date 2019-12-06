@@ -73,6 +73,9 @@ class menu():
         self.error_GEMROC.set(False)
         self.online_monitor = BooleanVar(self.master_window)
         self.online_monitor.set(False)
+        self.online_monitor_data = BooleanVar(self.master_window)
+        self.online_monitor_data.set(False)
+
         self.save_conf_every_run = BooleanVar(self.master_window)
         self.simple_analysis = IntVar(self.master_window)
         self.run_analysis = IntVar(self.master_window)
@@ -118,7 +121,7 @@ class menu():
         self.start_frame.pack()
         Label(self.start_frame, text="Acq time (seconds for TL, minutes for TM)").grid(row=0, column=0, sticky=NW, pady=4)
         self.time_in = Entry(self.start_frame, width=3)
-        self.time_in.insert(END, '30')
+        self.time_in.insert(END, '10')
         self.time_in.grid(row=0, column=1, sticky=NW, pady=4)
         Checkbutton(self.start_frame, text="Fast analysis", variable=self.simple_analysis).grid(row=0, column=2, sticky=NW, pady=4)
         Checkbutton(self.start_frame, text="On run analysis", variable=self.run_analysis).grid(row=0, column=3, sticky=NW, pady=4)
@@ -182,7 +185,13 @@ class menu():
             self.open_adv_acq()
             self.open_on_run_tab()
             self.online_monitor.set(True)
+            self.online_monitor_data.set(False)
             Checkbutton(self.start_frame, text="Online monitor", variable=self.online_monitor).grid(row=0, column=6, sticky=NW, pady=4)
+            Checkbutton(self.start_frame, text="Online data monitor", variable=self.online_monitor_data).grid(row=0, column=7, sticky=NW, pady=4)
+
+
+        #TO be restored
+        # Checkbutton(self.start_frame, text="Data online monitor", variable=self.online_monitor_data).grid(row=0, column=3, sticky=NW, pady=4)
 
         self.LED_UDP = Label(self.errors, image=self.icon_off)
         self.LED_UDP.grid(row=4, column=1)
@@ -482,15 +491,17 @@ class menu():
                     with open(self.logfile, 'a') as f:
                         f.write("{} -- Stopping acquisition due to time out errors {} times in a row \n".format(time.ctime(),self.reset_timedout))
                     self.send_mail("{} -- Stopping acquisition due to time out errors {} times in a row (GEMROC {})\n (Note: there could be more errors).".format(time.ctime(),self.reset_timedout, i.GEMROC_ID))
-                    self.send_telegram("{} -- Stopping LBerrorion due to time out errors {} times in a row (GEMROC {})\n (Note: there could be more errors).".format(time.ctime(),self.reset_timedout, i.GEMROC_ID))
+                    self.send_telegram("{} -- Stopping acquisition due to time out errors {} times in a row (GEMROC {})\n (Note: there could be more errors).".format(time.ctime(),self.reset_timedout, i.GEMROC_ID))
                     self.stop_acq()
                     break
 
     def PMT_on(self):
-        os.system("./HVWrappdemo ttyUSB0 VSet 2000")
+        os.system("./HVWrappdemo_0 ttyUSB0 VSet 2000")
+        os.system("./HVWrappdemo_2 ttyUSB0 VSet 2100")
 
     def PMT_OFF(self):
-        os.system("./HVWrappdemo ttyUSB0 VSet 1300")
+        os.system("./HVWrappdemo_0 ttyUSB0 VSet 1300")
+        os.system("./HVWrappdemo_2 ttyUSB0 VSet 800")
 
     def relaunch_acq(self):
         self.stop_acq(True)
@@ -664,8 +675,8 @@ class menu():
             self.conffile = "." + sep + "data_folder" + sep + self.run_folder + sep + "CONF_log_{}".format(self.sub_run_number)
         else:
             self.conffile = "." + sep + "data_folder" + sep + self.run_folder + sep + "CONF_log_all_run"
-
-        self.save_conf_registers()
+        if not self.std_alone:
+            self.save_conf_registers()
         self.but7.config(state='disabled')
         self.but6.config(state='disabled')
         for i in range(0, len(self.GEM)):
@@ -682,7 +693,7 @@ class menu():
         for i in range(0, len(self.GEM_to_read)):
             if self.GEM_to_read[i] == 1:
                 lista.append(i)
-                self.GEM.append(GEM_ACQ.reader(i, self.logfile))
+                self.GEM.append(GEM_ACQ.reader(i, self.logfile, self.online_monitor_data.get()))
                 with open(self.logfile, 'a+') as f:
                     f.write("{} -- Acquiring from GEMROC {} in {} mode\n".format(time.ctime(), i, self.mode))
                 print ("Acquiring from GEMROC {} in {} mode".format(i, self.mode))
@@ -793,6 +804,7 @@ class menu():
 
     def stop_acq(self, auto=False):
         if not auto:
+
             self.restart.set(False)
         self.run_analysis.set(False)
 
@@ -823,6 +835,9 @@ class menu():
         if self.error_GEMROC.get():
             self.save_GEMROC_errors()
         self.but7.config(state='normal')
+        if not auto:
+            self.messagge_field['text'] = "Acquisition stopped"
+            self.LED_UDP['image'] = self.icon_off
         time.sleep(2)
     def save_GEMROC_errors(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():

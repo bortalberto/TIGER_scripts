@@ -29,9 +29,6 @@ else:
     sys.exit()
 
 
-# TODO: bugs:
-# Add completition bars for TD scan
-# TODO: LV settings
 class menu():
     def __init__(self):
         self.GEM_to_config = np.zeros((20))
@@ -99,7 +96,7 @@ class menu():
         Label(Title_frame2, text="GUFI software",font=("Times", 25)).pack(side=LEFT)
         Label(Title_frame2, image=self.icon_GUFI2).pack(side=LEFT)
 
-        Label(Title_frame, text="             v.3.3 -- 2019 -- INFN-TO (abortone@to.infn.it)",font=("Times", 10, "italic")).pack(anchor=SE, side=RIGHT)
+        Label(Title_frame, text="             v.3.3 -- 2019 -- INFN-TO (abortone@to.infn.it)", font=("Times", 10, "italic")).pack(anchor=SE, side=RIGHT)
         Title_frame2.pack(anchor=S)
         Title_frame.pack(fill=BOTH)
 
@@ -200,7 +197,10 @@ class menu():
         TROPPi_frame = LabelFrame(basic_operation_frame, padx=5, pady=5,background="#cce6ff")
         TROPPi_frame.pack(side=LEFT)
         Button(TROPPi_frame, text="Run controller", command=self.launch_controller, activeforeground="blue").pack(side=RIGHT)
+        self.use_ecq_thr = BooleanVar(self.main_window)
         Button(TROPPi_frame, text="Fast configuration", command=self.fast_configuration, activeforeground="blue").pack(side=RIGHT)
+        Checkbutton(TROPPi_frame, text="Use equalized thr", var=self.use_ecq_thr).pack(side=RIGHT)
+
         # Button(TROPPi_frame, text="Enable double thr", command=self.double_enable, activeforeground="blue").pack(side=RIGHT)
         self.LED = []
         for i in range(0, len(self.GEM_to_config)):
@@ -230,8 +230,19 @@ class menu():
         Button(self.advanced_threshold_settings, text = "Import thresholds from old run", command =self.import_old_conf).pack(anchor=N)
         Button(self.advanced_threshold_settings, text = "Save current thr", command =self.save_current_thr).pack(anchor=N)
         Button(self.advanced_threshold_settings, text = "Save reference thr", command =self.save_reference_thr).pack(anchor=N)
-        Button(self.advanced_threshold_settings, text = "Load saved thr", command =self.load_thr_from_file).pack(anchor=N)
+        Button(self.advanced_threshold_settings, text = "Load last saved thr", command =self.load_thr_from_file).pack(anchor=N)
         Button(self.advanced_threshold_settings, text = "Load reference thr", command =self.load_thr_reference).pack(anchor=N)
+        self.desired_rate = IntVar(self.main_window)
+        self.desired_rate.set(5000)
+        self.number_of_steps = IntVar(self.main_window)
+        self.number_of_steps.set(2)
+        equaliz_frame=Frame(self.advanced_threshold_settings)
+        equaliz_frame.pack(anchor=N)
+        Label(equaliz_frame,text = "Desired rate").pack(side=LEFT)
+        Entry(equaliz_frame,textvariable=self.desired_rate, width=5).pack(side=LEFT)
+        Label(equaliz_frame,text = "Number of iterations").pack(side=LEFT)
+        Entry(equaliz_frame,textvariable=self.number_of_steps, width=2).pack(side=LEFT)
+        Button(equaliz_frame, text = "Start equalization", command =self.start_ecq).pack(side=LEFT)
 
         if COM_class.local_test == True:
             for G in range (0,11):
@@ -244,8 +255,13 @@ class menu():
         self.statu_tab_rows.pack(anchor = NW, fill =BOTH)
         self.version_dict = {}
         self.IVT_dict = {}
-
-
+    def start_ecq(self):
+        self.rate_window = rate_interface.menu(self.main_window, self.GEMROC_reading_dict,self)
+        # self.rate_window.rate_tab.rework_window()
+        self.rate_window.rate_tab.acquire_thread.procedural_scan_handler(self.GEMROC_reading_dict,des_rate=self.desired_rate.get(),number_of_cycle=self.number_of_steps.get())
+        self.save_current_thr()
+        self.rate_window.error_window_main.destroy()
+        print ("Equalization done and saved")
     def run_prep(self):
         print ("TD scan")
         conf_wind = error_GUI.menu(self.main_window, self.GEMROC_reading_dict)
@@ -1563,13 +1579,14 @@ class menu():
 
             for CH in range(0, 64):
                 write = GEMROC.GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg(GEMROC.c_inst, TIGER, CH)
-                read = GEMROC.GEM_COM.ReadTgtGEMROC_TIGER_ChCfgReg(GEMROC.c_inst, TIGER, CH)
-                try:
-                    GEMROC.GEM_COM.channel_set_check_GUI(write, read)
-                except:
-                    self.error_led_update()
-                    failed = True
-                    # print "!!! ERROR IN CONFIGURATION  GEMROC {},TIGER {},CHANNEL {}!!!".format(GEMROC.GEM_COM.GEMROC_ID, TIGER, CH)
+                if set_check:
+                    read = GEMROC.GEM_COM.ReadTgtGEMROC_TIGER_ChCfgReg(GEMROC.c_inst, TIGER, CH)
+                    try:
+                        GEMROC.GEM_COM.channel_set_check_GUI(write, read)
+                    except:
+                        self.error_led_update()
+                        failed = True
+                        # print "!!! ERROR IN CONFIGURATION  GEMROC {},TIGER {},CHANNEL {}!!!".format(GEMROC.GEM_COM.GEMROC_ID, TIGER, CH)
 
             if failed and set_check:
                 print ("!!! ERROR IN CHANNEL CONFIGURATION  GEMROC {},TIGER {}!!!".format(GEMROC.GEM_COM.GEMROC_ID, TIGER))
@@ -1656,15 +1673,15 @@ class menu():
                 self.write_CHANNEL(GEMROC, TIGER, 64, False,set_check)
         self.Synch_reset()
 
-    def load_default_config_parallel(self,set_check=True):
+    def load_default_config_parallel(self,set_check=True, led=True):
         proc_list=[]
         pip_list=[]
         for number,GEMROC in self.GEMROC_reading_dict.items():
             pipe_in, pipe_out = Pipe()
 
             p=Process(target=self.load_config_process, args=(GEMROC,pipe_out,set_check))
-            p.start()
 
+            p.start()
 
             proc_list.append(p)
             pip_list.append(pipe_in)
@@ -1679,21 +1696,23 @@ class menu():
                 self.Launch_error_check['text'] = "Configuration done with no errors"
                 self.main_window.update()
 
+
         self.Synch_reset()
 
 
     def load_config_process(self, GEMROC, pipe_out, set_check=True,):
-        Errors=""
+        Errors="\n"
         for TIGER in range(0,8):
             write = GEMROC.GEM_COM.Set_param_dict_global(GEMROC.g_inst, "TxDDR", int(TIGER), 0)
             read = GEMROC.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(GEMROC.g_inst, int(TIGER))
+            read = GEMROC.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(GEMROC.g_inst, int(TIGER))
+
             if set_check:
                 try:
                     GEMROC.GEM_COM.global_set_check(write, read)
                 except Exception as E:
+                    print (E)
                     Errors = Errors + "{}\n".format(E)
-                    self.error_led_update()
-            self.write_CHANNEL(GEMROC, TIGER, 64, False, set_check)
             printed = False
             for CH in range(0, 64):
                 write = GEMROC.GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg(GEMROC.c_inst, TIGER, CH)
@@ -1735,6 +1754,9 @@ class menu():
         self.change_acquisition_mode(True, 0)
         self.change_trigger_mode(value=0, to_all=True)
         self.load_thr(True, "scan", 3, 2, 0, 0, 8)
+
+        if self.use_ecq_thr:
+            self.load_thr_from_file()
         self.specific_channel_fast_setting()
         self.load_default_config_parallel()
         self.Synch_reset(1)

@@ -755,7 +755,7 @@ class noise_measure():
 
     def LOAD(self):
         filename = tkFileDialog.askopenfilename(initialdir="." + sep + "noise_scan" + sep + "saves", title="Select file", filetypes=(("Noise scan files", "*.ns"), ("all files", "*.*")))
-        with  open(filename, 'rb') as f:
+        with open(filename, 'rb') as f:
             self.scan_matrixs = pickle.load(f)
 
     def load_TP_settings(self, branch="T", TP=True):
