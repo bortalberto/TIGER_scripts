@@ -317,7 +317,8 @@ class analisys_conf: #Analysis class used for configurations10
         return thr_scan_matrix
 
     def both_vth_scan(self, T, j, extreme_t=(0, 63), extreme_e=(0, 63),acq_time=0.1):
-        DEBUG=False
+        maximum_matrix = self.GEM_COM.load_thr_max_from_file()[T][j]
+        DEBUG=True
         scan_matrix=np.zeros((64,64))
         self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode", T, j, 0)
         self.GEM_COM.Set_param_dict_channel(self.c_inst,"TP_disable_FE", T, j, 1)
@@ -334,7 +335,18 @@ class analisys_conf: #Analysis class used for configurations10
             E_T[0]=0
         if E_E[0]<0:
             E_E[0]=0
-	
+
+        if E_T[1]>maximum_matrix[0]:
+            E_T[1]=int(maximum_matrix[0])
+
+        if E_E[1] > maximum_matrix[1]:
+            E_E[1] = int(maximum_matrix[1])
+
+        if E_T[0]>maximum_matrix[0]:
+            E_T[0]=int(maximum_matrix[0]-3)
+
+        if E_E[0] > maximum_matrix[1]:
+            E_E[0] = int(maximum_matrix[1]-3)
 
         for Vth_t in range(E_T[0],E_T[1]+1):
             self.GEM_COM.Set_param_dict_channel(self.c_inst, "Vth_T1", T, j, Vth_t)
@@ -1425,9 +1437,12 @@ class analisys_read:
 
 def find_baseline(data):
     max = np.max(data)
+    argmax = np.argmax(data)
     first = np.argmax(data > 0.6 * max)
     last = 63 - np.argmax(np.flip(data) > 0.6 * max)
-    return first, last, ((last - first) / 2 + first)
+    return first, last, ((last - first) / 2 + first),argmax
+
+
 
 def error_fit(data,TP_rate, Ebranch=True):
     # for i, ytest in enumerate(ydata):

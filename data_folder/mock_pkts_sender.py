@@ -9,11 +9,6 @@ cloning_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 cloning_sock.bind((address_for_cloning_sender, cloning_sending_port))
 cloning_sock.setblocking(True)
 
-# with open("./SubRUN_5_GEMROC_0_TM.dat", 'rb') as fi:
-#     data = fi.read()
-#     for i in range(0, len(data) // 8):
-#         cloning_sock.sendto(data[i * 8:i * 8 + 8], (address_for_cloning_rcv, port_for_cloning))
-#         time.sleep(0.00012)
 
 with open("./data_for_packet_sender.dat", 'rb') as fi:
     full_data = fi.read()

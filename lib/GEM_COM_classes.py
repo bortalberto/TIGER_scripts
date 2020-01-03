@@ -14,7 +14,7 @@ import socket
 import struct
 import sys
 import time
-
+import select
 import numpy as np
 
 import GEM_CONF_classes as GEM_CONF_classes  # acr 2018-02-19 import GEMcnf_classes_2018
@@ -28,7 +28,7 @@ elif OS == 'linux2':
 else:
     print("ERROR: OS {} non compatible".format(OS))
     sys.exit()
-local_test = False
+local_test = True
 
 class communication:  #The directory are declared here to avoid multiple declaration
 
@@ -60,12 +60,12 @@ class communication:  #The directory are declared here to avoid multiple declara
             self.HOST_IP = "127.0.0.1"  # uncomment for test only
 
             self.HOST_PORT = 54816 + 1 + self.GEMROC_ID
-            self.HOST_PORT_RECEIVE = 52816 + 1 + self.GEMROC_ID
+            self.HOST_PORT_RECEIVE = 58912 + 1 + self.GEMROC_ID
 
             # DEST_IP_ADDRESS = "192.168.1.%d" %(GEMROC_ID+16) # offset 16 is determined by Stefano's MAC
             # DEST_PORT_NO = 58912+1 # STEFANO CHIOZZI - 2018-03-08 offset 0 is reserved by the MAC for a custom protocol; offset 3 is also a special debug port
             self.DEST_IP_ADDRESS = "127.0.0.1"
-            self.DEST_PORT_NO = 52816 + 1 + self.GEMROC_ID
+            self.DEST_PORT_NO = 58912 + 1 + self.GEMROC_ID
         else:
             self.HOST_IP = "192.168.1.200"
             self.HOST_PORT = 54816 + 1 + self.GEMROC_ID  # Port from where send to the gemroc
@@ -140,7 +140,7 @@ class communication:  #The directory are declared here to avoid multiple declara
         command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
         COMMAND_STRING = 'CMD_GEMROC_TIMING_DELAYS_UPDATE'
         command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
-        # self.flush_socket()
+        # self.flush_rcv_socket()
         self.test_GEMROC_communication()
 
         # Communication errors acquisition
@@ -164,13 +164,30 @@ class communication:  #The directory are declared here to avoid multiple declara
         self.log_file.close()
         self.IVT_log_file.close()
 
-    def flush_socket(self):
+    def flush_rcv_socket(self):
+        try:
+            self.flush_socket(self.receiveSock)
+        except Exception as e:
+            print "Error in flushing socket : {}".format(e)
+
+
+    def hard_flush_rcv_socket(self):
+        print "Packets in configuration rcv buffer for GEMROC {}, trying socket reset".format(self.GEMROC_ID)
         self.receiveSock.close()
-        # self.receiveSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        # self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        # self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 106496 )
-        self.receiveSock.settimeout(1)
-        # self.receiveSock.bind((self.HOST_IP, self.HOST_PORT_RECEIVE))
+        self.receiveSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.receiveSock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 106496)
+        self.receiveSock.settimeout(6)
+        self.receiveSock.bind((self.HOST_IP, self.HOST_PORT_RECEIVE))
+
+    def flush_socket(self,sockk):
+        sock=[sockk]
+        while 1:
+            inputready, o, e = select.select(sock, [], [], 0.0)
+            if len(inputready) == 0: break
+            # print "DEBUG: flushing rcv socket"
+            for s in inputready: s.recv(1024)
+
 
     def test_GEMROC_communication(self):
         self.gemroc_LV_XX.set_target_GEMROC(self.GEMROC_ID)
@@ -348,10 +365,12 @@ class communication:  #The directory are declared here to avoid multiple declara
         calibration_offset_mV_FEB2 = 1.0
         calibration_offset_mV_FEB1 = 1.0
         calibration_offset_mV_FEB0 = 1.0
+
+        calibration_offset_digits=6
+        
         # acr 2018-03-15 END increased the sensitivity of temperature measurement and adjusted some parameters
         shifted_T_ADC_res_mV_1LSB = 0.305 * (2 ** T_ADC_data_shift)
         V_ADC_data_shift = 4
-        shifted_V_ADC_res_mV_1LSB = 0.305 * (2 ** V_ADC_data_shift)
         deltaT_over_deltaV_ratio = 1.283
         FEB_T = np.zeros((4))
         FEB_VA = np.zeros((4))
@@ -359,15 +378,14 @@ class communication:  #The directory are declared here to avoid multiple declara
         FEB_VD = np.zeros((4))
         FEB_ID = np.zeros((4))
 
-        FEB_T[3] = T_ref_PT1000 + (((
-                                            FEB3_T_U * shifted_T_ADC_res_mV_1LSB) + calibration_offset_mV_FEB3 - V_ADC_at_25C) * deltaT_over_deltaV_ratio)
-        FEB_T[2] = T_ref_PT1000 + (((
-                                            FEB2_T_U * shifted_T_ADC_res_mV_1LSB) + calibration_offset_mV_FEB2 - V_ADC_at_25C) * deltaT_over_deltaV_ratio)
-        FEB_T[1] = T_ref_PT1000 + (((
-                                            FEB1_T_U * shifted_T_ADC_res_mV_1LSB) + calibration_offset_mV_FEB1 - V_ADC_at_25C) * deltaT_over_deltaV_ratio)
-        FEB_T[0] = T_ref_PT1000 + (((
-                                            FEB0_T_U * shifted_T_ADC_res_mV_1LSB) + calibration_offset_mV_FEB0 - V_ADC_at_25C) * deltaT_over_deltaV_ratio)
+        FEB_T[3] = T_ref_PT1000 + ((FEB3_T_U+calibration_offset_digits) * shifted_T_ADC_res_mV_1LSB + calibration_offset_mV_FEB3 - V_ADC_at_25C) * deltaT_over_deltaV_ratio
+        FEB_T[2] = T_ref_PT1000 + ((FEB2_T_U+calibration_offset_digits) * shifted_T_ADC_res_mV_1LSB + calibration_offset_mV_FEB2 - V_ADC_at_25C) * deltaT_over_deltaV_ratio
+        FEB_T[1] = T_ref_PT1000 + ((FEB1_T_U+calibration_offset_digits) * shifted_T_ADC_res_mV_1LSB + calibration_offset_mV_FEB1 - V_ADC_at_25C) * deltaT_over_deltaV_ratio
+        FEB_T[0] = T_ref_PT1000 + ((FEB0_T_U+calibration_offset_digits) * shifted_T_ADC_res_mV_1LSB + calibration_offset_mV_FEB0 - V_ADC_at_25C) * deltaT_over_deltaV_ratio
+
         Vout_atten_factor = 0.5
+        shifted_V_ADC_res_mV_1LSB = 0.305 * (2 ** V_ADC_data_shift)
+
         FEB_VD[3] = (FEB3_VD_U * shifted_V_ADC_res_mV_1LSB) / Vout_atten_factor
         FEB_VD[2] = (FEB2_VD_U * shifted_V_ADC_res_mV_1LSB) / Vout_atten_factor
         FEB_VD[1] = (FEB1_VD_U * shifted_V_ADC_res_mV_1LSB) / Vout_atten_factor
@@ -429,6 +447,148 @@ class communication:  #The directory are declared here to avoid multiple declara
         status_dict['limits']['ROC']["OVT_FLAG"] = ROC_OVT_FLAG
 
         return status_dict
+
+    def save_IVT_converter_new_calib(self, command_echo_param):
+        L_array = array.array('I')  # L is an array of unsigned long, I for some systems, L for others
+        L_array.fromstring(command_echo_param)
+        L_array.byteswap()
+
+        FEB3_T_U = (L_array[1] >> 22) & 0Xff
+        FEB2_T_U = (L_array[2] >> 22) & 0Xff
+        FEB1_T_U = (L_array[3] >> 22) & 0Xff
+        FEB0_T_U = (L_array[4] >> 22) & 0Xff
+        FEB3_VD_U = (L_array[1] >> 13) & 0X1ff
+        FEB2_VD_U = (L_array[2] >> 13) & 0X1ff
+        FEB1_VD_U = (L_array[3] >> 13) & 0X1ff
+        FEB0_VD_U = (L_array[4] >> 13) & 0X1ff
+        FEB3_ID_U = (L_array[1] >> 4) & 0X1ff
+        FEB2_ID_U = (L_array[2] >> 4) & 0X1ff
+        FEB1_ID_U = (L_array[3] >> 4) & 0X1ff
+        FEB0_ID_U = (L_array[4] >> 4) & 0X1ff
+        FEB3_VA_U = (L_array[5] >> 13) & 0X1ff
+        FEB2_VA_U = (L_array[6] >> 13) & 0X1ff
+        FEB1_VA_U = (L_array[7] >> 13) & 0X1ff
+        FEB0_VA_U = (L_array[8] >> 13) & 0X1ff
+        FEB3_IA_U = (L_array[5] >> 4) & 0X1ff
+        FEB2_IA_U = (L_array[6] >> 4) & 0X1ff
+        FEB1_IA_U = (L_array[7] >> 4) & 0X1ff
+        FEB0_IA_U = (L_array[8] >> 4) & 0X1ff
+        ROC_T_U = (L_array[9] >> 24) & 0X3f
+        FEB_OVT_FLAG = np.zeros((4))
+        FEB_DOVV_FLAG = np.zeros((4))
+        FEB_DOVC_FLAG = np.zeros((4))
+        FEB_AOVC_FLAG = np.zeros((4))
+        FEB_AOVV_FLAG = np.zeros((4))
+
+        FEB_OVT_FLAG[3] = (L_array[1] >> 3) & 0X1
+        FEB_DOVV_FLAG[3] = (L_array[1] >> 2) & 0X1
+        FEB_DOVC_FLAG[3] = (L_array[1] >> 1) & 0X1
+        FEB_AOVV_FLAG[3] = (L_array[5] >> 2) & 0X1
+        FEB_AOVC_FLAG[3] = (L_array[5] >> 1) & 0X1
+        FEB_OVT_FLAG[2] = (L_array[2] >> 3) & 0X1
+        FEB_DOVV_FLAG[2] = (L_array[2] >> 2) & 0X1
+        FEB_DOVC_FLAG[2] = (L_array[2] >> 1) & 0X1
+        FEB_AOVV_FLAG[2] = (L_array[6] >> 2) & 0X1
+        FEB_AOVC_FLAG[2] = (L_array[6] >> 1) & 0X1
+        FEB_OVT_FLAG[1] = (L_array[3] >> 3) & 0X1
+        FEB_DOVV_FLAG[1] = (L_array[3] >> 2) & 0X1
+        FEB_DOVC_FLAG[1] = (L_array[3] >> 1) & 0X1
+        FEB_AOVV_FLAG[1] = (L_array[7] >> 2) & 0X1
+        FEB_AOVC_FLAG[1] = (L_array[7] >> 1) & 0X1
+        FEB_OVT_FLAG[0] = (L_array[4] >> 3) & 0X1
+        FEB_DOVV_FLAG[0] = (L_array[4] >> 2) & 0X1
+        FEB_DOVC_FLAG[0] = (L_array[4] >> 1) & 0X1
+        FEB_AOVV_FLAG[0] = (L_array[8] >> 2) & 0X1
+        FEB_AOVC_FLAG[0] = (L_array[8] >> 1) & 0X1
+        ROC_OVT_FLAG = (L_array[9] >> 17) & 0X1  # ACR 2018-03-15
+        del L_array
+        calibration_offset_mV_FEB3 = 1.0
+        calibration_offset_mV_FEB2 = 1.0
+        calibration_offset_mV_FEB1 = 1.0
+        calibration_offset_mV_FEB0 = 1.0
+        # acr 2018-03-15 END increased the sensitivity of temperature measurement and adjusted some parameters
+        FEB_T = np.zeros((4))
+        FEB_VA = np.zeros((4))
+        FEB_IA = np.zeros((4))
+        FEB_VD = np.zeros((4))
+        FEB_ID = np.zeros((4))
+
+        coeff_T=1.727
+        inter_T=-314.8
+
+        FEB_T[0] = FEB0_T_U*coeff_T+inter_T
+        FEB_T[1] = FEB1_T_U*coeff_T+inter_T
+        FEB_T[2] = FEB2_T_U*coeff_T+inter_T
+        FEB_T[3] = FEB3_T_U*coeff_T+inter_T
+
+
+        V_ADC_data_shift = 4
+
+        Vout_atten_factor = 0.5
+        shifted_V_ADC_res_mV_1LSB = 0.305 * (2 ** V_ADC_data_shift)
+
+        FEB_VD[3] = (FEB3_VD_U * shifted_V_ADC_res_mV_1LSB) / Vout_atten_factor
+        FEB_VD[2] = (FEB2_VD_U * shifted_V_ADC_res_mV_1LSB) / Vout_atten_factor
+        FEB_VD[1] = (FEB1_VD_U * shifted_V_ADC_res_mV_1LSB) / Vout_atten_factor
+        FEB_VD[0] = (FEB0_VD_U * shifted_V_ADC_res_mV_1LSB) / Vout_atten_factor
+        FEB_VA[3] = (FEB3_VA_U * shifted_V_ADC_res_mV_1LSB) / Vout_atten_factor
+        FEB_VA[2] = (FEB2_VA_U * shifted_V_ADC_res_mV_1LSB) / Vout_atten_factor
+        FEB_VA[1] = (FEB1_VA_U * shifted_V_ADC_res_mV_1LSB) / Vout_atten_factor
+        FEB_VA[0] = (FEB0_VA_U * shifted_V_ADC_res_mV_1LSB) / Vout_atten_factor
+        ## acr 2018-02-28 BEGIN prototype V2 of GEMROC_IFC_CARD have INA GAIN set at 200 instead of 50!!!###
+        IADC_conv_fact_INA_GAIN_50 = 8.13
+        IADC_conv_fact_INA_GAIN_200 = 8.13 / 4  ## mA per LSB
+        #    if self.GEMROC_ID < 3:
+        #        IADC_conv_fact_INA_GAIN = IADC_conv_fact_INA_GAIN_50
+        #   else:
+        IADC_conv_fact_INA_GAIN = IADC_conv_fact_INA_GAIN_200
+        FEB_IA[3] = (FEB3_IA_U * IADC_conv_fact_INA_GAIN)
+        FEB_IA[2] = (FEB2_IA_U * IADC_conv_fact_INA_GAIN)
+        FEB_IA[1] = (FEB1_IA_U * IADC_conv_fact_INA_GAIN)
+        FEB_IA[0] = (FEB0_IA_U * IADC_conv_fact_INA_GAIN)
+        FEB_ID[3] = (FEB3_ID_U * IADC_conv_fact_INA_GAIN)
+        FEB_ID[2] = (FEB2_ID_U * IADC_conv_fact_INA_GAIN)
+        FEB_ID[1] = (FEB1_ID_U * IADC_conv_fact_INA_GAIN)
+        FEB_ID[0] = (FEB0_ID_U * IADC_conv_fact_INA_GAIN)
+        ## acr 2018-02-28 END  prototype V2 have INA GAIN set at 200 instead of 50!!!###
+        ROC_T_conv_fact_C_per_LSB = 1.0
+        ROC_T = ROC_T_U * ROC_T_conv_fact_C_per_LSB
+        status_dict = {
+            'status': {},
+            'limits': {}
+        }
+        status_dict['status'] = {
+            'FEB0': {},
+            'FEB1': {},
+            'FEB2': {},
+            'FEB3': {},
+            'ROC': {}
+        }
+
+        status_dict['limits'] = {
+            'FEB0': {},
+            'FEB1': {},
+            'FEB2': {},
+            'FEB3': {},
+            'ROC': {}
+        }
+        for key in (0, 1, 2, 3):
+            status_dict['status']['FEB{}'.format(key)]["TEMP[degC]"] = FEB_T[key]
+            status_dict['status']['FEB{}'.format(key)]["VD[mV]"] = FEB_VD[key]
+            status_dict['status']['FEB{}'.format(key)]["ID[mA]"] = FEB_ID[key]
+            status_dict['status']['FEB{}'.format(key)]["VA[mV]"] = FEB_VA[key]
+            status_dict['status']['FEB{}'.format(key)]["IA[mA]"] = FEB_IA[key]
+        status_dict['status']['ROC']["TEMP"] = ROC_T
+        for key in (0, 1, 2, 3):
+            status_dict['limits']['FEB{}'.format(key)]["OVT_flag"] = FEB_OVT_FLAG[key]
+            status_dict['limits']['FEB{}'.format(key)]["DOVV_flag"] = FEB_DOVV_FLAG[key]
+            status_dict['limits']['FEB{}'.format(key)]["DOVC_flag"] = FEB_DOVC_FLAG[key]
+            status_dict['limits']['FEB{}'.format(key)]["AOVV_flag"] = FEB_AOVV_FLAG[key]
+            status_dict['limits']['FEB{}'.format(key)]["AOVC_flag"] = FEB_AOVC_FLAG[key]
+        status_dict['limits']['ROC']["OVT_FLAG"] = ROC_OVT_FLAG
+
+        return status_dict
+
 
     def display_and_log_IVT(self, command_echo_param, display_enable_param, log_enable_param,
                             log_filename_param):  ## acr 2018-02-23
@@ -494,20 +654,20 @@ class communication:  #The directory are declared here to avoid multiple declara
         calibration_offset_mV_FEB2 = 1.0
         calibration_offset_mV_FEB1 = 1.0
         calibration_offset_mV_FEB0 = 1.0
+
+        calibration_offset_digits = 6
         # acr 2018-03-15 END increased the sensitivity of temperature measurement and adjusted some parameters
         shifted_T_ADC_res_mV_1LSB = 0.305 * (2 ** T_ADC_data_shift)
+        deltaT_over_deltaV_ratio = 1.283
+
+        FEB3_T = T_ref_PT1000 + ((((FEB3_T_U+calibration_offset_digits) * shifted_T_ADC_res_mV_1LSB) + calibration_offset_mV_FEB3 - V_ADC_at_25C) * deltaT_over_deltaV_ratio)
+        FEB2_T = T_ref_PT1000 + ((((FEB2_T_U+calibration_offset_digits) * shifted_T_ADC_res_mV_1LSB) + calibration_offset_mV_FEB2 - V_ADC_at_25C) * deltaT_over_deltaV_ratio)
+        FEB1_T = T_ref_PT1000 + ((((FEB1_T_U+calibration_offset_digits) * shifted_T_ADC_res_mV_1LSB) + calibration_offset_mV_FEB1 - V_ADC_at_25C) * deltaT_over_deltaV_ratio)
+        FEB0_T = T_ref_PT1000 + ((((FEB0_T_U+calibration_offset_digits) * shifted_T_ADC_res_mV_1LSB) + calibration_offset_mV_FEB0 - V_ADC_at_25C) * deltaT_over_deltaV_ratio)
+
+        Vout_atten_factor = 0.5
         V_ADC_data_shift = 4
         shifted_V_ADC_res_mV_1LSB = 0.305 * (2 ** V_ADC_data_shift)
-        deltaT_over_deltaV_ratio = 1.283
-        FEB3_T = T_ref_PT1000 + (((
-                                          FEB3_T_U * shifted_T_ADC_res_mV_1LSB) + calibration_offset_mV_FEB3 - V_ADC_at_25C) * deltaT_over_deltaV_ratio)
-        FEB2_T = T_ref_PT1000 + (((
-                                          FEB2_T_U * shifted_T_ADC_res_mV_1LSB) + calibration_offset_mV_FEB2 - V_ADC_at_25C) * deltaT_over_deltaV_ratio)
-        FEB1_T = T_ref_PT1000 + (((
-                                          FEB1_T_U * shifted_T_ADC_res_mV_1LSB) + calibration_offset_mV_FEB1 - V_ADC_at_25C) * deltaT_over_deltaV_ratio)
-        FEB0_T = T_ref_PT1000 + (((
-                                          FEB0_T_U * shifted_T_ADC_res_mV_1LSB) + calibration_offset_mV_FEB0 - V_ADC_at_25C) * deltaT_over_deltaV_ratio)
-        Vout_atten_factor = 0.5
         FEB3_VD = (FEB3_VD_U * shifted_V_ADC_res_mV_1LSB) / Vout_atten_factor
         FEB2_VD = (FEB2_VD_U * shifted_V_ADC_res_mV_1LSB) / Vout_atten_factor
         FEB1_VD = (FEB1_VD_U * shifted_V_ADC_res_mV_1LSB) / Vout_atten_factor
@@ -974,7 +1134,7 @@ class communication:  #The directory are declared here to avoid multiple declara
         self.gemroc_LV_XX.HIT_counter_disable = int(ERROR_counter_enable)
         self.gemroc_LV_XX.CHANNEL_for_counter = int(CHANNEL_for_counter)
         COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
-        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
+        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING, retry=False)
         return command_echo
 
     def reset_counter(self):
@@ -1881,7 +2041,7 @@ class communication:  #The directory are declared here to avoid multiple declara
         :return:
         """
         max_matrix=np.zeros((8,64,2))
-        for T in range(0,1):
+        for T in range(0,8):
             file_T = self.conf_folder + sep + "thr" + sep + "GEMROC{}_Chip{}_T.thr".format(self.GEMROC_ID, T)
             file_E = self.conf_folder + sep + "thr" + sep + "GEMROC{}_Chip{}_E.thr".format(self.GEMROC_ID, T)
             thr0_T = np.loadtxt(file_T, usecols=2)
@@ -1889,6 +2049,8 @@ class communication:  #The directory are declared here to avoid multiple declara
             max_matrix[T,:,0]=thr0_T
             max_matrix[T,:,1]=thr0_E
         return max_matrix
+
+
     def save_current_VTH(self,ChCFGReg_setting_inst,filename="default"):
         """
         Function created to save VTH from 2-D tuning

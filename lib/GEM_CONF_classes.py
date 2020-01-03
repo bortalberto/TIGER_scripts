@@ -166,7 +166,6 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
                              self.cmd_word1,
                              self.cmd_word0
                               ]
-
    def __del__(self):
       class_name = self.__class__.__name__
       #print class_name, "g_reg_settings destroyed"
@@ -417,6 +416,8 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
                    self.Global_cfg_list[T]["TP_Vcal_ref"] = 5
                if TP_amplitude == "high":
                    self.Global_cfg_list[T]["TP_Vcal_ref"] = 13
+
+
    def load_specif_settings(self, filename):
        with open (filename, 'r') as f:
            for line in f.readlines():
@@ -448,6 +449,7 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
 
                        else:
                            print ("Command {} not recognized".format(command))
+
 
    def search_for_Q(self,conf_dict, Q):
        if conf_dict["TP_calib"] != 'NA':

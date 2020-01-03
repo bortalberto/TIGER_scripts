@@ -7,6 +7,7 @@ import time
 import ttk
 from Tkinter import *
 from multiprocessing import Process, Pipe
+import subprocess
 from threading import Thread
 import array
 import numpy as np
@@ -80,7 +81,7 @@ class menu():
         self.simple_analysis = IntVar(self.master_window)
         self.run_analysis = IntVar(self.master_window)
         if OS == 'linux2':
-            self.master_window.wm_iconbitmap('@'+"." + sep + 'icons' + sep +'ACQ_ICON.xbm')
+            self.master_window.wm_iconbitmap('@' + "." + sep + 'icons' + sep + 'ACQ_ICON.xbm')
         Label(self.master_window, text='Acquisition setting', font=("Courier", 25)).pack()
         if not std_alone:
             self.master = Frame(self.tabControl)
@@ -93,7 +94,7 @@ class menu():
         self.icon_on = PhotoImage(file="." + sep + 'icons' + sep + 'on.gif')
         self.icon_off = PhotoImage(file="." + sep + 'icons' + sep + 'off.gif')
         self.icon_bad = PhotoImage(file="." + sep + 'icons' + sep + 'bad.gif')
-        self.mappa = PhotoImage(file="." + sep + 'icons' + sep + 'mappa.gif')
+        self.mappa = PhotoImage(file="." + sep + 'icons' + sep + 'mappa_updated_normal.gif')
         self.grid_frame = Frame(self.master)
         self.grid_frame.pack()
         Button(self.grid_frame, text='ROC 00', command=lambda: self.toggle(0)).grid(row=0, column=0, sticky=NW, pady=4)
@@ -168,9 +169,20 @@ class menu():
             colonna = ((i) % 10) * 2 + 1
             self.LED.append(Label(self.grid_frame, image=self.icon_off))
             self.LED[i].grid(row=riga, column=colonna)
+        middle_frame = Frame(self.master)
+        middle_frame.pack()
+        frame_mails = Frame(middle_frame)
+        frame_mails.pack(side=LEFT, padx=20)
+        self.mail_start_but = Button(frame_mails, text="Send acq start mail", command=self.send_acq_start)
+        self.mail_start_but.pack(side=LEFT)
 
-        self.errors = Frame(self.master)
-        self.errors.pack()
+        self.mail_stop_but = Button(frame_mails, text="Send acq stop mail", command=self.send_acq_stop)
+        self.mail_stop_but.pack(side=LEFT)
+        spacer = Frame(frame_mails)
+        spacer.pack(side=LEFT, padx=50)
+
+        self.errors = Frame(middle_frame)
+        self.errors.pack(side=LEFT)
         self.LBerror = Label(self.errors, text='Warnings', font=("Courier", 25))
         self.LBerror.grid(row=0, column=1, columnspan=8, sticky=S, pady=5)
         # self.butleftG_err = Button(self.errors, text='<', command=lambda: self.change_G_or_T(-1, "G")).grid(row=1, column=0, sticky=S, pady=4)
@@ -189,8 +201,7 @@ class menu():
             Checkbutton(self.start_frame, text="Online monitor", variable=self.online_monitor).grid(row=0, column=6, sticky=NW, pady=4)
             Checkbutton(self.start_frame, text="Online data monitor", variable=self.online_monitor_data).grid(row=0, column=7, sticky=NW, pady=4)
 
-
-        #TO be restored
+        # TO be restored
         # Checkbutton(self.start_frame, text="Data online monitor", variable=self.online_monitor_data).grid(row=0, column=3, sticky=NW, pady=4)
 
         self.LED_UDP = Label(self.errors, image=self.icon_off)
@@ -272,6 +283,20 @@ class menu():
                         for T in range(0, 8):
                             self.DCT_matrix[gemroc][T] = 1
 
+    def send_acq_start(self):
+        self.send_mail(error="Run start {}".format(self.run_folder), subject="Run start {}".format(self.run_folder))
+        self.mail_start_but.config(state='disabled')
+        self.master_window.after(5000, lambda: self.reset_mail_but())
+
+    def send_acq_stop(self):
+        self.send_mail(error="Run stop {}".format(self.run_folder), subject="Run stop {}".format(self.run_folder))
+        self.mail_stop_but.config(state='disabled')
+        self.master_window.after(5000, lambda: self.reset_mail_but())
+
+    def reset_mail_but(self):
+        self.mail_start_but.config(state='normal')
+        self.mail_stop_but.config(state='normal')
+
     def set_last_folder(self):
         """
         Funzione per andare all'ultima cartella
@@ -342,58 +367,58 @@ class menu():
 
         first_row = Frame(self.on_run_frame)
         first_row.pack()
-        self.check_810=BooleanVar(self.master_window)
+        self.check_810 = BooleanVar(self.master_window)
         self.check_810.set(True)
 
-        self.stop_timeout=BooleanVar(self.master_window)
+        self.stop_timeout = BooleanVar(self.master_window)
         self.stop_timeout.set(True)
 
-        self.numb_of_810_reset=IntVar(self.master_window)
-        self.numb_of_timeout_reset=IntVar(self.master_window)
+        self.numb_of_810_reset = IntVar(self.master_window)
+        self.numb_of_timeout_reset = IntVar(self.master_window)
         self.numb_of_810_reset.set(4)
         self.numb_of_timeout_reset.set(4)
 
-        fram810=LabelFrame(first_row)
+        fram810 = LabelFrame(first_row)
         fram810.pack(side=LEFT)
 
-        framtimed=LabelFrame(first_row)
+        framtimed = LabelFrame(first_row)
         framtimed.pack(side=LEFT)
-        Checkbutton(fram810, var=self.check_810,text="Check on 8/10 bit errors").pack(side=LEFT,padx=3)
-        Label(fram810,text="     Maximum number of reset in a row").pack(side=LEFT)
+        Checkbutton(fram810, var=self.check_810, text="Check on 8/10 bit errors").pack(side=LEFT, padx=3)
+        Label(fram810, text="     Maximum number of reset in a row").pack(side=LEFT)
         Entry(fram810, width=3, textvariable=self.numb_of_810_reset).pack(side=LEFT)
-        Checkbutton(framtimed,var=self.stop_timeout,text="Stop for timeout").pack(side=LEFT)
-        Label(framtimed,text="     Maximum number of timeout in a row").pack(side=LEFT,padx=3)
+        Checkbutton(framtimed, var=self.stop_timeout, text="Stop for timeout").pack(side=LEFT)
+        Label(framtimed, text="     Maximum number of timeout in a row").pack(side=LEFT, padx=3)
         Entry(framtimed, width=3, textvariable=self.numb_of_timeout_reset).pack(side=LEFT)
 
         second_row = LabelFrame(self.on_run_frame)
         second_row.pack()
-        self.check_thr=BooleanVar(self.master_window)
+        self.check_thr = BooleanVar(self.master_window)
         self.check_thr.set(True)
-        self.vth_t_toll=IntVar(self.master_window)
+        self.vth_t_toll = IntVar(self.master_window)
         self.vth_t_toll.set(4)
-        self.vth_e_toll=IntVar(self.master_window)
+        self.vth_e_toll = IntVar(self.master_window)
         self.vth_e_toll.set(4)
-        self.numb_of_viol=IntVar(self.master_window)
+        self.numb_of_viol = IntVar(self.master_window)
         self.numb_of_viol.set(20)
-        Checkbutton(second_row,var=self.check_thr,text="Check on thr before start").pack(side=LEFT)
-        Label(second_row,text="     Tollerance on the T thr").pack(side=LEFT)
+        Checkbutton(second_row, var=self.check_thr, text="Check on thr before start").pack(side=LEFT)
+        Label(second_row, text="     Tollerance on the T thr").pack(side=LEFT)
         Entry(second_row, width=3, textvariable=self.vth_t_toll).pack(side=LEFT)
 
-        Label(second_row,text="     Tollerance on the E thr").pack(side=LEFT)
+        Label(second_row, text="     Tollerance on the E thr").pack(side=LEFT)
         Entry(second_row, width=3, textvariable=self.vth_e_toll).pack(side=LEFT)
 
-        Label(second_row,text="     Number of concess violation").pack(side=LEFT)
+        Label(second_row, text="     Number of concess violation").pack(side=LEFT)
         Entry(second_row, width=3, textvariable=self.numb_of_viol).pack(side=LEFT)
 
         third_row = LabelFrame(self.on_run_frame)
         third_row.pack()
 
-        self.check_pause=BooleanVar(self.master_window)
+        self.check_pause = BooleanVar(self.master_window)
         self.check_pause.set(True)
-        self.check_TM=BooleanVar(self.master_window)
+        self.check_TM = BooleanVar(self.master_window)
         self.check_TM.set(True)
-        Checkbutton(third_row,var=self.check_pause,text="Check pause").pack(side=LEFT)
-        Checkbutton(third_row,var=self.check_TM,text="Check TM").pack(side=LEFT)
+        Checkbutton(third_row, var=self.check_pause, text="Check pause").pack(side=LEFT)
+        Checkbutton(third_row, var=self.check_TM, text="Check TM").pack(side=LEFT)
 
     def myfunction(self, event):
         self.canvas2.configure(scrollregion=self.canvas2.bbox("all"), width=1200, height=700)
@@ -445,7 +470,7 @@ class menu():
                     TIGER = int(key.split()[3])
                     if self.reading_TIGERs_matrix[GEMROC][TIGER] == 1 and self.DCT_matrix[GEMROC][TIGER] != 1:
                         self.reset_810 += 1
-                        if self.reset_810 < int(self.numb_of_810_reset.get()) :
+                        if self.reset_810 < int(self.numb_of_810_reset.get()):
                             print("Restarting acquisition due to 8bit/10bit errors \n")
                             self.LED_UDP['image'] = self.icon_bad
 
@@ -456,7 +481,7 @@ class menu():
                                 if self.restart.get():
                                     self.relaunch_acq()
                                 else:
-                                    self.stop_acq()
+                                    self.stop_acq(True)
                             break
                         else:
                             print("Stopping acquisition due to 8/10bit errors {} times in a row\n".format(self.reset_810))
@@ -464,15 +489,16 @@ class menu():
                             self.LED_UDP['image'] = self.icon_bad
 
                             with open(self.logfile, 'a') as f:
-                                f.write("{} -- Stopping acquisition due to 8/10bit errors {} times in a row \n".format(time.ctime(),self.reset_810))
-                            self.send_mail("{} --8/10 bit errors counter saturated {} times in a row: GEMROC {} TIGER {}\n (Note: there could be more errors).".format(time.ctime(),self.reset_810, GEMROC, TIGER))
-                            self.send_telegram("{} --8/10 bit errors counter saturated {} times in a row: GEMROC {} TIGER {}\n (Note: there could be more errors).".format(time.ctime(),self.reset_810, GEMROC, TIGER))
-                            self.stop_acq()
-
+                                f.write("{} -- Stopping acquisition due to 8/10bit errors {} times in a row \n".format(time.ctime(), self.reset_810))
+                            self.send_mail("{} --8/10 bit errors counter saturated {} times in a row: GEMROC {} TIGER {}\n (Note: there could be more errors).".format(time.ctime(), self.reset_810, GEMROC, TIGER))
+                            self.send_telegram("{} --8/10 bit errors counter saturated {} times in a row: GEMROC {} TIGER {}\n (Note: there could be more errors).".format(time.ctime(), self.reset_810, GEMROC, TIGER))
+                            self.restart.set(False)
+                            self.stop_acq(True)
                             break
 
             for i in self.GEM:
-                if i.TIMED_out and self.reset_timedout < int(self.numb_of_timeout_reset.get()) :
+                # print ("{} timeout:{}".format(i.GEMROC_ID,i.TIMED_out))
+                if i.TIMED_out and self.reset_timedout < int(self.numb_of_timeout_reset.get()):
                     self.reset_timedout += 1
                     self.LED_UDP['image'] = self.icon_bad
 
@@ -481,18 +507,21 @@ class menu():
                     print ("Number of reset for time out errors in a row: {}".format(self.reset_timedout))
                     if self.restart.get():
                         self.relaunch_acq()
+
                     else:
-                        self.stop_acq()
+                        self.restart.set(False)
+                        self.stop_acq(True)
                     break
-                if i.TIMED_out and self.reset_timedout >= 3:
+                if i.TIMED_out and self.reset_timedout >= int(self.numb_of_timeout_reset.get()) and self.stop_timeout.get():
                     self.messagge_field['text'] = "Stopping acquisition for {} timeouts in a row".format(self.reset_timedout)
                     self.LED_UDP['image'] = self.icon_bad
 
                     with open(self.logfile, 'a') as f:
-                        f.write("{} -- Stopping acquisition due to time out errors {} times in a row \n".format(time.ctime(),self.reset_timedout))
-                    self.send_mail("{} -- Stopping acquisition due to time out errors {} times in a row (GEMROC {})\n (Note: there could be more errors).".format(time.ctime(),self.reset_timedout, i.GEMROC_ID))
-                    self.send_telegram("{} -- Stopping acquisition due to time out errors {} times in a row (GEMROC {})\n (Note: there could be more errors).".format(time.ctime(),self.reset_timedout, i.GEMROC_ID))
-                    self.stop_acq()
+                        f.write("{} -- Stopping acquisition due to time out errors {} times in a row \n".format(time.ctime(), self.reset_timedout))
+                    self.send_mail("{} -- Stopping acquisition due to time out errors {} times in a row (GEMROC {})\n (Note: there could be more errors).".format(time.ctime(), self.reset_timedout, i.GEMROC_ID))
+                    self.send_telegram("{} -- Stopping acquisition due to time out errors {} times in a row (GEMROC {})\n (Note: there could be more errors).".format(time.ctime(), self.reset_timedout, i.GEMROC_ID))
+                    self.restart.set(False)
+                    self.stop_acq(True)
                     break
 
     def PMT_on(self):
@@ -508,7 +537,7 @@ class menu():
         if self.restart.get():
             self.messagge_field['text'] = "Restart process ongoing, please wait"
 
-            time.sleep(5)
+            time.sleep(4)
             if debug:
                 print "Restarting"
             if self.PMT:
@@ -522,8 +551,8 @@ class menu():
             time.sleep(2)
             print "Writing configuration"
             # self.father.Synch_reset()
-            self.father.load_default_config_parallel()
-            #self.father.Synch_reset()
+            self.father.load_default_config_parallel(set_check=False)
+            # self.father.Synch_reset()
             print "Configuration wrote"
 
             self.father.Synch_reset()
@@ -536,7 +565,6 @@ class menu():
                     print "PMT ON"
                 self.PMT_on()
             time.sleep(22)
-
             self.start_acq(First_launch=False)
 
     def ref_adv_acq(self):
@@ -674,7 +702,7 @@ class menu():
         if self.save_conf_every_run.get():
             self.conffile = "." + sep + "data_folder" + sep + self.run_folder + sep + "CONF_log_{}".format(self.sub_run_number)
         else:
-            self.conffile = "." + sep + "data_folder" + sep + self.run_folder + sep + "CONF_log_all_run"
+            self.conffile = "." + sep + "data_folder" + sep + self.run_folder + sep + "CONF_run_{}".format(self.run_folder.split("_")[1])
         if not self.std_alone:
             self.save_conf_registers()
         self.but7.config(state='disabled')
@@ -722,11 +750,11 @@ class menu():
 
         :return:
         """
-        th_tollerance=(int(self.vth_t_toll.get()), int(self.vth_e_toll.get()))
-        numb_of_toll_channels= int(self.numb_of_viol.get())
+        th_tollerance = (int(self.vth_t_toll.get()), int(self.vth_e_toll.get()))
+        numb_of_toll_channels = int(self.numb_of_viol.get())
         if self.check_thr.get():
             thr_out_of_position = 0
-            buff=""
+            buff = ""
             for numb, value in enumerate(self.GEM_to_read):
                 if value == 1:
                     number = "GEMROC {}".format(numb)
@@ -740,7 +768,7 @@ class menu():
                                 diff_E = int(splitted[7]) - GEMROC.c_inst.Channel_cfg_list[int(splitted[1])][int(splitted[3])]['Vth_T2']
                                 if diff_T > th_tollerance[0]:
                                     buff = buff + "{} TIGER {}, CHANNEL {}, thr T at {} from reference\n".format(number, int(splitted[1]), int(splitted[3]), diff_T)
-                                    print "Warning: no reference thr found for {}".format(number)
+                                    print "{} TIGER {}, CHANNEL {}, thr T at {} from reference\n".format(number, int(splitted[1]), int(splitted[3]), diff_T)
 
                                 if diff_E > th_tollerance[1]:
                                     buff = buff + "{} TIGER {}, CHANNEL {}, thr E at {} from reference\n".format(number, int(splitted[1]), int(splitted[3]), diff_E)
@@ -760,8 +788,8 @@ class menu():
                 self.write_in_log(buff)
                 return False
 
-            elif thr_out_of_position!=0:
-                self.messagge_field['text'] = "{} thr out of reference position by at least {}, less than {}, keeps stating acq".format(thr_out_of_position, th_tollerance,numb_of_toll_channels)
+            elif thr_out_of_position != 0:
+                self.messagge_field['text'] = "{} thr out of reference position by at least {}, less than {}, keeps stating acq".format(thr_out_of_position, th_tollerance, numb_of_toll_channels)
                 self.master_window.update()
                 self.write_in_log("{} thr out of reference position by at least {}:".format(thr_out_of_position, th_tollerance))
                 self.write_in_log(buff)
@@ -797,6 +825,7 @@ class menu():
             "DAQPause_Flag": ((L_array[4] >> 1) & 0x1),
         }
         return (read_dict['TL_nTM_ACQ'], read_dict['DAQPause_Flag'])
+
     def refresh_error_status(self):
         """
         :return:
@@ -804,7 +833,6 @@ class menu():
 
     def stop_acq(self, auto=False):
         if not auto:
-
             self.restart.set(False)
         self.run_analysis.set(False)
 
@@ -839,6 +867,7 @@ class menu():
             self.messagge_field['text'] = "Acquisition stopped"
             self.LED_UDP['image'] = self.icon_off
         time.sleep(2)
+
     def save_GEMROC_errors(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():
             GEMROC.GEM_COM.Access_diagn_DPRAM_read_and_log(0, 1, logtype="not_auto", logpth=self.logfile)
@@ -862,9 +891,8 @@ class menu():
         self.errors.destroy()
         self.plot_window.destroy()
 
-    def send_mail(self, error):
+    def send_mail(self, error, subject="DAQ stop"):
         text = error
-        subject = "DAQ stop"
         os.system("python3 {}send_mail.py '{}' '{}' ".format("lib" + sep, subject, text))
 
     def send_telegram(self, error):
@@ -898,6 +926,7 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
         self.caller = caller
         for key in self.TIGER_error_counters.keys():
             self.TIGER_error_counters[key] = 0
+
     def run(self):
         if self.caller.mode == 'TM':
             print "Acquiring for {:.2f} seconds".format(float(self.caller.time) * 60)
@@ -913,7 +942,7 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
             #     self.caller.relaunch_acq()
             time.sleep(0.1)
 
-            if (time.time()-self.start_time)>check_counter*check_time:
+            if (time.time() - self.start_time) > check_counter * check_time:
                 if self.caller.run_analysis.get():
                     self.update_err_and_plot_onrun()
                     time.sleep(10)
@@ -954,11 +983,28 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
                 del pipe_list[:]
 
                 if self.running:
+                    self.check_buffer()
                     self.caller.refresh_8_10_counters_and_TimeOut()
-                check_counter+=1
+                check_counter += 1
         self.stopper_thr.running = False
         if debug:
             print "Error thread stopped"
+
+    def check_buffer(self):
+        """
+        Check the buffer of the rcv socket, if there is stuff in it, try to empty it
+        :return:
+        """
+        if sys.platform == "linux2":
+            # comm=["ss","-a","-u","|","grep","{}:{}".format(GEMROC.GEM_COM.HOST_IP, GEMROC.GEM_COM.HOST_PORT_RECEIVE)]
+            comm = ["ss", "-a", "-u", ""]
+            buffer_status = subprocess.check_output(comm)
+            for line in buffer_status.splitlines():
+                if "State" not in line and ("192.168.1.200" in line or "127.0.0.1" in line) and int(line.split()[1]) != 0:
+                    print line
+                    GEMROC_key = "GEMROC {}".format(int(line.split()[3].split(":")[1])-58912-1)
+                    if GEMROC_key in self.GEMROC_reading_dict:
+                        self.GEMROC_reading_dict[GEMROC_key].GEM_COM.hard_flush_rcv_socket()
 
     def get_id(self):
 
@@ -997,6 +1043,7 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
             time.sleep(1)
         counter_value = GEMROC.GEM_COM.GEMROC_counter_get()
         tiger_string = "{} TIGER {}".format(GEMROC_num, TIGER)
+        # GEMROC.GEM_COM.flush_rcv_socket()
         pipe_in.send((tiger_string, counter_value))
         pipe_in.close()
 
@@ -1019,7 +1066,7 @@ class stopper(Thread):  # In order to scan during configuration is mandatory to 
                 print"Elapsed time {}".format(time.time() - self.start_time)
             # print (time_max)
             if (time.time() - self.start_time) > (time_max):
-                self.caller.reset_810 = 0 #The stopper resets the reset counter if the subrun finished well
+                self.caller.reset_810 = 0  # The stopper resets the reset counter if the subrun finished well
                 self.caller.reset_timedout = 0
                 if debug:
                     print "Out of time"

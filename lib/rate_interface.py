@@ -359,7 +359,6 @@ class Acquire_rate():
         for cycle in range(number_of_cycle):
             for key, GEMROC in self.GEMROC_reading_dic.items():
                 GEM_COM = GEMROC.GEM_COM
-                maximum_matrix = GEM_COM.load_thr_max_from_file()
                 for T in range(0,8):
                     for ch in range(0,64):
                         vt1_current= GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1']
@@ -377,12 +376,17 @@ class Acquire_rate():
                         GEMROC.GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg(c_inst,T,ch)
 
 
-    def procedural_scan_handler(self,GEMROC_DICT,des_rate=5000,number_of_cycle=1,square_size=5,acq_time=0.1):
+    def procedural_scan_handler(self,GEMROC_DICT,des_rate=5000,number_of_cycle=1,square_size=5,acq_time=0.1, scanning_map=np.ones((22,8,64)), conditional=False, tollerance=0.5,map=False):
         process_list = []
         pipe_list = []
         for key, GEMROC in GEMROC_DICT.items():
             pipe_in, pipe_out = Pipe()
-            p = Process(target=self.procedural_scan_process, args=(GEMROC, pipe_out,des_rate,number_of_cycle,square_size,acq_time))
+            if map:
+                where_to_scan=np.where(scanning_map==1)
+                p = Process(target=self.procedural_scan_process_map, args=(GEMROC, pipe_out, des_rate, number_of_cycle, square_size, acq_time, where_to_scan, conditional, tollerance))
+            else:
+                p = Process(target=self.procedural_scan_process, args=(GEMROC, pipe_out, des_rate, number_of_cycle, square_size, acq_time, conditional, tollerance))
+
             process_list.append(p)
             pipe_list.append(pipe_in)
             p.start()
@@ -406,7 +410,7 @@ class Acquire_rate():
                     pipe_list.remove(pipe)
 
 
-    def procedural_scan_process(self,GEMROC, pipeout, des_rate=3500, number_of_cycle=2, square_size=5,acq_time=0.1):
+    def procedural_scan_process_map(self,GEMROC, pipeout, des_rate=3500, number_of_cycle=2, square_size=5,acq_time=0.1, scanning_map=np.ones((22,8,64)), conditional=False, tollerance=0.5):
         """
         Procedural scan with multiprocess
         :param GEMROC:
@@ -418,24 +422,42 @@ class Acquire_rate():
         :return:
         """
         GEM_COM = GEMROC.GEM_COM
+
         if debug:
             with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "w+") as logfile:
-                logfile.write("Aiming at {}, {} cycles".format(des_rate, number_of_cycle))
+                logfile.write("Aiming at {}, {} cycles, with scanning map, conditional = {}".format(des_rate, number_of_cycle, conditional))
             print ("Starting")
         for cycle in range(number_of_cycle):
                 # maximum_matrix = GEM_COM.load_thr_max_from_file()
-                for T in range(0,8):
-                    for ch in range(0,64):
+                for G, T, ch in zip(scanning_map[0], scanning_map[1], scanning_map[2]):
+                    if G==GEM_COM.GEMROC_ID:
                         if debug:
+                            print ("Cycle: {}/{} -- G{}, T{}, CH{}".format(cycle+1, number_of_cycle, G, T, ch))
                             with open ("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID),"a+") as logfile:
                                 logfile.write("T {} ch{}\n".format(T,ch))
                         vt1_current= GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1']
                         vt2_current= GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2']
                         c_inst = GEMROC.c_inst
                         g_inst = GEMROC.g_inst
-                        with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
-                            logfile.write("Current VT1-{} VT2-{}\n".format(vt1_current, vt2_current))
+                        if debug:
+                            with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
+                                logfile.write("Current VT1-{} VT2-{}\n".format(vt1_current, vt2_current))
                         test_c = AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst)
+
+
+                        if conditional:
+                            scan_matrix=test_c.both_vth_scan(T, ch, extreme_t=(vt1_current,vt1_current), extreme_e=(vt2_current,vt2_current),acq_time=acq_time)
+                            scan_matrix = scan_matrix * (1 / (acq_time))
+                            if scan_matrix[vt1_current][vt2_current]<des_rate*(1+tollerance) and  scan_matrix[vt1_current][vt2_current]>des_rate*(1-tollerance):
+                                if debug:
+                                    with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
+                                        logfile.write("No need to change gemroc {}, TIGER {}, channel\n".format(GEMROC.GEMROC_ID, T, ch))
+                                pipeout.send(GEM_COM.GEMROC_ID)
+                                pipeout.send(T)
+                                pipeout.send(ch)
+                                pipeout.send(vt1_current)
+                                pipeout.send(vt2_current)
+                                continue
                         scan_matrix=test_c.both_vth_scan(T, ch, extreme_t=(vt1_current-(square_size-1)/2,vt1_current+(square_size-1)/2), extreme_e=((vt2_current-(square_size-1)/2,vt2_current+(square_size-1)/2)),acq_time=acq_time)
                         scan_matrix=scan_matrix*(1/(acq_time))
                         diff_matrix=abs(scan_matrix-des_rate)
@@ -452,12 +474,82 @@ class Acquire_rate():
                         pipeout.send(ch)
                         pipeout.send(vt1)
                         pipeout.send(vt2)
-                    print ("T {} done".format(T))
+
 
 
         pipeout.send(65)
+        print ("GEMROC {} done".format(GEM_COM.GEMROC_ID))
         return
 
+    def procedural_scan_process(self, GEMROC, pipeout, des_rate=3500, number_of_cycle=2, square_size=5, acq_time=0.1, conditional=False, tollerance=0.5):
+        """
+        Procedural scan with multiprocess
+        :param GEMROC:
+        :param pipeout:
+        :param des_rate:
+        :param number_of_cycle:
+        :param square_size:
+        :param acq_time:
+        :return:
+        """
+        GEM_COM = GEMROC.GEM_COM
+
+        if debug:
+            with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "w+") as logfile:
+                logfile.write("Aiming at {}, {} cycles, conditional = {}".format(des_rate, number_of_cycle, conditional))
+            print ("Starting")
+        for cycle in range(number_of_cycle):
+            # maximum_matrix = GEM_COM.load_thr_max_from_file()
+            for T in range(0, 8):
+                for ch in range(0, 64):
+                    if debug:
+                        with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
+                            logfile.write("T {} ch{}\n".format(T, ch))
+                    vt1_current = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1']
+                    vt2_current = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2']
+                    c_inst = GEMROC.c_inst
+                    g_inst = GEMROC.g_inst
+                    if debug:
+                        with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
+                            logfile.write("Current VT1-{} VT2-{}\n".format(vt1_current, vt2_current))
+                    test_c = AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst)
+
+                    if conditional:
+                        scan_matrix = test_c.both_vth_scan(T, ch, extreme_t=(vt1_current, vt1_current), extreme_e=(vt2_current, vt2_current), acq_time=acq_time)
+                        scan_matrix = scan_matrix * (1 / (acq_time))
+                        if scan_matrix[vt1_current][vt2_current] < des_rate * (1 + tollerance) and scan_matrix[vt1_current][vt2_current] > des_rate * (1 - tollerance):
+                            if debug:
+                                with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
+                                    logfile.write("No need to change gemroc {}, TIGER {}, channel{}\n".format(GEMROC.GEMROC_ID, T, ch))
+                            pipeout.send(GEM_COM.GEMROC_ID)
+                            pipeout.send(T)
+                            pipeout.send(ch)
+                            pipeout.send(vt1_current)
+                            pipeout.send(vt2_current)
+                            continue
+                        elif debug:
+                            with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
+                                logfile.write("Tollerated rate {}-{}, acquired rate: {}\n".format(des_rate * (1 + tollerance),des_rate * (1 - tollerance),scan_matrix[vt1_current][vt2_current]))
+                    scan_matrix = test_c.both_vth_scan(T, ch, extreme_t=(vt1_current - (square_size - 1) / 2, vt1_current + (square_size - 1) / 2), extreme_e=((vt2_current - (square_size - 1) / 2, vt2_current + (square_size - 1) / 2)), acq_time=acq_time)
+                    scan_matrix = scan_matrix * (1 / (acq_time))
+                    diff_matrix = abs(scan_matrix - des_rate)
+                    vt1, vt2 = (np.argmin(diff_matrix) // 64, np.argmin(diff_matrix) % 64)
+                    # print "T {} Ch {} -set vth1 {}, set vth 2 {}".format(T,ch,vt1,vt2)
+                    GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] = vt1
+                    GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = vt2
+                    if debug:
+                        with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
+                            logfile.write("VT1 = {}, VT2 = {}\n".format(vt1, vt2))
+                    GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg(c_inst, T, ch)
+                    pipeout.send(GEM_COM.GEMROC_ID)
+                    pipeout.send(T)
+                    pipeout.send(ch)
+                    pipeout.send(vt1)
+                    pipeout.send(vt2)
+                print ("T {} done".format(T))
+
+        pipeout.send(65)
+        return
     def diagonal_walk(self, limit=(3000, 4500), number_of_cycle=45):
         ch_status={}
         for key, GEMROC in self.GEMROC_reading_dic.items():

@@ -158,6 +158,8 @@ class menu():
         Button(Tantissime_frame, text="Run prearation (TD + both scans)", command=self.run_prep, activeforeground="#f77f00").pack(side=LEFT)
         Button(Tantissime_frame, text="ToT Mode", command=self.ToT, activeforeground="blue").pack(side=RIGHT)
         Button(Tantissime_frame, text="Launch TP", command=self.start_TP, activeforeground="blue").pack(side=RIGHT)
+        Button(Tantissime_frame, text='Flush socket', command=self.flush).pack(side=LEFT)
+
         self.NUM_TP = Entry(Tantissime_frame, width=4)
         self.NUM_TP.insert(0,'2')
         self.NUM_TP.pack(side=RIGHT)
@@ -193,12 +195,17 @@ class menu():
         TROPPii_frame.pack(side=LEFT)
         Button(TROPPii_frame, text="Sync Reset to all", command=self.Synch_reset, activeforeground="blue").pack(side=LEFT)
         Button(TROPPii_frame, text="Write configuration", command=self.load_default_config_parallel, activeforeground="blue").pack(side=LEFT)
+
         Frame(basic_operation_frame,width=90).pack(side=LEFT)  # Spacer
         TROPPi_frame = LabelFrame(basic_operation_frame, padx=5, pady=5,background="#cce6ff")
         TROPPi_frame.pack(side=LEFT)
         Button(TROPPi_frame, text="Run controller", command=self.launch_controller, activeforeground="blue").pack(side=RIGHT)
         self.use_ecq_thr = BooleanVar(self.main_window)
+        self.TP_active = BooleanVar(self.main_window)
+
         Button(TROPPi_frame, text="Fast configuration", command=self.fast_configuration, activeforeground="blue").pack(side=RIGHT)
+        Checkbutton(TROPPi_frame, text="TP", var=self.TP_active).pack(side=RIGHT)
+
         Checkbutton(TROPPi_frame, text="Use equalized thr", var=self.use_ecq_thr).pack(side=RIGHT)
 
         # Button(TROPPi_frame, text="Enable double thr", command=self.double_enable, activeforeground="blue").pack(side=RIGHT)
@@ -208,7 +215,6 @@ class menu():
                 riga = 0
             else:
                 riga = 1
-
             colonna = ((i) % 10) * 2 + 1
             self.LED.append(Label(self.grid_frame, image=self.icon_off))
             self.LED[i].grid(row=riga, column=colonna)
@@ -228,10 +234,12 @@ class menu():
         Label(self.advanced_threshold_settings,text="---Calculate thr fC from thr set---").pack(anchor=N)
         Button(self.advanced_threshold_settings, text="Calculate",command= self.calculate_FC_thr).pack(anchor=N)
         Button(self.advanced_threshold_settings, text = "Import thresholds from old run", command =self.import_old_conf).pack(anchor=N)
-        Button(self.advanced_threshold_settings, text = "Save current thr", command =self.save_current_thr).pack(anchor=N)
-        Button(self.advanced_threshold_settings, text = "Save reference thr", command =self.save_reference_thr).pack(anchor=N)
-        Button(self.advanced_threshold_settings, text = "Load last saved thr", command =self.load_thr_from_file).pack(anchor=N)
-        Button(self.advanced_threshold_settings, text = "Load reference thr", command =self.load_thr_reference).pack(anchor=N)
+        load_save_frame=Frame(self.advanced_threshold_settings)
+        load_save_frame.pack(anchor=N)
+        Button(load_save_frame, text = "Save current thr", command =self.save_current_thr).pack(side=LEFT)
+        Button(load_save_frame, text = "Save reference thr", command =self.save_reference_thr).pack(side=LEFT)
+        Button(load_save_frame, text = "Load last saved thr", command =self.load_thr_from_file).pack(side=LEFT)
+        Button(load_save_frame, text = "Load reference thr", command =self.load_thr_reference).pack(side=LEFT)
         self.desired_rate = IntVar(self.main_window)
         self.desired_rate.set(5000)
         self.number_of_steps = IntVar(self.main_window)
@@ -242,7 +250,30 @@ class menu():
         Entry(equaliz_frame,textvariable=self.desired_rate, width=5).pack(side=LEFT)
         Label(equaliz_frame,text = "Number of iterations").pack(side=LEFT)
         Entry(equaliz_frame,textvariable=self.number_of_steps, width=2).pack(side=LEFT)
-        Button(equaliz_frame, text = "Start equalization", command =self.start_ecq).pack(side=LEFT)
+        # Button(equaliz_frame, text = "Start equalization", command =self.start_ecq).pack(side=LEFT)
+        equaliz_frame_2=Frame(self.advanced_threshold_settings)
+        equaliz_frame_2.pack(anchor=N)
+        Label(equaliz_frame_2,text = "Tollerance").pack(side=LEFT)
+        self.tollerance = DoubleVar(self.main_window)
+        self.tollerance.set(0.5)
+        Entry(equaliz_frame_2,textvariable=self.tollerance, width=3).pack(side=LEFT)
+        # Button(equaliz_frame_2, text = "Start equalization for the cannels outsie tollerance", command =self.start_ecq_conditional).pack(side=LEFT)
+        equaliz_frame_3=Frame(self.advanced_threshold_settings)
+        equaliz_frame_3.pack(side=BOTTOM)
+        Label(equaliz_frame_3,text = "Channels to eq.").pack(side=LEFT)
+        self.strip_1_x = BooleanVar(self.main_window)
+        self.strip_1_v = BooleanVar(self.main_window)
+        self.strip_2_x = BooleanVar(self.main_window)
+        self.strip_2_v = BooleanVar(self.main_window)
+        self.strip_planari= BooleanVar(self.main_window)
+
+        Checkbutton(equaliz_frame_3,text="strip_1_x",var=self.strip_1_x).pack(side=LEFT)
+        Checkbutton(equaliz_frame_3,text="strip_1_v",var=self.strip_1_v).pack(side=LEFT)
+        Checkbutton(equaliz_frame_3,text="strip_2_x",var=self.strip_2_x).pack(side=LEFT)
+        Checkbutton(equaliz_frame_3,text="strip_2_v",var=self.strip_2_v).pack(side=LEFT)
+        Checkbutton(equaliz_frame_3,text="strip_planari",var=self.strip_planari).pack(side=LEFT)
+
+        Button(equaliz_frame_3, text = "Start equalization", command =self.start_ecq_map).pack(side=LEFT)
 
         if COM_class.local_test == True:
             for G in range (0,11):
@@ -255,13 +286,66 @@ class menu():
         self.statu_tab_rows.pack(anchor = NW, fill =BOTH)
         self.version_dict = {}
         self.IVT_dict = {}
-    def start_ecq(self):
+    # def start_ecq(self):
+    #     self.rate_window = rate_interface.menu(self.main_window, self.GEMROC_reading_dict,self)
+    #     # self.rate_window.rate_tab.rework_window()
+    #     self.rate_window.rate_tab.acquire_thread.procedural_scan_handler(self.GEMROC_reading_dict,des_rate=self.desired_rate.get(),number_of_cycle=self.number_of_steps.get())
+    #     self.save_current_thr()
+    #     self.rate_window.error_window_main.destroy()
+    #     print ("Equalization done and saved")
+    #
+    # def start_ecq_conditional(self):
+    #     self.rate_window = rate_interface.menu(self.main_window, self.GEMROC_reading_dict,self)
+    #     # self.rate_window.rate_tab.rework_window()
+    #     self.rate_window.rate_tab.acquire_thread.procedural_scan_handler(self.GEMROC_reading_dict,des_rate=self.desired_rate.get(),number_of_cycle=self.number_of_steps.get(), conditional=True,tollerance=self.tollerance.get())
+    #     self.save_current_thr()
+    #     self.rate_window.error_window_main.destroy()
+    #     print ("Equalization done and saved")
+
+    def start_ecq_map(self):
         self.rate_window = rate_interface.menu(self.main_window, self.GEMROC_reading_dict,self)
-        # self.rate_window.rate_tab.rework_window()
-        self.rate_window.rate_tab.acquire_thread.procedural_scan_handler(self.GEMROC_reading_dict,des_rate=self.desired_rate.get(),number_of_cycle=self.number_of_steps.get())
+        self.rate_window.rate_tab.rework_window()
+        strip_to_scan = self.build_scan_matrix()
+        self.rate_window.rate_tab.acquire_thread.procedural_scan_handler(self.GEMROC_reading_dict,des_rate=self.desired_rate.get(),number_of_cycle=self.number_of_steps.get(), scanning_map=strip_to_scan,map=True, conditional=True,tollerance=self.tollerance.get())
         self.save_current_thr()
         self.rate_window.error_window_main.destroy()
         print ("Equalization done and saved")
+
+    def build_scan_matrix(self):
+        with open("." + sep + "lib" + sep + "mapping.pickle", "rb") as filein:
+            mapping_matrix = pickle.load(filein)
+        strip_scan_map=np.zeros((22,8,64))
+        if self.strip_1_v.get():
+            for GEMROC in range (0,4):
+                for TIGER in range(0,8):
+                    for channel in range (0,64):
+                        if mapping_matrix[GEMROC][TIGER][channel].split("-")[0]=="V":
+                            strip_scan_map[GEMROC][TIGER][channel]=1
+        if self.strip_1_x.get():
+            for GEMROC in range (0,4):
+                for TIGER in range(0,8):
+                    for channel in range (0,64):
+                        if mapping_matrix[GEMROC][TIGER][channel].split("-")[0]=="X":
+                            strip_scan_map[GEMROC][TIGER][channel]=1
+        if self.strip_2_v.get():
+            for GEMROC in range (4,11):
+                for TIGER in range(0,8):
+                    for channel in range (0,64):
+                        if mapping_matrix[GEMROC][TIGER][channel].split("-")[0]=="V":
+                            strip_scan_map[GEMROC][TIGER][channel]=1
+        if self.strip_2_x.get():
+            for GEMROC in range (4,11):
+                for TIGER in range(0,8):
+                    for channel in range (0,64):
+                        if mapping_matrix[GEMROC][TIGER][channel].split("-")[0]=="X":
+                            strip_scan_map[GEMROC][TIGER][channel]=1
+        if self.strip_planari.get():
+            for GEMROC in range (12,14):
+                for TIGER in range(0,8):
+                    for channel in range (0,64):
+                        if not (GEMROC==12 and TIGER in [4,5,6,7]):
+                            strip_scan_map[GEMROC][TIGER][channel]=1
+        return strip_scan_map
     def run_prep(self):
         print ("TD scan")
         conf_wind = error_GUI.menu(self.main_window, self.GEMROC_reading_dict)
@@ -766,6 +850,7 @@ class menu():
         tasti.grid(row=0, column=0, sticky=W, pady=2)
         Button(tasti, text='Read configuration', command=self.read_TIGER_channel).grid(row=0, column=1, sticky=W, pady=2)
         Button(tasti, text='Write configuration', command=self.write_CHANNEL_Handling).grid(row=0, column=2, sticky=W, pady=2)
+
         OptionMenu(tasti, self.all_channels, *["All Channels", "-"]).grid(row=0, column=3, sticky=W, pady=2)
         OptionMenu(tasti, self.all_TIGERs, *["All TIGERs", "-"]).grid(row=0, column=4, sticky=W, pady=2)
         OptionMenu(tasti, self.all_GEMROCs, *["All GEMROCs", "-"]).grid(row=0, column=5, sticky=W, pady=2)
@@ -828,7 +913,9 @@ class menu():
             # Button(thr_frame, text="Load auto threshold", command=lambda: self.load_thr_Handling(thr_target, "auto")).pack(side=LEFT)
             Button(thr_frame, text="Launch THR-T scan on this TIGER", command=lambda: self.thr_Scan(self.showing_GEMROC.get(), int(self.showing_TIGER.get()))).pack(side=LEFT)
             Button(thr_frame, text="Launch THR-E scan on this TIGER", command=lambda: self.thr_Scan(self.showing_GEMROC.get(), int(self.showing_TIGER.get()),branch=2)).pack(side=LEFT)
-
+    def flush(self):
+        for number, GEMROC in self.GEMROC_reading_dict.items():
+            GEMROC.GEM_COM.flush_rcv_socket()
     def TIGER_GLOBAL_configurator(self):
         self.third_row_frame.destroy()
         self.third_row_frame = Frame(self.conf_frame)
@@ -962,46 +1049,6 @@ class menu():
         Label(single_use_frame, text="---").grid(row=i + 2, column=1, pady=1, sticky=W)
         TP_num = Entry(single_use_frame, width="4", textvariable=self.TP_num)
         TP_num.grid(row=i + 2, column=2, pady=1, sticky=W)
-        # another_frame = Frame(self.third_row_frame)
-        # another_frame.grid(row=0, column=1, sticky=W, pady=2)
-        # Label(another_frame, text="Change configuration", font=("Courier", 20)).grid(row=0, column=0, columnspan=8, sticky=S, pady=5)
-        # # modebut=Button(another_frame, text="Trigger matched",command= lambda : self.switch_mode(modebut))
-        # # modebut.grid(row=1, column=1, sticky=W, pady=2)
-        #
-        # Label(another_frame, text="TCAM_Enable_pattern").grid(row=2, column=0, sticky=S, pady=0)
-        # Label(another_frame, text="Periodic_FEB_TP_Enable_pattern").grid(row=3, column=0, sticky=S, pady=0)
-        # Label(another_frame, text="TP_repeat_burst").grid(row=4, column=0, sticky=S, pady=0)
-        # Label(another_frame, text="TP_Num_in_burst").grid(row=5, column=0, sticky=S, pady=0)
-        # Label(another_frame, text="TL_nTM_ACQ_choice").grid(row=6, column=0, sticky=S, pady=0)
-        # # Label(another_frame,text="Periodic_L1_Enable_BIT").grid(row=7, column=0,sticky=S, pady=0) #E' lo stesso di periodic FEB_TP_Enable pattern
-        # Label(another_frame, text="Enab_Auto_L1_from_TP_bit_param").grid(row=8, column=0, sticky=S, pady=0)
-        # Label(another_frame, text="Enable_DAQPause_Until_First_Trigger").grid(row=9, column=0, sticky=S, pady=0)
-        # # Label(another_frame,text="DAQPause_Set").grid(row=10, column=0,sticky=S, pady=0)
-        # # Label(another_frame,text="Tpulse_gen_w_ext_trigger_enable").grid(row=11, column=0,sticky=S, pady=0)
-        # Label(another_frame, text="EXT_nINT_B3clk").grid(row=12, column=0, sticky=S, pady=0)
-        #
-        # self.IN1 = Entry(another_frame)
-        # self.IN1.grid(row=2, column=1, sticky=S, pady=0)
-        # self.IN2 = Entry(another_frame)
-        # self.IN2.grid(row=3, column=1, sticky=S, pady=0)
-        # self.IN3 = Entry(another_frame)
-        # self.IN3.grid(row=4, column=1, sticky=S, pady=0)
-        # self.IN4 = Entry(another_frame)
-        # self.IN4.grid(row=5, column=1, sticky=S, pady=0)
-        # self.IN5 = Entry(another_frame)
-        # self.IN5.grid(row=6, column=1, sticky=S, pady=0)
-        # # self.IN6=Entry(another_frame)
-        # # self.IN6.grid(row=7, column=1,sticky=S, pady=0)
-        # self.IN7 = Entry(another_frame)
-        # self.IN7.grid(row=8, column=1, sticky=S, pady=0)
-        # self.IN8 = Entry(another_frame)
-        # self.IN8.grid(row=9, column=1, sticky=S, pady=0)
-        # # self.IN9 = Entry(another_frame)
-        # # self.IN9.grid(row=10, column=1, sticky=S, pady=0)
-        # # self.IN10 = Entry(another_frame)
-        # # self.IN10.grid(row=11, column=1, sticky=S, pady=0)
-        # self.IN11 = Entry(another_frame)
-        # self.IN11.grid(row=12, column=1, sticky=S, pady=0)
 
         Button(single_use_frame, text='Set', command=self.write_DAQ_CR).grid(row=0, column=2, sticky=W, pady=2)
         Button(single_use_frame, text='Set on all active GEMROCs', command=lambda: self.write_DAQ_CR(1)).grid(row=0, column=3, sticky=W, pady=2)
@@ -1329,6 +1376,7 @@ class menu():
 
     def read_DAQ_CR(self):
         command_reply = self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.Read_GEMROC_DAQ_CfgReg()
+        # self.GEMROC_reading_dict[self.showing_GEMROC.get()].GEM_COM.display_log_GEMROC_DAQ_CfgReg_readback(command_rep
         # self.GEMROC_reading_dict[self.showing_GEMROC.get()].GEM_COM.display_log_GEMROC_DAQ_CfgReg_readback(command_reply, 1, 1)
         L_array = array.array('I')
         L_array.fromstring(command_reply)
@@ -1701,6 +1749,7 @@ class menu():
 
 
     def load_config_process(self, GEMROC, pipe_out, set_check=True,):
+        GEMROC.GEM_COM.flush_rcv_socket()
         Errors="\n"
         for TIGER in range(0,8):
             write = GEMROC.GEM_COM.Set_param_dict_global(GEMROC.g_inst, "TxDDR", int(TIGER), 0)
@@ -1711,7 +1760,7 @@ class menu():
                 try:
                     GEMROC.GEM_COM.global_set_check(write, read)
                 except Exception as E:
-                    print (E)
+                    print ("Error configuring: {}".format(E))
                     Errors = Errors + "{}\n".format(E)
             printed = False
             for CH in range(0, 64):
@@ -1755,7 +1804,7 @@ class menu():
         self.change_trigger_mode(value=0, to_all=True)
         self.load_thr(True, "scan", 3, 2, 0, 0, 8)
 
-        if self.use_ecq_thr:
+        if self.use_ecq_thr.get():
             self.load_thr_from_file()
         self.specific_channel_fast_setting()
         self.load_default_config_parallel()
@@ -1776,13 +1825,21 @@ class menu():
 
     def specific_channel_fast_setting(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():
-            for T in range(0, 8):
-                GEMROC.c_inst.Channel_cfg_list[T][62]["TriggerMode"] = 1
-            if int(number.split()[1])>3 and int(number.split()[1])<11:
-                GEMROC.c_inst.Channel_cfg_list[T][61]["TriggerMode"] = 3
-                GEMROC.c_inst.Channel_cfg_list[T][63]["TriggerMode"] = 3
-
-
+            if self.TP_active.get():
+                    for T in range(0, 8):
+                        GEMROC.g_inst.Global_cfg_list[T]["FE_TPEnable"] = 1
+                        GEMROC.c_inst.Channel_cfg_list[T][62]["TriggerMode"] = 1
+                        if int(number.split()[1])>3 and int(number.split()[1])<11:
+                            GEMROC.c_inst.Channel_cfg_list[T][61]["TriggerMode"] = 3
+                            GEMROC.c_inst.Channel_cfg_list[T][63]["TriggerMode"] = 3
+            else:
+                for T in range(0,8):
+                    GEMROC.g_inst.Global_cfg_list[T]["FE_TPEnable"] = 0
+                for number, GEMROC in self.GEMROC_reading_dict.items():
+                    for T in range(0, 8):
+                            GEMROC.c_inst.Channel_cfg_list[T][61]["TriggerMode"] = 3
+                            GEMROC.c_inst.Channel_cfg_list[T][62]["TriggerMode"] = 3
+                            GEMROC.c_inst.Channel_cfg_list[T][63]["TriggerMode"] = 3
 
     def reactivate_TIGERS(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():
@@ -1850,6 +1907,7 @@ class GEMROC_HANDLER:
         self.GEM_COM = COM_class.communication(GEMROC_ID, 0)  # Create communication class
         default_g_inst_settigs_filename = self.GEM_COM.conf_folder + sep + "TIGER_def_g_cfg_2018.txt"
         self.g_inst = GEM_CONF.g_reg_settings(GEMROC_ID, default_g_inst_settigs_filename)
+        self.g_inst.load_specif_settings(filename=self.GEM_COM.conf_folder+sep+"specific_conf")
         default_ch_inst_settigs_filename = self.GEM_COM.conf_folder + sep + "TIGER_def_ch_cfg_2018.txt"
         self.c_inst = GEM_CONF.ch_reg_settings(GEMROC_ID, default_ch_inst_settigs_filename)
 

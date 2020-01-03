@@ -106,7 +106,7 @@ class noise_measure():
         self.icon_OK = PhotoImage(file="." + sep + 'icons' + sep + "gufi" + sep + 'OK.gif')
         self.icon_cry = PhotoImage(file="." + sep + 'icons' + sep + "gufi" + sep + 'cry.gif')
         self.icon_sleep = PhotoImage(file="." + sep + 'icons' + sep + "gufi" + sep + 'sleep.gif')
-        self.icon_mappa = PhotoImage(file="." + sep + 'icons' + sep + 'mappa_mini.gif')
+        self.icon_mappa = PhotoImage(file="." + sep + 'icons' + sep + 'mappa_updated_mini.gif')
 
         Label(self.second_row_frame, text='First TIGER   ').pack(side=LEFT)
         Entry(self.second_row_frame, width=4, textvariable=self.TIGER_num_first).pack(side=LEFT)
@@ -704,7 +704,7 @@ class noise_measure():
                     TPparameters = self.TPfits[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)]
                     Bas_parameters_fit = self.baseline[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)]
                     bas_parameters_not_fit = self.baseline_pos[number]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)]
-                    self.line_list.append(self.plot_rate.plot(bas_parameters_not_fit, (data.max(), data.max(), data.max()), 'o'))
+                    self.line_list.append(self.plot_rate.plot(bas_parameters_not_fit[0:3], (data.max(), data.max(), data.max()), 'o'))
                     if parameters[0] != "Fail":
                         self.line_list.append(self.plot_rate.plot(np.arange(0, 64), AN_CLASS.double_error_func(np.arange(0, 64), *parameters), '-.', label="Preliminary fit", linewidth=1))
 

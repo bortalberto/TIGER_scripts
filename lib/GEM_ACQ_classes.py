@@ -134,6 +134,8 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
                     print ("Finished saving data from  GEMROC {} in file {}, total packets= {}\n".format(self.reader.GEMROC_ID, self.reader.datapath, Totallissimi_packets))
 
                     self.reader.dataSock.close()
+                    if self.reader.data_online_monitor:
+                        self.reader.cloning_sock.close()
                     self.running=False
                     return 0
             self.reader.data_list = list(data_list)
@@ -155,7 +157,8 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
                 self.reader.datapath = datapath
                 return 0
         self.reader.dataSock.close()
-
+        if self.reader.data_online_monitor:
+            self.reader.cloning_sock.close()
         self.reader.datapath = datapath
         with open(self.reader.log_path, 'a') as f:
             f.write("{} -- Finished saving data from  GEMROC {} in file {}, total packets= {}\n".format(time.ctime(), self.reader.GEMROC_ID, self.reader.datapath,Totallissimi_packets ))
@@ -189,12 +192,13 @@ class reader:
         if self.data_online_monitor:
             if local_reader:
                 self.port_for_cloning = 58880 + self.GEMROC_ID
-                self.cloning_sending_port=50000 + self.GEMROC_ID
+                self.port_for_cloning =58912 + 1 + self.GEMROC_ID
+                self.cloning_sending_port=51000 + self.GEMROC_ID
                 self.address_for_cloning_sender="127.0.0.1"
                 self.address_for_cloning_rcv="127.0.0.1"
             else:
                 self.port_for_cloning = 58880 + self.GEMROC_ID
-                self.cloning_sending_port=50000+ self.GEMROC_ID
+                self.cloning_sending_port=51000+ self.GEMROC_ID
                 self.address_for_cloning_sender="192.168.1.200"
                 self.address_for_cloning_rcv="192.168.1.150" #just an example, change it accordingly
             self.create_cloning_socket()
@@ -210,6 +214,7 @@ class reader:
             self.dataSock.settimeout(self.timeout_for_sockets)
             self.dataSock.bind((self.HOST_IP, self.HOST_PORT))
         except Exception as e:
+
             print "--GEMROC {}-{}".format(self.GEMROC_ID,e)
             Exception("TIMED_OUT")
             with open(self.log_path, 'a') as f:
@@ -221,7 +226,6 @@ class reader:
         # print self.dataSock.getsockopt(socket.SOL_SOCKET,socket.SO_RCVBUF)
 
     def __del__(self):
-        self.cloning_sock.close()
         return 0
     def acquire_rate(self, max_time):
         acq_matrix = np.zeros((8,64))
@@ -388,7 +392,7 @@ class reader:
                 print type(data)
             for i in range (0,len(data)//8):
                 self.cloning_sock.sendto(data[i*8:i*8+8], (self.address_for_cloning_rcv, self.port_for_cloning))
-            time.sleep(1)
+            time.sleep(15)
         else:
             data = self.dataSock.recv(self.BUFSIZE)
             if self.data_online_monitor:

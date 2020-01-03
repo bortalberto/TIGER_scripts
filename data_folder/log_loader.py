@@ -11,9 +11,7 @@ elif OS == 'linux' or 'linux2':
 else:
     print("ERROR: OS {} non compatible".format(OS))
     sys.exit()
-RUN = 281
-MIN_TIME = 500
-
+RUN = 300
 
 class measure_8_10():
 
@@ -61,7 +59,7 @@ class measure_8_10():
         with open(log_file, 'r') as log_file_opened:
             lines = log_file_opened.readlines()
         for line in lines:
-            if "16777215" in line:
+            if "errors since" in line:
                 for number, element in enumerate(line.split(" ")):
                     if element == "GEMROC":
                         gemroc = (line.split(" ")[number + 1])
@@ -88,9 +86,9 @@ class measure_8_10():
 
     def load_dict_in_pickle(self):
         with open("error_log_all_runs", "rb") as fileout:
-            self.dict_8_10 = pickle.load(fileout, encoding="latin1")
+            self.dict_8_10 = pickle.load(fileout)
         with open("duration", "rb") as fileout:
-            self.dict_duration = pickle.load(fileout, encoding="latin1")
+            self.dict_duration = pickle.load(fileout)
 
     def print_stats(self, min_dur, run):
         error_counters = np.zeros((22, 8))
@@ -108,16 +106,18 @@ class measure_8_10():
                 print ("GEMROC {} TIGER {} -- (RUN {})Saturated counter {} times in {} subruns of at least {} seconds. {}%".format(G, T, run, error_counters[G][T], run_counter, min_dur, error_counters[G][T] / run_counter * 100))
 
 
-    def log_stats(self, min_dur):
+    def log_stats(self, min_dur, norm_duration=False):
         run_list =[ key.split("-")[0] for key in self.dict_8_10.keys()]
-        # ########
-        for run in range (220,290):
+        for run in run_list:
             error_counters = np.zeros((22, 8))
             run_counter = 0
+            duration = 0
             for key in self.dict_8_10.keys():
-                if int(key.split("-")[0]) == run:
+
+                if int(key.split("-")[0]) == int(run):
                     if self.dict_duration[key] > min_dur:
                         run_counter += 1
+                        duration += self.dict_duration [key]
                         for G in range(0, 22):
                             for T in range(0, 8):
                                 if self.dict_8_10[key][G][T] == 16777215:
@@ -125,12 +125,15 @@ class measure_8_10():
             with open ("error_saturation_log"+sep+str(run), "w+") as file:
                 for G in range(0, 22):
                     for T in range(0, 8):
-                        file.write ("GEMROC {} TIGER {} -- (RUN {})Saturated counter {} times in {} subruns of at least {} seconds. {:.2f}%\n".format(G, T, run, error_counters[G][T], run_counter, min_dur, error_counters[G][T] / run_counter * 100,'2f'))
-        print (run_list)
+                        if norm_duration:
+                            file.write("GEMROC {} TIGER {} -- (RUN {})Saturated counter {} times in {}  seconds. Saturation per second = {}\n".format(G, T, run, error_counters[G][T], duration, error_counters[G][T]/duration   ))
+
+                        else:
+                            file.write ("GEMROC {} TIGER {} -- (RUN {})Saturated counter {} times in {} subruns of at least {} seconds. {}%\n".format(G, T, run, error_counters[G][T], run_counter, min_dur, error_counters[G][T] / run_counter * 100))
 if __name__ == "__main__":
     error_importer = measure_8_10(".")
     error_importer.run_trough_files()
     error_importer.save_dict_in_pickle()
-    # error_importer.load_dict_in_pickle()
+    error_importer.load_dict_in_pickle()
     # error_importer.print_stats(MIN_TIME, RUN)
-    error_importer.log_stats(500)
+    error_importer.log_stats(30, True)
