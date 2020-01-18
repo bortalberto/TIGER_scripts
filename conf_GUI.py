@@ -1836,10 +1836,11 @@ class menu():
                 for T in range(0,8):
                     GEMROC.g_inst.Global_cfg_list[T]["FE_TPEnable"] = 0
                 for number, GEMROC in self.GEMROC_reading_dict.items():
-                    for T in range(0, 8):
-                            GEMROC.c_inst.Channel_cfg_list[T][61]["TriggerMode"] = 3
-                            GEMROC.c_inst.Channel_cfg_list[T][62]["TriggerMode"] = 3
-                            GEMROC.c_inst.Channel_cfg_list[T][63]["TriggerMode"] = 3
+                    if int(number.split()[1]) > 3 and int(number.split()[1]) < 11:
+                        for T in range(0, 8):
+                                GEMROC.c_inst.Channel_cfg_list[T][61]["TriggerMode"] = 3
+                                GEMROC.c_inst.Channel_cfg_list[T][62]["TriggerMode"] = 3
+                                GEMROC.c_inst.Channel_cfg_list[T][63]["TriggerMode"] = 3
 
     def reactivate_TIGERS(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():
