@@ -487,6 +487,7 @@ class Acquire_rate():
         :param GEMROC:
         :param pipeout:
         :param des_rate:
+        :param des_rate:
         :param number_of_cycle:
         :param square_size:
         :param acq_time:

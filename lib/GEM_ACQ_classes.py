@@ -17,7 +17,7 @@ elif OS == 'linux2':
 else:
     print("ERROR: OS {} non compatible".format(OS))
     sys.exit()
-local_test = False
+local_test = True
 
 
 class Thread_handler(Thread):
@@ -111,6 +111,8 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
             pass
         data_list = []
         self.reader.start_socket()
+        if self.reader.data_online_monitor:
+            self.reader.send_start_packet(self.sub_folder, self.sub_run_number, datapath)
         while True:
             Total_Data = 0
             Total_packets =0
@@ -157,12 +159,14 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
                 self.reader.datapath = datapath
                 return 0
         self.reader.dataSock.close()
-        if self.reader.data_online_monitor:
-            self.reader.cloning_sock.close()
         self.reader.datapath = datapath
         with open(self.reader.log_path, 'a') as f:
             f.write("{} -- Finished saving data from  GEMROC {} in file {}, total packets= {}\n".format(time.ctime(), self.reader.GEMROC_ID, self.reader.datapath,Totallissimi_packets ))
         print ("Finished saving data from  GEMROC {} in file {}, total packets= {}\n".format( self.reader.GEMROC_ID, self.reader.datapath,Totallissimi_packets ))
+
+        if self.reader.data_online_monitor:
+            self.reader.send_end_packet(self.sub_folder, self.sub_run_number, datapath)
+            self.reader.cloning_sock.close()
 
 class reader:
     def __init__(self, GEMROC_ID,logfile="ACQ_log",online_monitor=False):
@@ -184,7 +188,6 @@ class reader:
         self.BUFSIZE = 32000
         self.first_framew = np.zeros(8)
         self.last_framew = np.zeros(8)
-        self.datapath = ""
         self.datalist = []
         self.log_path=logfile
         self.data_online_monitor = online_monitor
@@ -192,7 +195,7 @@ class reader:
         if self.data_online_monitor:
             if local_reader:
                 self.port_for_cloning = 58880 + self.GEMROC_ID
-                self.port_for_cloning =58912 + 1 + self.GEMROC_ID
+                # self.port_for_cloning =58912 + 1 + self.GEMROC_ID
                 self.cloning_sending_port=51000 + self.GEMROC_ID
                 self.address_for_cloning_sender="127.0.0.1"
                 self.address_for_cloning_rcv="127.0.0.1"
@@ -385,14 +388,13 @@ class reader:
         return 0
 
     def fast_acquisition(self, data_list_tmp):  # remove savefile to be added in a new class GM 11.06.18
-        if local_test:
+        if self.local_test:
             with open("./data_folder/SubRUN_5_GEMROC_0_TM.dat", 'rb') as fi:
                 data = fi.read()
-                print (len(data))
-                print type(data)
+
             for i in range (0,len(data)//8):
                 self.cloning_sock.sendto(data[i*8:i*8+8], (self.address_for_cloning_rcv, self.port_for_cloning))
-            time.sleep(15)
+                time.sleep(0.2)
         else:
             data = self.dataSock.recv(self.BUFSIZE)
             if self.data_online_monitor:
@@ -698,3 +700,11 @@ class reader:
             if TIGER_not_missing[i]==0:
                 TIGER_out.append(i)
         return TIGER_out, frame_missing
+
+    def send_start_packet(self, run, subrun,datapath):
+
+        self.cloning_sock.sendto("Srt - RUN {} SUBRUN {} FOLDER {} GEMROC{}".format(run, subrun, datapath, self.GEMROC_ID), (self.address_for_cloning_rcv, self.port_for_cloning))
+
+    def send_end_packet(self, run, subrun, datapath):
+        self.cloning_sock.sendto("End - RUN {} SUBRUN {} FOLDER {} GEMROC{}".format(run, subrun, datapath, self.GEMROC_ID), (self.address_for_cloning_rcv, self.port_for_cloning))
+

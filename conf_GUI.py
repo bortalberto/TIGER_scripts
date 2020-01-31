@@ -7,6 +7,7 @@ import communication_error_GUI as error_GUI
 import noise_GUI as noise_GUI
 import generic_scan as scan_GUI
 from lib import rate_interface as rate_interface
+from lib import acquire_rate_interface as acquire_rate_interface
 
 from multiprocessing import Process, Pipe
 import acq_GUI as acq_GUI
@@ -154,7 +155,8 @@ class menu():
         Tantissime_frame.grid(row=3, column=5, sticky=N, pady=5,columnspan=20)
         Button(Tantissime_frame, text="Write configuration", command=self.load_default_config_parallel, activeforeground="#f77f00").pack(side=LEFT)
         Button(Tantissime_frame, text="Open communication error interface", command=self.open_communicaton_GUI, activeforeground="#f77f00").pack(side=LEFT)
-        Button(Tantissime_frame, text="Rate measure", command=self.open_rate_window, activeforeground="#f77f00").pack(side=LEFT)
+        Button(Tantissime_frame, text="System rate measure", command=self.open_rate_window, activeforeground="#f77f00").pack(side=LEFT)
+        Button(Tantissime_frame, text="Channel rate measure", command=self.open_rate_measure, activeforeground="#f77f00").pack(side=LEFT)
         Button(Tantissime_frame, text="Run prearation (TD + both scans)", command=self.run_prep, activeforeground="#f77f00").pack(side=LEFT)
         Button(Tantissime_frame, text="ToT Mode", command=self.ToT, activeforeground="blue").pack(side=RIGHT)
         Button(Tantissime_frame, text="Launch TP", command=self.start_TP, activeforeground="blue").pack(side=RIGHT)
@@ -510,6 +512,12 @@ class menu():
         """
         self.rate_window = rate_interface.menu(self.main_window, self.GEMROC_reading_dict,self)
 
+    def open_rate_measure(self):
+        """
+        Open a window to measure the rate on signle channels
+        :return:
+        """
+        self.ch_rate_wind = acquire_rate_interface.menu(self.main_window, self.GEMROC_reading_dict,self)
 
     def launch_controller(self):
         self.acq = acq_GUI.menu(False, self.main_window, self.GEMROC_reading_dict, self)
