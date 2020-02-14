@@ -584,9 +584,9 @@ class noise_measure():
 
         for T in range(first, last):  # TIGER
             for J in range(firstch, lastch):  # Channel
+                GEMROC.GEM_COM.Set_param_dict_global(g_inst, "CounterEnable", T, 0)
                 for i in range(0, 64):  # THR
                     scan_matrix[T, J, i] = test_c.noise_scan_using_GEMROC_COUNTERS_progress_bar(T, J, i, False, vth2)
-
                     position = ((T - first) * (lastch - firstch)) * 64 + (J-firstch) * 64 + i
                     pipe_out.send(position)
 
@@ -806,14 +806,14 @@ class noise_measure():
                     GEMROC.GEM_COM.Set_param_dict_global(GEMROC.g_inst, "FE_TPEnable", T, 0)
                 for ch in range(0, 64):
                     if branch == "T":
-                        GEMROC.GEM_COM.Set_param_dict_channel(GEMROC.c_inst, "TriggerMode2B", T, ch, 0)
-                        GEMROC.GEM_COM.Set_param_dict_channel(GEMROC.c_inst, "TriggerMode2Q", T, ch, 0)
-                        GEMROC.GEM_COM.Set_param_dict_channel(GEMROC.c_inst, "TriggerMode2E", T, ch, 0)
+                        GEMROC.GEM_COM.Set_param_dict_channel(GEMROC.c_inst, "TriggerMode2B", T, ch, 0,send_command=False)
+                        GEMROC.GEM_COM.Set_param_dict_channel(GEMROC.c_inst, "TriggerMode2Q", T, ch, 0,send_command=False)
+                        GEMROC.GEM_COM.Set_param_dict_channel(GEMROC.c_inst, "TriggerMode2E", T, ch, 0,send_command=False)
                         GEMROC.GEM_COM.Set_param_dict_channel(GEMROC.c_inst, "TriggerMode2T", T, ch, 0)
                     if branch == "E":
-                        GEMROC.GEM_COM.Set_param_dict_channel(GEMROC.c_inst, "TriggerMode2B", T, ch, 1)
-                        GEMROC.GEM_COM.Set_param_dict_channel(GEMROC.c_inst, "TriggerMode2Q", T, ch, 1)
-                        GEMROC.GEM_COM.Set_param_dict_channel(GEMROC.c_inst, "TriggerMode2E", T, ch, 1)
+                        GEMROC.GEM_COM.Set_param_dict_channel(GEMROC.c_inst, "TriggerMode2B", T, ch, 1,send_command=False)
+                        GEMROC.GEM_COM.Set_param_dict_channel(GEMROC.c_inst, "TriggerMode2Q", T, ch, 1,send_command=False)
+                        GEMROC.GEM_COM.Set_param_dict_channel(GEMROC.c_inst, "TriggerMode2E", T, ch, 1,send_command=False)
                         GEMROC.GEM_COM.Set_param_dict_channel(GEMROC.c_inst, "TriggerMode2T", T, ch, 1)
                         GEMROC.GEM_COM.Set_param_dict_channel(GEMROC.c_inst, "Vth_T1", T, ch, 63)
 
@@ -846,6 +846,15 @@ class noise_measure():
                         # if values[2][2]!="Fail":
                         # gauss_values=gauss_fit_baseline(matrix[TIG][channel],values[0][1],values[0][3],values[2][2])
                         # self.gaussians[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=gauss_values
+        print ("Check those channels, they may be dead:")
+        for GEMROC, matrix in self.scan_matrixs.items():
+            for TIG in range(0, 8):
+                if np.any(matrix[TIG])!=0:
+                    for channel in range(0, 64):
+                        # print ("{} - {} - {}".format(GEMROC, TIG, channel))
+                        # print np.size(np.where(matrix[TIG][channel] > 200))
+                        if np.size(np.where(matrix[TIG][channel] > 200))<3:
+                            print ("{} - {} - {}".format(GEMROC,TIG,channel))
         print ("time")
         print(time.time() - start)
 

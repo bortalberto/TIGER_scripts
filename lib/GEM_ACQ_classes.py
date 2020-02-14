@@ -134,10 +134,12 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
                     with open(self.reader.log_path, 'a') as f:
                         f.write("{} -- Finished saving data from  GEMROC {} in file {}, total packets= {}\n".format(time.ctime(), self.reader.GEMROC_ID, self.reader.datapath, Totallissimi_packets))
                     print ("Finished saving data from  GEMROC {} in file {}, total packets= {}\n".format(self.reader.GEMROC_ID, self.reader.datapath, Totallissimi_packets))
-
                     self.reader.dataSock.close()
+
                     if self.reader.data_online_monitor:
+                        self.reader.send_end_packet(self.sub_folder, self.sub_run_number, datapath)
                         self.reader.cloning_sock.close()
+
                     self.running=False
                     return 0
             self.reader.data_list = list(data_list)
@@ -145,13 +147,13 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
             # with open(self.reader.log_path, 'a') as log_file:
             #     log_file.write("{} -- Closing acquisition on GEMROC {}\n".format(time.ctime(),self.reader.GEMROC_ID))
             with open(datapath, 'ab') as datafile:
-                print "Saving data on file"
+                # print "Saving data on file"
                 self.reader.dump_list(datafile, data_list)
                 data_list=[]
             if self.running==False:
                 break
         with open(datapath, 'ab') as datafile:
-            print "Saving data on file"
+            # print "Saving data on file"
             try:  # add a method to write the list on the file
                 self.reader.dump_list(datafile, data_list)
                 data_list = []
@@ -163,10 +165,11 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
         with open(self.reader.log_path, 'a') as f:
             f.write("{} -- Finished saving data from  GEMROC {} in file {}, total packets= {}\n".format(time.ctime(), self.reader.GEMROC_ID, self.reader.datapath,Totallissimi_packets ))
         print ("Finished saving data from  GEMROC {} in file {}, total packets= {}\n".format( self.reader.GEMROC_ID, self.reader.datapath,Totallissimi_packets ))
-
         if self.reader.data_online_monitor:
             self.reader.send_end_packet(self.sub_folder, self.sub_run_number, datapath)
             self.reader.cloning_sock.close()
+
+
 
 class reader:
     def __init__(self, GEMROC_ID,logfile="ACQ_log",online_monitor=False):
@@ -394,7 +397,7 @@ class reader:
 
             for i in range (0,len(data)//8):
                 self.cloning_sock.sendto(data[i*8:i*8+8], (self.address_for_cloning_rcv, self.port_for_cloning))
-                time.sleep(0.2)
+                time.sleep(0.05)
         else:
             data = self.dataSock.recv(self.BUFSIZE)
             if self.data_online_monitor:

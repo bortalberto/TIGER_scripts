@@ -14,7 +14,14 @@ import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 import ctypes
-
+import psutil
+TER=TRUE
+try:
+    from influxdb import InfluxDBClient
+    DB = True
+except:
+    print "Can't find DB library"
+    DB = False
 from lib import GEM_ACQ_classes as GEM_ACQ
 
 OS = sys.platform
@@ -27,6 +34,13 @@ else:
     sys.exit()
 
 debug = False
+if DB:
+    try:
+        client = InfluxDBClient(host='localhost', port=8086)
+        client.switch_database('GUFI_DB')
+    except:
+        print ("Can't connect to BD")
+        DB = False
 
 
 class menu():
@@ -54,7 +68,7 @@ class menu():
         self.reset_810 = 0
         self.reset_timedout = 0
         self.reading_TIGERs_matrix = np.zeros((22, 8))
-
+        self.last_810_log = 0
         self.build_DCT_matrix()
         if std_alone:
             self.master_window = Tk()
@@ -292,6 +306,9 @@ class menu():
         self.send_mail(error="Run stop {}".format(self.run_folder), subject="Run stop {}".format(self.run_folder))
         self.mail_stop_but.config(state='disabled')
         self.master_window.after(5000, lambda: self.reset_mail_but())
+        if TER:
+            subprocess.call(['/bin/bash', '-i', '-c', "copy_data {}".format(self.run_folder.split("_")[1])])
+            subprocess.call(['/bin/bash', '-i', '-c', "sync_data"])
 
     def reset_mail_but(self):
         self.mail_start_but.config(state='normal')
@@ -399,7 +416,7 @@ class menu():
         self.vth_e_toll = IntVar(self.master_window)
         self.vth_e_toll.set(4)
         self.numb_of_viol = IntVar(self.master_window)
-        self.numb_of_viol.set(20)
+        self.numb_of_viol.set(40)
         Checkbutton(second_row, var=self.check_thr, text="Check on thr before start").pack(side=LEFT)
         Label(second_row, text="     Tollerance on the T thr").pack(side=LEFT)
         Entry(second_row, width=3, textvariable=self.vth_t_toll).pack(side=LEFT)
@@ -451,6 +468,12 @@ class menu():
                     self.button_dict["{} TIGER {}".format(number, T)]['activebackground'] = '#e6e6e6'
 
     def refresh_8_10_counters_and_TimeOut(self):
+
+        if DB and time.time() - self.last_810_log > 15:
+            self.send_810b_error_to_DB()
+            self.send_PC_stats()
+            self.last_810_log = time.time()
+
         for key, label in self.error_dict810.items():
             try:
                 label['text'] = self.errors_counters_810[key]
@@ -466,6 +489,7 @@ class menu():
         if self.online_monitor.get():
             for key, label in self.error_dict810.items():
                 if label['text'] == 16777215:
+                    self.send_810b_error_to_DB()
                     GEMROC = int(key.split()[1])
                     TIGER = int(key.split()[3])
                     if self.reading_TIGERs_matrix[GEMROC][TIGER] == 1 and self.DCT_matrix[GEMROC][TIGER] != 1:
@@ -523,6 +547,58 @@ class menu():
                     self.restart.set(False)
                     self.stop_acq(True)
                     break
+
+    def send_810b_error_to_DB(self):
+        """
+        Log the error GEMROC status in DB
+        :return:
+        """
+        for GEMROC in self.GEMROC_reading_dict.keys():
+            body = [{
+                "measurement": "Offline",
+                "tags": {
+                    "type": "8_10_b_errors",
+                    "gemroc": GEMROC.split(" ")[1],
+                    "tiger": -1
+                },
+                "time": str(datetime.datetime.utcnow()),
+                "fields": {
+                }
+            }]
+            for T in range(0, 8):
+                body[0]["tags"]["tiger"]=T
+                if self.error_dict810["{} TIGER {}".format(GEMROC, T)]["text"] != "-----":
+                    body[0]["fields"]["8_10_errors"] = int(self.error_dict810["{} TIGER {}".format(GEMROC, T)]["text"])
+                else:
+                    body[0]["fields"]["8_10_errors"] = 0
+                self.send_to_db(body)
+
+    def send_PC_stats(self):
+        """
+        Log the PC status
+        :return:
+        """
+        body = [{
+            "measurement": "Online",
+            "tags": {
+                "type": "PC_status",
+            },
+            "time": str(datetime.datetime.utcnow()),
+            "fields": {
+                "CPU_usage": psutil.cpu_percent(),
+                "Memory usage": psutil.virtual_memory().percent,
+                "HD usage": psutil.disk_usage("/dev/sda2").percent
+            },
+            "retention_policy": "online_data"
+        }]
+
+        self.send_to_db(body)
+
+    def send_to_db(self, json):
+        try:
+            client.write_points(json)
+        except Exception as e:
+            print("Unable to log in infludb: {}".format(e))
 
     def PMT_on(self):
         os.system("./HVWrappdemo_0 ttyUSB0 VSet 2000")
@@ -768,10 +844,13 @@ class menu():
                                 diff_E = int(splitted[7]) - GEMROC.c_inst.Channel_cfg_list[int(splitted[1])][int(splitted[3])]['Vth_T2']
                                 if diff_T > th_tollerance[0]:
                                     buff = buff + "{} TIGER {}, CHANNEL {}, thr T at {} from reference\n".format(number, int(splitted[1]), int(splitted[3]), diff_T)
-                                    print "{} TIGER {}, CHANNEL {}, thr T at {} from reference\n".format(number, int(splitted[1]), int(splitted[3]), diff_T)
-
+                                    print "{} TIGER {}, CHANNEL {}, thr T at {} from reference, using instead the reference value\n".format(number, int(splitted[1]), int(splitted[3]), diff_T)
+                                    GEMROC.c_inst.Channel_cfg_list[int(splitted[1])][int(splitted[3])]['Vth_T1']=int(splitted[5])
+                                    thr_out_of_position += 1
                                 if diff_E > th_tollerance[1]:
                                     buff = buff + "{} TIGER {}, CHANNEL {}, thr E at {} from reference\n".format(number, int(splitted[1]), int(splitted[3]), diff_E)
+                                    print "{} TIGER {}, CHANNEL {}, thr E at {} from reference, using instead  the reference value\n".format(number, int(splitted[1]), int(splitted[3]), diff_E)
+                                    GEMROC.c_inst.Channel_cfg_list[int(splitted[1])][int(splitted[3])]['Vth_T2']=int(splitted[7])
                                     thr_out_of_position += 1
                     else:
                         print "Warning: no reference thr found for {}".format(number)
@@ -1002,7 +1081,7 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
             for line in buffer_status.splitlines():
                 if "State" not in line and ("192.168.1.200" in line or "127.0.0.1" in line) and int(line.split()[1]) != 0:
                     print line
-                    GEMROC_key = "GEMROC {}".format(int(line.split()[3].split(":")[1])-58912-1)
+                    GEMROC_key = "GEMROC {}".format(int(line.split()[3].split(":")[1]) - 58912 - 1)
                     if GEMROC_key in self.GEMROC_reading_dict:
                         self.GEMROC_reading_dict[GEMROC_key].GEM_COM.hard_flush_rcv_socket()
 

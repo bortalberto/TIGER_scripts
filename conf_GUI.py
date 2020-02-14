@@ -234,7 +234,7 @@ class menu():
         self.E_thr_sigma.pack(side=LEFT)
         Button(scan_frame, text="Load thr",command= lambda: self.load_thr(to_all = True, source = 'scan', sigma_T = float(self.T_thr_sigma.get()), sigma_E = float(self.E_thr_sigma.get()))).pack(side = LEFT)
         Label(self.advanced_threshold_settings,text="---Calculate thr fC from thr set---").pack(anchor=N)
-        Button(self.advanced_threshold_settings, text="Calculate",command= self.calculate_FC_thr).pack(anchor=N)
+        Button(self.advanced_threshold_settings, text="Calculate", command= self.calculate_FC_thr_caller).pack(anchor=N)
         Button(self.advanced_threshold_settings, text = "Import thresholds from old run", command =self.import_old_conf).pack(anchor=N)
         load_save_frame=Frame(self.advanced_threshold_settings)
         load_save_frame.pack(anchor=N)
@@ -436,12 +436,51 @@ class menu():
         """
         self.canvas2.configure(scrollregion=self.canvas2.bbox("all"), width=1200, height=900)
 
-    def calculate_FC_thr(self):
+    def calculate_FC_thr_caller(self):
+        self.plot_window = Toplevel(self.main_window)
+        self.branch_thr_plot = StringVar(self.plot_window)
+        self.branch_thr_plot .set("T")
+        framina=Frame(self.plot_window)
+        framina.pack()
+        Label(framina,text="Thresholds setted").pack()
+        Label(framina,text="Branch").pack(side=LEFT)
+        OptionMenu(framina,self.branch_thr_plot ,*("T","E"), command=self.calculate_FC).pack(side=LEFT)
+
+        self.calculate_FC(self.branch_thr_plot.get())
+
+
+    def calculate_FC(self,branch):
+        x = getattr(self, 'Thr_frame', None)
+        if x!=None:
+            self.Thr_frame.destroy()
+        self.Thr_frame=Frame(self.plot_window)
+        self.Thr_frame.pack()
+        with open("." + sep + "lib" + sep + "mapping.pickle", "rb") as filein:
+            mapping_matrix = pickle.load(filein)
+
         file_T = ("." + sep + "conf" + sep + "advanced_threshold_setting" + sep + "real_baseline_T" +".pickle")
-        # file_E = ("." + sep + "conf" + sep + "advanced_threshold_setting" + sep + "Baseline_E" +".pickle")
         file_E = ("." + sep + "conf" + sep + "advanced_threshold_setting" + sep + "real_baseline_E" +".pickle")
-        list_t = []
-        list_e = []
+
+        dict_thr ={ "T": {"L1":{
+            "X":[],
+            "V":[]
+        },"L2":{
+            "X": [],
+            "V": []
+        },"L3":{
+            "X": [],
+            "V": []}
+        },"E": {"L1":{
+            "X":[],
+            "V":[]
+        },"L2":{
+            "X": [],
+            "V": []
+        },"L3":{
+            "X": [],
+            "V": []}
+        }
+        }
         with open (file_T, 'rb') as f:
             baseline_T = pickle.load(f)
         with open(file_E, 'rb') as f:
@@ -451,53 +490,39 @@ class menu():
                 for ch in range (0,64):
                     Vth_T1 = GEMROC.c_inst.Channel_cfg_list[T][ch]["Vth_T1"]
                     Vth_T2 = GEMROC.c_inst.Channel_cfg_list[T][ch]["Vth_T2"]
-                    Baseline_T1 = baseline_T[int(number.split(" ")[1])][T][ch] #Real baseline contains a pickle with a dictionary
-                    # Baseline_T1 = baseline_T[number]["TIG{}".format(T)]["CH{}".format(ch)][1]
-                    Baseline_T2 = baseline_E[int(number.split(" ")[1])][T][ch] #Real baseline contains a pickle with a dictionary
-
-                    # Baseline_T2 = baseline_E[number]["TIG{}".format(T)]["CH{}".format(ch)][1]
-                    if Baseline_T1 != "Fail" and ch!=62:  ##Valido per L2, #TODO da togliere quando facciamo per L1
-                        # print (AN_CLASS.convert_to_fC(Baseline_T1-Vth_T1, 55))
-                        list_t.append(AN_CLASS.convert_to_fC(Baseline_T1-Vth_T1, 55))
-                    # if Baseline_T2 != "Fail":
-                    #     # print (AN_CLASS.convert_to_fC(Baseline_T2-Vth_T2, 55))
-                    #     list_e.append(AN_CLASS.convert_to_fC(Baseline_T2-Vth_T2, 55))
-
-                    if Baseline_T2 != 0 and ch!=62:
-                        # print (AN_CLASS.convert_to_fC(Baseline_T2-Vth_T2, 55))
-                        list_e.append(AN_CLASS.convert_to_fC(Baseline_T2-Vth_T2, 55))
-                        if AN_CLASS.convert_to_fC(Baseline_T2-Vth_T2, 55)>18:
-                            print "GEMROC {}, TIGER {}, CH {}, has threshold at {} fC".format(number, T, ch, AN_CLASS.convert_to_fC(Baseline_T2-Vth_T2, 55))
-
-        print "T branch (0-2fC) {}/{}".format(len(list(x for x in list_t if 0 < x <= 2)), len (list_t) )
-        print "E branch (0-2fC) {}/{}".format(len(list(x for x in list_e if 0 < x <= 2)), len (list_e) )
-
-        print "T branch (2-4fC) {}/{}".format(len(list(x for x in list_t if 2 < x <= 4)), len (list_t) )
-        print "E branch (2-4fC) {}/{}".format(len(list(x for x in list_e if 2 < x <= 4)), len (list_e) )
-
-        print "T branch (4-5fC) {}/{}".format(len(list(x for x in list_t if 4 < x <= 5)), len (list_t) )
-        print "E branch (4-5fC) {}/{}".format(len(list(x for x in list_e if 4 < x <= 5)), len (list_e) )
-
-        print "T branch (>5fC) {}/{}".format(len(list(x for x in list_t if 5 < x <= 100)), len (list_t) )
-        print "E branch (>5fC) {}/{}".format(len(list(x for x in list_e if 5 < x <= 100)), len (list_e) )
+                    Baseline_T1 = baseline_T[GEMROC.GEMROC_ID][T][ch] #Real baseline contains a pickle with a dictionary
+                    Baseline_T2 = baseline_E[GEMROC.GEMROC_ID][T][ch] #Real baseline contains a pickle with a dictionary
+                    if mapping_matrix[GEMROC.GEMROC_ID][T][ch].split("-")[0]!="NaS":
+                        if Baseline_T1!=0 and Baseline_T2!=0:
+                            dict_thr["T"]["L{}".format(GEMROC.layer)][mapping_matrix[GEMROC.GEMROC_ID][T][ch].split("-")[0]].append(AN_CLASS.convert_to_fC(Baseline_T1-Vth_T1, 55))
+                            dict_thr["E"]["L{}".format(GEMROC.layer)][mapping_matrix[GEMROC.GEMROC_ID][T][ch].split("-")[0]].append(AN_CLASS.convert_to_fC(Baseline_T2-Vth_T2, 55))
 
         # print "T branch (>4fC)  {}/{}".format(len(list(x for x in list_t if 4.01 < x <= 100)), len (list_t) )
         # print "E branch (>4fC)  {}/{}".format(len(list(x for x in list_e if 4.01 < x <= 100)), len (list_e) )
-        self.plot_window = Toplevel(self.main_window)
+
         self.fig = Figure(figsize=(14, 8))
-        self.thr_T = self.fig.add_subplot(121)
-        self.thr_T.hist(list_t, bins=50)
-        self.thr_T.set_title("Thresholds in FC, T branch")
-        self.thr_T.set_xlabel("Threshold (fC)", fontsize=14)
-        self.thr_E = self.fig.add_subplot(122)
-        self.thr_E.hist(list_e, bins=50)
-        self.thr_E.set_title("Thresholds in FC, E branch")
-        self.thr_E.set_xlabel("Threshold (fC)", fontsize=14)
-        self.canvas = FigureCanvasTkAgg(self.fig, master=self.plot_window)
+        self.thr_1_x = self.fig.add_subplot(221)
+        self.thr_1_x.hist(dict_thr[branch]["L1"]["X"],range=(-1,20),bins=42)
+        self.thr_1_x.set_ylabel("Thresholds in FC, L1 X, {} branch".format(self.branch_thr_plot .get()))
+        self.thr_1_x.set_xlabel("Threshold (fC)", fontsize=14)
+        self.thr_1_V = self.fig.add_subplot(222)
+        self.thr_1_V.hist(dict_thr[branch]["L1"]["V"],range=(-1,20),bins=42)
+        self.thr_1_V.set_ylabel("Thresholds in FC, L1 V, {} branch".format(self.branch_thr_plot .get()))
+        self.thr_1_V.set_xlabel("Threshold (fC)", fontsize=14)
+        self.thr_2_x = self.fig.add_subplot(223)
+        self.thr_2_x.hist(dict_thr[branch]["L2"]["X"],range=(-1,20),bins=42)
+        self.thr_2_x.set_ylabel("Thresholds in FC, L2 X, {} branch".format(self.branch_thr_plot .get()))
+        self.thr_2_x.set_xlabel("Threshold (fC)", fontsize=14)
+        self.thr_2_v = self.fig.add_subplot(224)
+        self.thr_2_v.hist(dict_thr[branch]["L2"]["V"],range=(-1,20),bins=42)
+        self.thr_2_v.set_ylabel("Thresholds in FC, L2 V, {} branch".format(self.branch_thr_plot .get()))
+        self.thr_2_v.set_xlabel("Threshold (fC)", fontsize=14)
+
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self.Thr_frame)
         self.canvas.get_tk_widget().pack(side=BOTTOM)
         self.canvas.draw()
         self.canvas.flush_events()
-        self.toolbar = NavigationToolbar2Tk(self.canvas,self.plot_window)
+        self.toolbar = NavigationToolbar2Tk(self.canvas,self.Thr_frame)
         self.toolbar.draw()
 
     def launch_noise_window(self):
@@ -1177,8 +1202,6 @@ class menu():
                                 button['state'] = "normal"
                                 break
 
-
-
                 elif field.cget('text') == 0:
                     button['text'] = "Un-paused"
                     button['state'] = "normal"
@@ -1811,7 +1834,6 @@ class menu():
         self.change_acquisition_mode(True, 0)
         self.change_trigger_mode(value=0, to_all=True)
         self.load_thr(True, "scan", 3, 2, 0, 0, 8)
-
         if self.use_ecq_thr.get():
             self.load_thr_from_file()
         self.specific_channel_fast_setting()
@@ -1823,7 +1845,7 @@ class menu():
         self.Synch_reset(1)
         self.set_pause_mode(True, 1)
         self.Launch_error_check['text']="Fast configuration done"
-
+        self.calculate_FC_thr_caller()
     def change_trigger_mode(self, value, to_all=False):
         if to_all == True:
             for number, GEMROC in self.GEMROC_reading_dict.items():
@@ -1849,6 +1871,8 @@ class menu():
                                 GEMROC.c_inst.Channel_cfg_list[T][61]["TriggerMode"] = 3
                                 GEMROC.c_inst.Channel_cfg_list[T][62]["TriggerMode"] = 3
                                 GEMROC.c_inst.Channel_cfg_list[T][63]["TriggerMode"] = 3
+        #Noisy channel to disable here:
+        self.GEMROC_reading_dict["GEMROC 5"].c_inst.Channel_cfg_list[6][26]["TriggerMode"] = 3
 
     def reactivate_TIGERS(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():
@@ -1919,7 +1943,12 @@ class GEMROC_HANDLER:
         self.g_inst.load_specif_settings(filename=self.GEM_COM.conf_folder+sep+"specific_conf")
         default_ch_inst_settigs_filename = self.GEM_COM.conf_folder + sep + "TIGER_def_ch_cfg_2018.txt"
         self.c_inst = GEM_CONF.ch_reg_settings(GEMROC_ID, default_ch_inst_settigs_filename)
-
+        if GEMROC_ID<4:
+            self.layer=1
+        elif GEMROC_ID<10:
+            self.layer=2
+        else:
+            self.layer=3
     def __del__(self):
         self.GEM_COM.__del__()
 

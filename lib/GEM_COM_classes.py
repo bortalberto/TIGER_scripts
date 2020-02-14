@@ -28,6 +28,7 @@ elif OS == 'linux2':
 else:
     print("ERROR: OS {} non compatible".format(OS))
     sys.exit()
+
 local_test = True
 
 class communication:  #The directory are declared here to avoid multiple declaration
@@ -44,12 +45,12 @@ class communication:  #The directory are declared here to avoid multiple declara
 
         self.keep_cfg_log = keep_cfg_log
         self.keep_IVT_log = keep_IVT_log
-
-        self.log_fname = "." + sep + "log_folder" + sep + "GEMROC{}_interactive_cfg_log_{}.txt".format(self.GEMROC_ID, datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
-        self.log_file = open(self.log_fname, 'w')
-        self.log_file.write("Tiger configuration log file")
-        self.IVT_log_fname = "." + sep + "log_folder" + sep + "GEMROC{}_IVT_log_{}.txt".format(self.GEMROC_ID, datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
-        self.IVT_log_file = open(self.IVT_log_fname, 'w')
+        if keep_IVT_log:
+            self.log_fname = "." + sep + "log_folder" + sep + "GEMROC{}_interactive_cfg_log_{}.txt".format(self.GEMROC_ID, datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
+            self.log_file = open(self.log_fname, 'w')
+            self.log_file.write("Tiger configuration log file")
+            self.IVT_log_fname = "." + sep + "log_folder" + sep + "GEMROC{}_IVT_log_{}.txt".format(self.GEMROC_ID, datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
+            self.IVT_log_file = open(self.IVT_log_fname, 'w')
         self.DiagnDPRAM_data_log_fname = "." + sep + "log_folder" + sep + "GEMROC{}_Diagn_log_{}.txt".format(self.GEMROC_ID, datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         self.success_counter = 0
         self.fail_counter = 0
@@ -151,18 +152,18 @@ class communication:  #The directory are declared here to avoid multiple declara
 
     def __del__(self):
         print("GEMROC {}    Successful communication: {}  Fails: {}".format(self.GEMROC_ID, self.success_counter, self.fail_counter))
-        path_cfg = self.log_file.name
-        path_IVT = self.IVT_log_file.name
-        self.log_file.close()
-        self.IVT_log_file.close()
-        if not self.keep_cfg_log and os.path.isfile(path_cfg):
-            os.remove(path_cfg)
-        if not self.keep_IVT_log and os.path.isfile(path_IVT):
-            os.remove(path_IVT)
+        # path_cfg = self.log_file.name
+        # path_IVT = self.IVT_log_file.name
+        if self.keep_cfg_log:
+            self.log_file.close()
+        if self.keep_IVT_log:
+            self.IVT_log_file.close()
+        # if not self.keep_cfg_log and os.path.isfile(path_cfg):
+        #     os.remove(path_cfg)
+        # if not self.keep_IVT_log and os.path.isfile(path_IVT):
+        #     os.remove(path_IVT)
         self.clientSock.close()
         self.receiveSock.close()
-        self.log_file.close()
-        self.IVT_log_file.close()
 
     def flush_rcv_socket(self):
         try:
@@ -223,8 +224,9 @@ class communication:  #The directory are declared here to avoid multiple declara
                 command_echo_f = self.receiveSock.recv(self.BUFSIZE)
                 self.success_counter += 1
                 break
-            except:
+            except Exception as E:
                 if not retry:
+                    print E
                     raise Exception("GEMROC {} communication timed out".format(self.GEMROC_ID))
                     break
                 self.fail_counter += 1
@@ -1033,7 +1035,6 @@ class communication:  #The directory are declared here to avoid multiple declara
         array_to_send = self.gemroc_LV_XX.command_words
         command_echo_ivt = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
                                                         self.DEST_PORT_NO)
-        # print '\nGEMROC_ID: %d: CMD_GEMROC_LV_IVT_READ' %self.GEMROC_ID
         return self.save_IVT_converter(command_echo_ivt)
 
 
@@ -2082,8 +2083,8 @@ class communication:  #The directory are declared here to avoid multiple declara
         file_T = self.conf_folder + sep + "thr" + sep + "GEMROC{}_Chip{}_T.thr".format(self.GEMROC_ID, TIGER_ID_param)
         file_E = self.conf_folder + sep + "thr" + sep + "GEMROC{}_Chip{}_E.thr".format(self.GEMROC_ID, TIGER_ID_param)
 
-
-        self.log_file.write("Setting VTH on both VTH from file in GEMROC {}, TIGER {}, {}(T) and {}(E) sigmas\n".format(self.GEMROC_ID, TIGER_ID_param, number_sigma_T, number_sigma_E))
+        if self.keep_cfg_log:
+            self.log_file.write("Setting VTH on both VTH from file in GEMROC {}, TIGER {}, {}(T) and {}(E) sigmas\n".format(self.GEMROC_ID, TIGER_ID_param, number_sigma_T, number_sigma_E))
         print "Setting VTH on both VTH from file in GEMROC {}, TIGER {}, {}(T) and {}(E) sigmas\n".format(self.GEMROC_ID, TIGER_ID_param, number_sigma_T, number_sigma_E)
 
         thr0_T = np.loadtxt(file_T )

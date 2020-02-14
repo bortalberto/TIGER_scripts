@@ -321,7 +321,7 @@ class analisys_conf: #Analysis class used for configurations10
         DEBUG=True
         scan_matrix=np.zeros((64,64))
         self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode", T, j, 0)
-        self.GEM_COM.Set_param_dict_channel(self.c_inst,"TP_disable_FE", T, j, 1)
+        # self.GEM_COM.Set_param_dict_channel(self.c_inst,"TP_disable_FE", T, j, 1)
         E_T=[extreme_t[0],extreme_t[1]]
         E_E=[extreme_e[0],extreme_e[1]]
         if DEBUG:
@@ -392,8 +392,8 @@ class analisys_conf: #Analysis class used for configurations10
 
     def noise_scan_using_GEMROC_COUNTERS_progress_bar(self, T,j,i, print_to_screen=True,vth2=False):
 
-        self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode", T, j, 0)
-        self.GEM_COM.Set_param_dict_channel(self.c_inst,"TP_disable_FE", T, j, 0)
+        self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode", T, j, 0,send_command=False)
+        self.GEM_COM.Set_param_dict_channel(self.c_inst,"TP_disable_FE", T, j, 0,send_command=False)
         if vth2==True:
             self.GEM_COM.Set_param_dict_channel(self.c_inst, "Vth_T2", T, j, i)
         else:
@@ -411,7 +411,7 @@ class analisys_conf: #Analysis class used for configurations10
             string = "SCANNING [TIGER={}, VTh={}, CH={}]\n".format(T, i, j)
             sys.stdout.write(string)
 
-        self.GEM_COM.Set_param_dict_channel(self.c_inst, "TriggerMode", T, j, 3)
+        self.GEM_COM.Set_param_dict_channel(self.c_inst, "TriggerMode", T, j, 3,send_command=False)
         self.GEM_COM.Set_param_dict_channel(self.c_inst,"TP_disable_FE", T, j, 1)
 
         return value

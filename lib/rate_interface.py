@@ -451,7 +451,7 @@ class Acquire_rate():
                             if scan_matrix[vt1_current][vt2_current]<des_rate*(1+tollerance) and  scan_matrix[vt1_current][vt2_current]>des_rate*(1-tollerance):
                                 if debug:
                                     with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
-                                        logfile.write("No need to change gemroc {}, TIGER {}, channel\n".format(GEMROC.GEMROC_ID, T, ch))
+                                        logfile.write("No need to change gemroc {}, TIGER {}, channel{}\n".format(GEMROC.GEMROC_ID, T, ch))
                                 pipeout.send(GEM_COM.GEMROC_ID)
                                 pipeout.send(T)
                                 pipeout.send(ch)
