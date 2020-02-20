@@ -15,7 +15,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 import ctypes
 import psutil
-TER=TRUE
+TER=True
 try:
     from influxdb import InfluxDBClient
     DB = True
@@ -471,7 +471,8 @@ class menu():
 
         if DB and time.time() - self.last_810_log > 15:
             self.send_810b_error_to_DB()
-            self.send_PC_stats()
+            if self.online_monitor_data:
+                self.send_PC_stats()
             self.last_810_log = time.time()
 
         for key, label in self.error_dict810.items():
@@ -571,7 +572,7 @@ class menu():
                     body[0]["fields"]["8_10_errors"] = int(self.error_dict810["{} TIGER {}".format(GEMROC, T)]["text"])
                 else:
                     body[0]["fields"]["8_10_errors"] = 0
-                self.send_to_db(body)
+                send_to_db(body)
 
     def send_PC_stats(self):
         """
@@ -592,13 +593,8 @@ class menu():
             "retention_policy": "online_data"
         }]
 
-        self.send_to_db(body)
+        send_to_db(body)
 
-    def send_to_db(self, json):
-        try:
-            client.write_points(json)
-        except Exception as e:
-            print("Unable to log in infludb: {}".format(e))
 
     def PMT_on(self):
         os.system("./HVWrappdemo_0 ttyUSB0 VSet 2000")
@@ -640,7 +636,7 @@ class menu():
                 if debug:
                     print "PMT ON"
                 self.PMT_on()
-            time.sleep(22)
+            time.sleep(15)
             self.start_acq(First_launch=False)
 
     def ref_adv_acq(self):
@@ -937,6 +933,8 @@ class menu():
                 self.LED[int(i.GEMROC_ID)]['image'] = self.icon_bad
             else:
                 self.LED[int(i.GEMROC_ID)]['image'] = self.icon_on
+        for number, GEMROC in self.GEMROC_reading_dict.items():
+            GEMROC.GEM_COM.flush_rcv_socket()
         if self.simple_analysis.get() or self.run_analysis.get():
             self.build_errors()
         if self.error_GEMROC.get():
@@ -1114,7 +1112,7 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
 
         # print self.TM_errors
 
-    def acquire_errors(self, GEMROC_num, TIGER, pipe_in, reset):
+    def acquire_errors(self, GEMROC_num, TIGER, pipe_in, reset,read_IVT=TRUE):
         GEMROC = self.GEMROC_reading_dict[GEMROC_num]
         GEMROC.GEM_COM.set_counter(int(TIGER), 1, 0)
         if reset:
@@ -1125,7 +1123,34 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
         # GEMROC.GEM_COM.flush_rcv_socket()
         pipe_in.send((tiger_string, counter_value))
         pipe_in.close()
+        if DB and read_IVT:
+            IVT = GEMROC.GEM_COM.save_IVT()
+            for FEB in range(0,4):
+                body = [{
+                    "measurement": "Offline",
+                    "tags": {
+                        "type": "IVT_LOG_FEB",
+                        "gemroc": GEMROC.GEM_COM.GEMROC_ID,
+                        "FEB": FEB
+                    },
+                    "time": str(datetime.datetime.utcnow()),
+                    "fields":
+                        IVT['status']['FEB{}'.format(FEB)]
 
+                }]
+                send_to_db(body)
+            body = [{
+                "measurement": "Offline",
+                "tags": {
+                    "type": "IVT_LOG_GEMROC",
+                    "gemroc": GEMROC.GEM_COM.GEMROC_ID,
+                },
+                "time": str(datetime.datetime.utcnow()),
+                "fields":
+                    IVT['status']['ROC']
+
+            }]
+            send_to_db(body)
 
 class stopper(Thread):  # In order to scan during configuration is mandatory to use multithreading
     def __init__(self, caller, start_time):
@@ -1186,3 +1211,9 @@ def find_number(stringa):
         number = int(stringa[0].split(" ")[1])
 
     return number
+
+def send_to_db(json):
+    try:
+        client.write_points(json)
+    except Exception as e:
+        print("Unable to log in infludb: {}".format(e))

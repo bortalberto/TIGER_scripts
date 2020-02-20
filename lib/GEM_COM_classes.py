@@ -29,7 +29,7 @@ else:
     print("ERROR: OS {} non compatible".format(OS))
     sys.exit()
 
-local_test = True
+local_test = False
 
 class communication:  #The directory are declared here to avoid multiple declaration
 
@@ -230,9 +230,9 @@ class communication:  #The directory are declared here to avoid multiple declara
                     raise Exception("GEMROC {} communication timed out".format(self.GEMROC_ID))
                     break
                 self.fail_counter += 1
-                time.sleep(1)
-                self.SynchReset_to_TgtTCAM()
-                self.SynchReset_to_TgtFEB()
+                time.sleep(0.1)
+                # self.SynchReset_to_TgtTCAM()
+                # self.SynchReset_to_TgtFEB()
                 if log_save:
                     self.log_file.write(cmd_message)
                     self.log_file.write(binascii.b2a_hex(buffer_to_send))
@@ -949,9 +949,9 @@ class communication:  #The directory are declared here to avoid multiple declara
                     raise Exception("GEMROC {} communication timed out for 5 times".format(self.GEMROC_ID))
                     break
                 self.fail_counter += 1
-                time.sleep(1)
-                self.SynchReset_to_TgtTCAM()
-                self.SynchReset_to_TgtFEB()
+                time.sleep(0.1)
+                # self.SynchReset_to_TgtTCAM()
+                # self.SynchReset_to_TgtFEB()
                 if log_save:
                     self.log_file.write(cmd_message)
                     self.log_file.write(binascii.b2a_hex(buffer_to_send))
@@ -992,8 +992,8 @@ class communication:  #The directory are declared here to avoid multiple declara
             except:
                 self.fail_counter += 1
                 time.sleep(1)
-                self.SynchReset_to_TgtTCAM()
-                self.SynchReset_to_TgtFEB()
+                # self.SynchReset_to_TgtTCAM()
+                # self.SynchReset_to_TgtFEB()
                 i += 1
         if i == 5:
             raise Exception("GEMROC {} communication timed out for 5 times".format(self.GEMROC_ID))

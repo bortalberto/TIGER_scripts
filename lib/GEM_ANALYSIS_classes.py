@@ -90,7 +90,7 @@ class analisys_conf: #Analysis class used for configurations10
 
              print ("_-_-_-_-_-Send syncronous reset_-_-_-_-_-\n")
              self.GEM_COM.SynchReset_to_TgtFEB(1, True)
-             self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
+             # self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
 
              print ("_-_-_-_-_-Setting  channels for scan_-_-_-_-_-\n")
 
@@ -130,7 +130,7 @@ class analisys_conf: #Analysis class used for configurations10
 
                         word_count = 0
                         self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
-                        self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
+                        # self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
                         test_r.start_socket()
                         while word_count < 60:
                             #print word_count
@@ -217,11 +217,11 @@ class analisys_conf: #Analysis class used for configurations10
             self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, 64, 1, 0)
             self.GEM_COM.Load_VTH_fromMatrix(self.c_inst, T, self.vthr_matrix)
             self.GEM_COM.DAQ_set(2 ** T, 0x0, 0, 0, 1, 0)
-            self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
+            # self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
             for j in range (0,64):
                 self.GEM_COM.set_counter(T, 0, j)
                 self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
-                self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
+                # self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
                 self.GEM_COM.reset_counter()
                 time.sleep(tempo)
                 autotune_scan_matrix[T,j]=self.GEM_COM.GEMROC_counter_get()
@@ -432,7 +432,7 @@ class analisys_conf: #Analysis class used for configurations10
                         command_sent = self.GEM_COM.Set_Vth_T1(self.c_inst, T, j, i)
                         word_count=0
                         self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
-                        self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
+                        # self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
                         test_r.start_socket()
                         while word_count < 60:
                             # print word_count
@@ -620,7 +620,7 @@ class analisys_conf: #Analysis class used for configurations10
             self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, 64, 1, 0)
             self.GEM_COM.Load_VTH_fromMatrix(self.c_inst, T, self.vthr_matrix)
             self.GEM_COM.DAQ_set(2 ** T, 0x0, 0, 0, 1, 0)
-            self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
+            # self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
             test_r.start_socket()
             while frame_count < frameMax and not self.timedOut:
                 frame_count, autotune_scan_matrix = self.acquire_rate(frame_count, autotune_scan_matrix, test_r)
@@ -699,11 +699,11 @@ class analisys_conf: #Analysis class used for configurations10
             self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, 64, 1, 0)
             self.GEM_COM.Load_VTH_fromMatrix(self.c_inst, T, self.vthr_matrix)
             self.GEM_COM.DAQ_set(2 ** T, 0x0, 0, 0, 1, 0)
-            self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
+            # self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
             for j in range (0,64):
                 self.GEM_COM.set_counter(T, 0, j)
                 self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
-                self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
+                # self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
                 self.GEM_COM.reset_counter()
                 time.sleep(tempo)
                 autotune_scan_matrix[T,j]=self.GEM_COM.GEMROC_counter_get()
@@ -858,7 +858,7 @@ class analisys_conf: #Analysis class used for configurations10
             print ("Setting delay {}".format(TD))
             self.GEM_COM.set_FEB_timing_delays(TD, TD, TD, TD)
             self.GEM_COM.DAQ_set(0, 0xff, 1, 256, 1, 1, False)
-            self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
+            # self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
             for Ts in range(0, 4):
                 if time_for_step<0:
                     self.GEM_COM.SynchReset_to_TgtFEB(0, 1)

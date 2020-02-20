@@ -1,6 +1,6 @@
 from Tkinter import *
 from ttk import Progressbar
-import Tkinter, Tkconstants, tkFileDialog
+import tkFileDialog
 import numpy as np
 from lib import GEM_COM_classes as COM_class
 import communication_error_GUI as error_GUI
@@ -1382,7 +1382,7 @@ class menu():
             "TIMING_DLY_FEB1": ((L_array[10] >> 8) & 0x3F),
             "TIMING_DLY_FEB0": ((L_array[10] >> 0) & 0x3F)
         }
-        print read_dict
+        print (read_dict)
 
         for i in range(0, len(self.label_array)):
             label = self.label_array[i]
@@ -1584,7 +1584,7 @@ class menu():
         try:
             self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.global_set_check(write, read)
         except Exception as E:
-            print E
+            print (E)
             self.error_led_update()
 
     def write_TIGER_GLOBAL_allGEM(self):
@@ -1767,7 +1767,7 @@ class menu():
         for pipeout in pip_list:
             result = pipeout.recv()
             if result!="ok":
-                print result
+                print (result)
                 self.error_led_update()
                 self.Launch_error_check['text'] = "Some error occurred in TIGER configuration, check terminal"
                 self.main_window.update()
@@ -1811,12 +1811,12 @@ class menu():
         if to_all == 1:
             for number, GEMROC in self.GEMROC_reading_dict.items():
                 GEMROC.GEM_COM.SynchReset_to_TgtFEB()
-                GEMROC.GEM_COM.SynchReset_to_TgtTCAM()
+                #GEMROC.GEM_COM.SynchReset_to_TgtTCAM()
                 print ("{} reset".format(number))
         else:
             GEMROC = self.showing_GEMROC.get()
             self.GEMROC_reading_dict[GEMROC].GEM_COM.SynchReset_to_TgtFEB()
-            self.GEMROC_reading_dict[GEMROC].GEM_COM.SynchReset_to_TgtTCAM()
+            #self.GEMROC_reading_dict[GEMROC].GEM_COM.SynchReset_to_TgtTCAM()
             print ("{} reset".format(self.showing_GEMROC.get()))
         self.Launch_error_check_op['text']="Synch reset sent"
         self.Launch_error_check['text']="Synch reset sent"
@@ -1905,7 +1905,7 @@ class menu():
                                 self.GEMROC_reading_dict[GEMROC_key].c_inst.Channel_cfg_list[TIGER_id][channel_id]["TriggerMode"] = dict3["TriggerMode"]
 
                             except KeyError as e:
-                                print 'I a KeyError - missing %s. Probably a GEMROC is offline '% str(e)
+                                print ("I'm a KeyError - missing %s. Probably a GEMROC is offline "% str(e))
                                 break
                             # print self.GEMROC_reading_dict[GEMROC_key].c_inst.Channel_cfg_list[TIGER_id][channel_id]
             print ("Channel settings for {} loaded".format(GEMROC_key))
@@ -1965,5 +1965,6 @@ def find_number(stringa):
 
     return number
 
-Main_menu = menu()
-Main_menu.runna()
+if __name__ == '__main__':
+    Main_menu = menu()
+    Main_menu.runna()

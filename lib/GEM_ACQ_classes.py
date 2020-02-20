@@ -17,7 +17,7 @@ elif OS == 'linux2':
 else:
     print("ERROR: OS {} non compatible".format(OS))
     sys.exit()
-local_test = True
+local_test = False
 
 
 class Thread_handler(Thread):
