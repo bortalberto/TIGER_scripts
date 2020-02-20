@@ -18,10 +18,12 @@ from threading import Thread
 import datetime
 import multiprocessing
 import time
+
 OS = sys.platform
+
 if OS == 'win32':
 	sep = '\\'
-elif OS == 'linux2':
+elif OS == 'linux2' or 'linux':
 	sep = '/'
 else:
 	print("ERROR: OS {} non compatible".format(OS))
@@ -84,9 +86,9 @@ class analisys_conf: #Analysis class used for configurations10
              print("_-_-_-_-_-Configurating Channels_-_-_-_-_-\n")
              default_filename = self.GEM_COM.conf_folder+sep+"TIGER_def_ch_cfg_2018.txt"
              command_reply = self.GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg(self.c_inst, T, 64)
-             print '\nCWdef command_reply: %s' % binascii.b2a_hex(command_reply)
+             print ('\nCWdef command_reply: %s' % binascii.b2a_hex(command_reply))
              command_reply = self.GEM_COM.ReadTgtGEMROC_TIGER_ChCfgReg(self.c_inst, T, 64, 0)
-             print '\nCRd   command_reply: %s' % binascii.b2a_hex(command_reply)
+             print ('\nCRd   command_reply: %s' % binascii.b2a_hex(command_reply))
 
              print ("_-_-_-_-_-Send syncronous reset_-_-_-_-_-\n")
              self.GEM_COM.SynchReset_to_TgtFEB(1, True)
@@ -257,7 +259,7 @@ class analisys_conf: #Analysis class used for configurations10
             pipe_out.send(T*iter+iter)
             if print_to_screen:
                 print(" \n Scan matrix GEMROC {} TIGER {}".format(self.GEMROC_ID,T))
-                print autotune_scan_matrix[T, :]
+                print (autotune_scan_matrix[T, :])
                 print(" \n Threshold matrix GEMROC {} TIGER {}".format(self.GEMROC_ID,T))
                 print(self.vthr_matrix[T, :])
                 # self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, self.GEMROC_ID, T, 64, 1, 3)
@@ -405,7 +407,7 @@ class analisys_conf: #Analysis class used for configurations10
         self.GEM_COM.reset_counter()
         time.sleep(0.1)
         value = self.GEM_COM.GEMROC_counter_get()
-        print value
+        print (value)
         if print_to_screen:
             os.system('clear')
             string = "SCANNING [TIGER={}, VTh={}, CH={}]\n".format(T, i, j)
@@ -460,7 +462,7 @@ class analisys_conf: #Analysis class used for configurations10
         try:
             data, addr = test_r.dataSock.recvfrom(BUFSIZE)
         except:
-            print "\nTimed out!"
+            print ("\nTimed out!")
             self.timedOut = True
             return frame_count, rate_matrix
         hexdata = binascii.hexlify(data)
@@ -502,7 +504,7 @@ class analisys_conf: #Analysis class used for configurations10
         try:
             data, addr = test_r.dataSock.recvfrom(BUFSIZE)
         except:
-            print "\nTimed out!"
+            print ("\nTimed out!")
             self.timedOut = True
             return frame_count, frame_matrix
         hexdata = binascii.hexlify(data)
@@ -656,7 +658,7 @@ class analisys_conf: #Analysis class used for configurations10
                     self.GEM_COM.Load_VTH_fromMatrix(self.c_inst, T, self.vthr_matrix)
 
                 print(" \n Scan matrix TIGER {}".format(T))
-                print autotune_scan_matrix[T, :]
+                print (autotune_scan_matrix[T, :])
                 print(" \n Threshold matrix TIGER {}".format(T))
                 print(self.vthr_matrix[T, :])
                 self.timedOut = False
@@ -738,7 +740,7 @@ class analisys_conf: #Analysis class used for configurations10
                 self.GEM_COM.Load_VTH_fromMatrix(self.c_inst, T, self.vthr_matrix)
 
             print(" \n Scan matrix TIGER {}".format(T))
-            print autotune_scan_matrix[T, :]
+            print (autotune_scan_matrix[T, :])
             print(" \n Threshold matrix TIGER {}".format(T))
             print(self.vthr_matrix[T, :])
                 # self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, self.GEMROC_ID, T, 64, 1, 3)
@@ -781,23 +783,23 @@ class analisys_conf: #Analysis class used for configurations10
         while frame_count < frameMax and not self.timedOut:
             frame_count, frame_matrix = self.acquire_frame(frame_count, frame_matrix,test_r)
         test_r.dataSock.close()
-        print "Framewords collected:"
-        print frame_matrix
+        print( "Framewords collected:")
+        print( frame_matrix)
         coincidence_matrix=np.zeros((8,8))
         for i in range (0,8):
             for j in range (i,8):
                 coincidence_matrix[i,j]=np.any(np.in1d(frame_matrix[i,:], frame_matrix[j,:]))
                 if not np.any(np.in1d(frame_matrix[i,:], frame_matrix[j,:])) and not np.all(frame_matrix[i,:]==np.zeros((1,len(frame_matrix)))) and not np.all(frame_matrix[j,:]==np.zeros((1,len(frame_matrix))).all()) :
-                    print "TIGER {} not in sync with TIGER {}".format(i,j)
+                    print ("TIGER {} not in sync with TIGER {}".format(i,j))
         #print coincidence_matrix
         self.timedOut=False
 
         return 0
 
     def TIGER_config_test(self):
-        print "--------------------------"
-        print "Configuration test, GEMROC {}".format(self.GEMROC_ID)
-        print "--------------------------"
+        print( "--------------------------")
+        print( "Configuration test, GEMROC {}".format(self.GEMROC_ID))
+        print( "--------------------------")
 
         default_g_inst_settings_filename = self.GEM_COM.conf_folder + sep + "TIGER_def_g_cfg_2018.txt"
         default_c_inst_settings_filename = self.GEM_COM.conf_folder + sep + "TIGER_def_ch_cfg_2018.txt"
@@ -807,10 +809,10 @@ class analisys_conf: #Analysis class used for configurations10
             command_sent = self.GEM_COM.WriteTgtGEMROC_TIGER_GCfgReg(self.g_inst, T, False)
             command_reply = self.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(self.g_inst, T)
             if (int(binascii.b2a_hex(command_sent), 16)) != ((int(binascii.b2a_hex(command_reply), 16)) - 2048):
-                print "   !!! Errors in global configuration !!!   "
+                print( "   !!! Errors in global configuration !!!   ")
                 error_list.append(T)
             else:
-                print "         Global Configuration OK         "
+                print ("         Global Configuration OK         ")
             ch_list = []
 
             for ch in range (0,64):
@@ -822,24 +824,24 @@ class analisys_conf: #Analysis class used for configurations10
                     ch_list.append(ch)
             if ch_list:
                 #print "Errors configurating channels: {}".format(ch_list)
-                print "   !!! Error(s) in channel(s) configuration !!!  "
+                print ("   !!! Error(s) in channel(s) configuration !!!  ")
             else:
-                print "         Channel Configuration OK         "
+                print ("         Channel Configuration OK         ")
 
 
 
         if error_list:
-            print " \n--Gemroc {}: Errors configurating Tiger: {}".format(self.GEMROC_ID,error_list)
+            print (" \n--Gemroc {}: Errors configurating Tiger: {}".format(self.GEMROC_ID,error_list))
         else:
-            print " \n--Gemroc {}: Configuration test passed".format(self.GEMROC_ID)
+            print (" \n--Gemroc {}: Configuration test passed".format(self.GEMROC_ID))
 
 
         return (error_list)
 
     def TIGER_GEMROC_sync_test(self):
-        print "--------------------------"
-        print "Checking synchronization for GEMROC {}".format(self.GEMROC_ID)
-        print "--------------------------"
+        print ("--------------------------")
+        print ("Checking synchronization for GEMROC {}".format(self.GEMROC_ID))
+        print ("--------------------------")
 
         self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
         self.check_sync()
@@ -1377,7 +1379,7 @@ class analisys_read:
                 plt.clf()
             pass
 
-        print "GEMROC {} TIGER {}, ch {}, fit: {}".format(self.GEMROC_ID,Tiger,Channel,popt)
+        print ("GEMROC {} TIGER {}, ch {}, fit: {}".format(self.GEMROC_ID,Tiger,Channel,popt))
 
         x = np.arange(0, 64)
         y = errorfunc(x, *popt)
@@ -1409,7 +1411,7 @@ class analisys_read:
         popt, pcov = curve_fit(errorfunc, xdata, ydata[:m ], method='lm', maxfev=5000)
 
         print ("\n")
-        print popt
+        print (popt)
 
         x = np.arange(0, 64)
         y = errorfunc(x, *popt)
@@ -1461,8 +1463,8 @@ def error_fit(data,TP_rate, Ebranch=True):
             big_value=np.max(data)
             bigger=np.argmax(data == big_value)
             going_down=np.argmax(data[bigger:]<big_value*0.9)
-            print going_down
-            print bigger
+            print( going_down)
+            print( bigger)
             M=going_down+bigger
         for i in range(M, 64):
             ydata[i] = TP_rate
@@ -1527,7 +1529,7 @@ def error_fit(data,TP_rate, Ebranch=True):
                 popt2 = ("Fail", "Fail", "Fail")
                 pcov2 = np.zeros((3, 3))
             if ydata[0]>10000:
-                print "First point not zero, check settings"
+                print ("First point not zero, check settings")
                 popt2 = ("Fail", "Fail", "Fail")
                 pcov2 = np.zeros((3, 3))
         else:

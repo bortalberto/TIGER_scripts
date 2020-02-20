@@ -1,7 +1,8 @@
-from Tkinter import *
+from tkinter import *
+from tkinter.ttk import Notebook
+
 from threading import Thread
 import socket
-import ttk
 import numpy as np
 from lib import GEM_ACQ_classes as GEM_ACQ
 from collections import deque
@@ -18,7 +19,7 @@ TER = True
 OS = sys.platform
 if OS == 'win32':
     sep = '\\'
-elif OS == 'linux2':
+elif OS == 'linux2' or 'linux':
     sep = '/'
 else:
     print("ERROR: OS {} non compatible".format(OS))
@@ -30,7 +31,7 @@ class menu():
         self.main_win = Tk()
         self.client = InfluxDBClient(host='localhost', port=8086)
         self.client.switch_database('GUFI_DB')
-        if OS == 'linux2':
+        if OS == 'linux2' or OS =='linux':
             self.main_win.wm_iconbitmap('@' + "." + sep + 'icons' + sep + 'GUFO_ICON.xbm')
         self.main_win.wm_title("Online data monitoring")
         self.GEM_to_config = np.zeros((22))
@@ -39,7 +40,7 @@ class menu():
 
         Label(Title_frame, text="GUFI Online Monitor", font=("Times", 25)).pack(side=LEFT)
 
-        self.tabControl = ttk.Notebook(self.main_win)  # Create Tab Control
+        self.tabControl = Notebook(self.main_win)  # Create Tab Control
         self.tabControl.pack(side=TOP)
         self.select_frame = Frame(self.main_win)
         self.tabControl.add(self.select_frame, text="Selection")
@@ -278,7 +279,7 @@ class menu():
         self.get_event_flag=True #This flag means that we will start to save the data from when the value in UDP
         hit_stack=[]
         running=True
-        print self.UDP_trigger
+        print (self.UDP_trigger)
         thread_for_plot=Plotter(self)
         thread_for_plot.start()
     def connect_to_acquisition(self):
@@ -397,8 +398,8 @@ class online_reader(GEM_ACQ.reader):
             self.dataSock.bind((self.HOST_IP, self.HOST_PORT))
             self.dataSock.setblocking(True)
         except Exception as e:
-            print "--GEMROC {}-{}".format(self.GEMROC_ID, e)
-            print "Can't bind the socket"
+            print( "--GEMROC {}-{}".format(self.GEMROC_ID, e))
+            print( "Can't bind the socket")
 
         # self.dataSock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 8388608 )
         # print self.dataSock.getsockopt(socket.SOL_SOCKET,socket.SO_RCVBUF)
@@ -540,7 +541,7 @@ class GEMROC_decoder(Thread):
                             # print(proc.communicate())
                             key = self.caller2.GEMROC_acquiring_dict.keys()[0] #Only the first gemroc of the list will run the analysis
                             if self.GEMROC_id == int(key.split(" ")[1]):
-                                print "GEMROC {} is running the data decode".format(self.GEMROC_id)
+                                print ("GEMROC {} is running the data decode".format(self.GEMROC_id))
                                 subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh", "-V", str(self.RUN.split("_")[1]), str(self.subRun)])
                                 subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh", "-A", str(self.RUN.split("_")[1]), str(self.subRun)])
                                 subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh", "-E", str(self.RUN.split("_")[1]), str(self.subRun)])
@@ -660,7 +661,7 @@ class GEMROC_decoder(Thread):
                 if not self.first_packet:
                     if self.last_UDP_number != (((int_x >> 32) & 0xFFFFF) + ((int_x >> 0) & 0xFFFFFFF)) - 1:
                         pacchetti_mancanti = (((int_x >> 32) & 0xFFFFF) + ((int_x >> 0) & 0xFFFFFFF)) - self.last_UDP_number - 1
-                        print "Missing {} UDP packets, up to {}".format(pacchetti_mancanti, self.last_UDP_number + 1)
+                        print( "Missing {} UDP packets, up to {}".format(pacchetti_mancanti, self.last_UDP_number + 1))
                         self.write_log("Missing {} UDP packets, up to{}".format(pacchetti_mancanti, self.last_UDP_number + 1))
                         self.log_missing_UDP(self.last_UDP_number + 1, pacchetti_mancanti)
                         self.missing_pkt_counter += 1
@@ -873,7 +874,7 @@ class Plotter(Thread):
         for elem in L2_x:
             R.append(2)
             THETA.append(elem/1260*6.28)
-        print THETA
+        print (THETA)
         self.caller.scatter.set_xdata(THETA)
         self.caller.scatter.set_ydata(R)
 

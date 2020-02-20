@@ -1,6 +1,7 @@
-from Tkinter import *
-from ttk import Progressbar
-import tkFileDialog
+from tkinter import *
+from tkinter import filedialog
+from tkinter.ttk import Progressbar
+from tkinter.ttk import Notebook
 import numpy as np
 from lib import GEM_COM_classes as COM_class
 import communication_error_GUI as error_GUI
@@ -15,18 +16,36 @@ from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
 import sys
 import array
 import time
-import ttk
 import pickle
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 
+def cmp_to_key(mycmp):
+    'Convert a cmp= function into a key= function'
+    class K:
+        def __init__(self, obj, *args):
+            self.obj = obj
+        def __lt__(self, other):
+            return mycmp(self.obj, other.obj) < 0
+        def __gt__(self, other):
+            return mycmp(self.obj, other.obj) > 0
+        def __eq__(self, other):
+            return mycmp(self.obj, other.obj) == 0
+        def __le__(self, other):
+            return mycmp(self.obj, other.obj) <= 0
+        def __ge__(self, other):
+            return mycmp(self.obj, other.obj) >= 0
+        def __ne__(self, other):
+            return mycmp(self.obj, other.obj) != 0
+    return K
+
 OS = sys.platform
 if OS == 'win32':
     sep = '\\'
-elif OS == 'linux2':
+elif OS == 'linux2' or 'linux':
     sep = '/'
 else:
-    print("ERROR: OS {} non compatible".format(OS))
+    print("ERROR: OS {} not compatible".format(OS))
     sys.exit()
 
 
@@ -101,7 +120,7 @@ class menu():
         Title_frame2.pack(anchor=S)
         Title_frame.pack(fill=BOTH)
 
-        self.tabControl = ttk.Notebook(self.select_window)  # Create Tab Control
+        self.tabControl = Notebook(self.select_window)  # Create Tab Control
         self.select_frame = Frame(self.select_window)
         Tante_frame = Frame(self.select_window)
         self.tabControl.add(self.select_frame,text = "Selection")
@@ -392,7 +411,7 @@ class menu():
         frame.bind("<Configure>", self.myfunction)
         self.canvas2.pack(side=LEFT, fill=BOTH)
 
-        for number, GEMROC in sorted(self.GEMROC_reading_dict.items(),cmp = sort_by_number):
+        for number, GEMROC in sorted(self.GEMROC_reading_dict.items(),key = find_number):
             this_ROC_IVT = self.IVT_dict[number]
             a = Frame(frame)
             a.pack(pady=5, fill=BOTH)
@@ -599,7 +618,7 @@ class menu():
             self.GEMROC_reading_dict["GEMROC {}".format(ID)] = self.handler_list[i]
         Label(self.second_row_frame, text='GEMROC   ').grid(row=0, column=0, sticky=NW, pady=4)
         # print self.GEMROC_reading_dict.keys()
-        self.select_GEMROC = OptionMenu(self.second_row_frame, self.showing_GEMROC, *sorted(self.GEMROC_reading_dict.keys(),cmp = sort_by_number))
+        self.select_GEMROC = OptionMenu(self.second_row_frame, self.showing_GEMROC, *sorted(self.GEMROC_reading_dict.keys(),key = find_number))
         self.select_GEMROC.grid(row=1, column=0, sticky=NW, pady=4)
         fields_options = ["DAQ configuration", "LV and diagnostic", "Global Tiger configuration", "Channel Tiger configuration"]
 
@@ -996,24 +1015,24 @@ class menu():
 
     def SAVE(self):
         if self.configure_MODE.get() == "Global Tiger configuration":
-            File_name = tkFileDialog.asksaveasfilename(initialdir="." + sep + "conf" + sep + "saves", title="Select file name", filetypes=(("Global configuration saves", "*.gs"), ("all files", "*.*")))
+            File_name = filedialog.asksaveasfilename(initialdir="." + sep + "conf" + sep + "saves", title="Select file name", filetypes=(("Global configuration saves", "*.gs"), ("all files", "*.*")))
             GEM_NAME = str(self.showing_GEMROC.get())
             self.GEMROC_reading_dict[GEM_NAME].g_inst.save_glob_conf(File_name)
 
         if self.configure_MODE.get() == "Channel Tiger configuration":
-            File_name = tkFileDialog.asksaveasfilename(initialdir="." + sep + "conf" + sep + "saves", title="Select file name", filetypes=(("Channels configuration saves", "*.cs"), ("all files", "*.*")))
+            File_name = filedialog.asksaveasfilename(initialdir="." + sep + "conf" + sep + "saves", title="Select file name", filetypes=(("Channels configuration saves", "*.cs"), ("all files", "*.*")))
             GEM_NAME = str(self.showing_GEMROC.get())
             self.GEMROC_reading_dict[GEM_NAME].c_inst.save_ch_conf(File_name)
 
     def LOAD(self):
         if self.configure_MODE.get() == "Global Tiger configuration":
             GEM_NAME = str(self.showing_GEMROC.get())
-            File_name = tkFileDialog.askopenfilename(initialdir="." + sep + "conf" + sep + "saves", title="Select file", filetypes=(("Global configuration saves", "*.gs"), ("all files", "*.*")))
+            File_name = filedialog.askopenfilename(initialdir="." + sep + "conf" + sep + "saves", title="Select file", filetypes=(("Global configuration saves", "*.gs"), ("all files", "*.*")))
             self.GEMROC_reading_dict[GEM_NAME].g_inst.load_glob_conf(File_name)
 
         if self.configure_MODE.get() == "Channel Tiger configuration":
             GEM_NAME = str(self.showing_GEMROC.get())
-            File_name = tkFileDialog.askopenfilename(initialdir="." + sep + "conf" + sep + "saves", title="Select file", filetypes=(("Channels configuration saves", "*.cs"), ("all files", "*.*")))
+            File_name = filedialog.askopenfilename(initialdir="." + sep + "conf" + sep + "saves", title="Select file", filetypes=(("Channels configuration saves", "*.cs"), ("all files", "*.*")))
             self.GEMROC_reading_dict[GEM_NAME].c_inst.load_ch_conf(File_name)
         self.LOAD_ON.config(state='normal')
 
@@ -1131,7 +1150,7 @@ class menu():
         GEMROC = self.GEMROC_reading_dict[self.showing_GEMROC.get()]
         GEMROC.GEM_COM.set_FnR_pattern(int(self.samp_pol_pattern.get(),16))
     def default_pol(self):
-        for number, GEMROC in sorted(self.GEMROC_reading_dict.items(),cmp = sort_by_number):
+        for number, GEMROC in sorted(self.GEMROC_reading_dict.items(),key = find_number):
             GEMROC.GEM_COM.reload_default_pol_pattern()
     def set_L1_window(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():
@@ -1885,12 +1904,12 @@ class menu():
         Funcion to import the channel configuration from old RUNS. Needs the pickle containing the data
         :return:
         """
-        File_name = tkFileDialog.askopenfilename(initialdir="." + sep + "data_folder", title="Select file", filetypes=(("Configuration log", "*.pkl"), ("all files", "*.*")))
+        File_name = filedialog.askopenfilename(initialdir="." + sep + "data_folder", title="Select file", filetypes=(("Configuration log", "*.pkl"), ("all files", "*.*")))
 
         with open(File_name, 'rb') as f:
             old_conf_dict = pickle.load(f)
 
-        for GEMROC_key, dict in sorted(old_conf_dict.items(),cmp = sort_by_number):
+        for GEMROC_key, dict in sorted(old_conf_dict.items(),key = find_number):
             for TIGER_key, dict2 in dict.items():
                 if TIGER_key.split(" ")[0] == "TIGER":
                     TIGER_id = int(TIGER_key.split(" ")[1])
@@ -1953,8 +1972,8 @@ class GEMROC_HANDLER:
         self.GEM_COM.__del__()
 
 def sort_by_number(stringa1,stringa2):
-    number1=find_number(stringa1)
-    number2=find_number(stringa2)
+    number1 = find_number(stringa1)
+    number2 = find_number(stringa2)
     return number1-number2
 
 def find_number(stringa):

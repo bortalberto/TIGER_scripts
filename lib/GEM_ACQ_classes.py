@@ -12,7 +12,7 @@ import numpy as np
 OS = sys.platform
 if OS == 'win32':
     sep = '\\'
-elif OS == 'linux2':
+elif OS == 'linux2' or 'linux':
     sep = '/'
 else:
     print("ERROR: OS {} non compatible".format(OS))
@@ -41,7 +41,7 @@ class Thread_handler(Thread):
         self.TIMED_out = False
         with open(datapath, 'wb'):
             pass
-        print "Acquiring GEMROC {} for {} seconds".format(self.reader.GEMROC_ID, self.acq_time)
+        print ("Acquiring GEMROC {} for {} seconds".format(self.reader.GEMROC_ID, self.acq_time))
         self.reader.start_socket()
         while time.time() - time0 < self.acq_time and self.running:
             Total_Data = 0
@@ -51,7 +51,7 @@ class Thread_handler(Thread):
                     x = self.reader.fast_acquisition(data_list)  # self.reader.fast_acquisition(data_list)
                     Total_Data += x
                 except Exception as e:
-                    print e
+                    print( e)
                     print ("\n---TIMED_OUT!!!...\n")
                     self.reader.dataSock.close()
                     self.running = False
@@ -70,7 +70,7 @@ class Thread_handler(Thread):
 
         self.reader.dataSock.close()
         self.reader.data_list = list(data_list)
-        print len(self.reader.data_list)
+        print (len(self.reader.data_list))
 
         # with open(self.reader.log_path, 'a') as log_file:
         #     log_file.write("{} -- Closing acquisition on GEMROC {}\n".format(time.ctime(),self.reader.GEMROC_ID))
@@ -83,7 +83,7 @@ class Thread_handler(Thread):
                 print ("\n----SOMETHING WRONG---FILE MISSING\n")
                 return 0
         self.reader.datapath = datapath
-        print "Done acquiring"
+        print ("Done acquiring")
 
 
 class Thread_handler_TM(Thread):  # In order to scan during configuration is mandatory to use multithreading
@@ -124,7 +124,7 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
                     Totallissimi_packets += 1
                     #print ("Packet from GEMROC {}".format(self.reader.GEMROC_ID))
                 except Exception as e:
-                    print e
+                    print (e)
                     with open(self.reader.log_path, 'a') as f:
                         f.write("{} -- GEMROC {} TIMED_OUT\n".format(time.ctime(), self.reader.GEMROC_ID))
 
@@ -221,12 +221,12 @@ class reader:
             self.dataSock.bind((self.HOST_IP, self.HOST_PORT))
         except Exception as e:
 
-            print "--GEMROC {}-{}".format(self.GEMROC_ID,e)
+            print ("--GEMROC {}-{}".format(self.GEMROC_ID,e))
             Exception("TIMED_OUT")
             with open(self.log_path, 'a') as f:
                 f.write("{} -- GEMROC {} TIMED_OUT\n".format(time.ctime(), self.GEMROC_ID))
             self.TIMED_out=True
-            print "Can't bind the socket"
+            print ("Can't bind the socket")
 
         # self.dataSock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 8388608 )
         # print self.dataSock.getsockopt(socket.SOL_SOCKET,socket.SO_RCVBUF)
@@ -417,7 +417,7 @@ class reader:
         self.thr_scan_frames = np.ones(8)
         self.thr_scan_rate = np.zeros((8, 64))
         statinfo = os.stat(path)
-        print statinfo.st_size
+        print (statinfo.st_size)
         with open(path, 'r') as f:
             for i in range(0, statinfo.st_size / 8):
 
@@ -558,7 +558,7 @@ class reader:
             axarray[i].bar(np.arange(0, 64), thr_scan_copy[i, :])
 
     def check_TM_continuity(self, path):
-        print "OPEN {}".format(path)
+        print ("OPEN {}".format(path))
         LOCAL_L1_COUNT_31_6 = 0
         LOCAL_L1_COUNT_5_0 = 0
         LOCAL_L1_COUNT = 0

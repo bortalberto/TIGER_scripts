@@ -1,10 +1,12 @@
 from threading import Thread
-from Tkinter import *
 from lib import GEM_ACQ_classes as GEM_ACQ
 import numpy as np
-import ttk
+
+from tkinter import *
+from tkinter import filedialog
+from tkinter.ttk import Progressbar
+from tkinter.ttk import Notebook
 from multiprocessing import Process, Pipe
-import Queue
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 import matplotlib
@@ -14,7 +16,7 @@ from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
 OS = sys.platform
 if OS == 'win32':
     sep = '\\'
-elif OS == 'linux2':
+elif OS == 'linux2' or 'linux':
     sep = '/'
 else:
     print("ERROR: OS {} non compatible".format(OS))
@@ -26,7 +28,7 @@ class menu():
 
         self.error_window_main = Toplevel(main_menu)
         self.error_window_main.wm_title("Noise and thresholds")
-        self.tabControl = ttk.Notebook(self.error_window_main)  # Create Tab Control
+        self.tabControl = Notebook(self.error_window_main)  # Create Tab Control
 
         self.rate_tab=noise_rate_measure(self.error_window_main ,gemroc_handler,self.tabControl,main_menu_istance)
         self.rate_tab._insert("All system")
@@ -74,7 +76,7 @@ class noise_rate_measure ():
         Button(self.first_lane_frame, text="Rise (T) ch below cap", command=lambda : self.thr_equalizing("b")).pack(side=LEFT)
 
         # Button(self.first_lane_frame, text="Stop rate acquisition", command=self.stop_acq ).pack(side=LEFT)
-        fields_optionsG = self.GEMROC_reading_dict.keys()
+        fields_optionsG = list(self.GEMROC_reading_dict.keys())
         # fields_optionsG.append("All")
         OptionMenu(self.single_GEMROC, self.GEMROC, *fields_optionsG).grid(row=0, column=2, sticky=S, pady=4, columnspan=20)
         self.GEMROC.set(fields_optionsG[0])
@@ -138,7 +140,7 @@ class noise_rate_measure ():
             self.axe_total.set_yticklabels(["TIGER {}".format(tig_num) for tig_num in range(0, 11)])
         else:
             gem_num=int(sv.get().split(" ")[1])
-            print gem_num
+            print (gem_num)
             self.axe_total.set_xticks(np.arange(self.count_matrix_channel[gem_num].shape[0]))
             self.axe_total.set_yticks(np.arange(self.count_matrix_channel[gem_num].shape[1]))
             self.axe_total.set_xticklabels(["TIGER {}".format(tig_num) for tig_num in range(0, 11)])
@@ -319,7 +321,7 @@ class Acquire_rate():
                     if self.count_matrix[number][T][ch] > int(limit):
                         if branch == "T":
                             GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] - 1
-                            print "G:{} T:{} Ch:{} Lowering T at {}".format(GEMROC.GEMROC_ID, T, ch, GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'])
+                            print ("G:{} T:{} Ch:{} Lowering T at {}".format(GEMROC.GEMROC_ID, T, ch, GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1']))
                         if branch == "E":
                             GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] - 1
                         if branch == "both":
@@ -341,7 +343,7 @@ class Acquire_rate():
                     if self.count_matrix[number][T][ch] < int(limit):
                         if branch == "T":
                             GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] + 1
-                            print "G:{} T:{} Ch:{} Rising T at {}".format(GEMROC.GEMROC_ID, T, ch, GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'])
+                            print ("G:{} T:{} Ch:{} Rising T at {}".format(GEMROC.GEMROC_ID, T, ch, GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1']))
                         if branch == "E":
                             GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] + 1
                         if branch == "both":
@@ -370,7 +372,7 @@ class Acquire_rate():
                         scan_matrix=scan_matrix*(1/(acq_time))
                         diff_matrix=abs(scan_matrix-des_rate)
                         vt1, vt2 = (np.argmin(diff_matrix)//64, np.argmin(diff_matrix)%64)
-                        print "Ch {} -set vth1 {}, set vth 2 {}".format(ch,vt1,vt2)
+                        print( "Ch {} -set vth1 {}, set vth 2 {}".format(ch,vt1,vt2))
                         GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] = vt1
                         GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = vt2
                         GEMROC.GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg(c_inst,T,ch)
@@ -572,8 +574,8 @@ class Acquire_rate():
                         if T==0 and ch ==51:
                             # print ("----\nTIGER {} CH {}:\n, rate : {}".format(T,ch, self.count_matrix[number][T][ch]))
                             # print (status)
-                            print "Vth1: {} , VTh2: {}".format(GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'],GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'])
-                            print self.count_matrix[number][T][ch]
+                            print ("Vth1: {} , VTh2: {}".format(GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'],GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2']))
+                            print (self.count_matrix[number][T][ch])
                         if not status["done"]:
                             if self.count_matrix[number][T][ch] < limit[0]:
 

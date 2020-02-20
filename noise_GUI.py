@@ -2,21 +2,22 @@ import os
 import pickle
 import sys
 import time
-import tkFileDialog
-import ttk
-from Tkinter import *
 from multiprocessing import Process, Pipe
-from ttk import Progressbar
 import datetime
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
 
+
+from tkinter import *
+from tkinter import filedialog
+from tkinter.ttk import Progressbar
+from tkinter.ttk import Notebook
 OS = sys.platform
 if OS == 'win32':
     sep = '\\'
-elif OS == 'linux2':
+elif OS == 'linux2' or 'linux':
     sep = '/'
 else:
     print("ERROR: OS {} non compatible".format(OS))
@@ -98,7 +99,7 @@ class noise_measure():
         self.TP_rate.set(49000)
         self.number_of_TP = IntVar(self.error_window)
         self.number_of_TP.set(2)
-        fields_optionsG = self.GEMROC_reading_dict.keys()
+        fields_optionsG = list(self.GEMROC_reading_dict.keys())
         fields_optionsG.append("All")
         OptionMenu(self.second_row_frame, self.GEMROC_num, *fields_optionsG).pack(side=LEFT)
 
@@ -599,7 +600,7 @@ class noise_measure():
         with  open(filename, 'wb') as f:
             pickle.dump(test_r.thr_scan_rate, f)
 
-        print "GEMROC {} done".format(GEMROC_ID)
+        print ("GEMROC {} done".format(GEMROC_ID))
         position = (last * (lastch - firstch) + 1) + (lastch)
         pipe_out.send(position)
 
@@ -717,7 +718,7 @@ class noise_measure():
                         noise = "Canno't fit"
 
                     if Bas_parameters_fit[0] != "Fail" and TPparameters[0] != "Fail":
-                        print Bas_parameters_fit
+                        print (Bas_parameters_fit)
                         translated_gas = AN_CLASS.gaus(np.arange(TPparameters[0], 64, 1.0), *Bas_parameters_fit) + TPparameters[2]
                         self.line_list.append(self.plot_rate.plot(np.arange(TPparameters[0], 64, 1.0), translated_gas, '--', label="Gaussian baseline estimation"))
                     self.plot_rate.set_title("ROC {},TIG {}, CH {} , Sigma Noise={} fC".format(self.plotting_gemroc, self.plotting_TIGER, self.plotting_Channel, noise))

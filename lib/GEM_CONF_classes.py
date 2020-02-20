@@ -37,7 +37,7 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
       ## acr 2017-07-12 BEGIN implementing a parameter array loaded from a configuration file
       self.parameter_array = [0 for i in range(37)] # acr 2018-01-25 [0 for i in range(38)]
       with open(self.cfg_filename, "r") as f:
-         self.parameter_array = map(int, f)
+         self.parameter_array = [int(x) for x in f.readlines()]
       self.BufferBias = self.parameter_array [0] ## BufferBias_param; default 0
       self.TDCVcasN        = swap_order_N_bits(self.parameter_array [1],4)  # acr 2018-01-25 ## TDCVcasN_param; default 0
       self.TDCVcasP        = swap_order_N_bits(self.parameter_array [2],5)  # acr 2018-01-25 ## TDCVcasP_param; default 0
@@ -173,7 +173,7 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
    def reload_gcfg_settings_from_file(self, GCFGReg_def_fname_param): ## acr 2018-02-23 new method to reaload from a default file
       self.parameter_array = [0 for i in range(37)] # acr 2018-01-25 [0 for i in range(38)]
       with open(GCFGReg_def_fname_param, "r") as f:
-         self.parameter_array = map(int, f)
+         self.parameter_array = [int(x) for x in f.readlines()]
          f.close()
       self.BufferBias = self.parameter_array [0] ## BufferBias_param; default 0
       self.TDCVcasN        = swap_order_N_bits(self.parameter_array [1],4)  # acr 2018-01-25 ## TDCVcasN_param; default 0
@@ -219,7 +219,7 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
 
    def print_command_words(self):
       for i in range (0, len(self.command_words)):
-         print '%08X'% self.command_words[i]
+         print ('%08X'% self.command_words[i])
 
    def set_target_GEMROC(self, GEMROC_ID_param): # acr 2017-09-22
       self.TARGET_GEMROC_ID = GEMROC_ID_param & 0x1f
@@ -366,7 +366,7 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
    #                            ]
 ## acr 2018-01-29 BEGIN must take into account the different endianness for different fields
    def extract_parameters_from_UDP_packet(self):
-      print'\nList of parameters sent to TIGER%d:'%self.target_TIGER_ID
+      print ('\nList of parameters sent to TIGER%d:'%self.target_TIGER_ID)
       print ( "\nBufferBias:%02X;\t\tTDCVcasN:%02X;\t\tTDCVcasP:%02X;\t\tTDCVcasPHyst:%02X;" %( ((self.cmd_word10>>24)&0x3), swap_order_N_bits(((self.cmd_word10>>16)&0xF),4), swap_order_N_bits(((self.cmd_word10>>8)&0x1F),5), swap_order_N_bits(((self.cmd_word10>>0)&0x3F),6) ) )
       print ( "\nDiscFE_Ibias:%02X;\tBiasFE_PpreN:%02X;\tAVcasp_global:%02X;\tTDCcompVcas:%02X;" %( swap_order_N_bits(((self.cmd_word9>>24)&0x3F),6), ((self.cmd_word9>>16)&0x3F), swap_order_N_bits(((self.cmd_word9>>8)&0x1F),5), swap_order_N_bits(((self.cmd_word9>>0)&0xF),4) ) )
       print ( "\nTDCIref_cs:%02X;\t\tDiscVcasN:%02X;\t\tIntegVb1:%02X;\t\tBiasFE_A1:%02X;" %( swap_order_N_bits(((self.cmd_word8>>24)&0x1F),5), swap_order_N_bits(((self.cmd_word8>>16)&0xF),4), swap_order_N_bits(((self.cmd_word8>>8)&0x3F),6), ((self.cmd_word8>>0)&0xF) ) )
@@ -379,7 +379,7 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
       print ( "\nTDCClkdiv:%02X;\t\tVetoMode:%02X;\t\tCh_DebugMode:%02X;\tTxMode:%02X;" %( ((self.cmd_word2>>24)&0x1), ((self.cmd_word2>>16)&0x3F), ((self.cmd_word2>>8)&0x1 ), ((self.cmd_word2>>0)&0x3) ) )
       print ( "\nTxDDR:%02X;\t\tTxLinks:%02X;" %( ((self.cmd_word1>>24)&0x1), ((self.cmd_word1>>16)&0x3) ) )
    def extract_d_parameters_from_UDP_packet(self):
-      print'\nList of parameters sent to TIGER%d:'%self.target_TIGER_ID
+      print ('\nList of parameters sent to TIGER%d:'%self.target_TIGER_ID)
       print ( "\nBufferBias:%d;\t\tTDCVcasN:%d;\t\tTDCVcasP:%d;\t\tTDCVcasPHyst:%d;" %( ((self.cmd_word10>>24)&0x3), swap_order_N_bits(((self.cmd_word10>>16)&0xF),4), swap_order_N_bits(((self.cmd_word10>>8)&0x1F),5), swap_order_N_bits(((self.cmd_word10>>0)&0x3F),6) ) )
       print ( "\nDiscFE_Ibias:%d;\tBiasFE_PpreN:%d;\tAVcasp_global:%d;\tTDCcompVcas:%d;" %( swap_order_N_bits(((self.cmd_word9>>24)&0x3F),6), ((self.cmd_word9>>16)&0x3F), swap_order_N_bits(((self.cmd_word9>>8)&0x1F),5), swap_order_N_bits(((self.cmd_word9>>0)&0xF),4) ) )
       print ( "\nTDCIref_cs:%d;\t\tDiscVcasN:%d;\t\tIntegVb1:%d;\t\tBiasFE_A1:%d;" %( swap_order_N_bits(((self.cmd_word8>>24)&0x1F),5), swap_order_N_bits(((self.cmd_word8>>16)&0xF),4), swap_order_N_bits(((self.cmd_word8>>8)&0x3F),6), ((self.cmd_word8>>0)&0xF) ) )
@@ -398,7 +398,7 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
    def load_glob_conf(self,filename):
         with  open(filename,'rb') as f:
             self.Global_cfg_list=pickle.load(f)
-        print self.Global_cfg_list
+        print (self.Global_cfg_list)
         return 0
 
    def load_TP_cal(self,config_dict, TP_amplitude= "low"):
@@ -472,7 +472,7 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
       ## acr 2017-07-12 BEGIN implementing a parameter array loaded from a configuration file
       self.parameter_array = [0 for i in range(30)]
       with open(self.cfg_filename, "r") as f:
-         self.parameter_array = map(int, f)
+         self.parameter_array = [int(x) for x in f.readlines()]
       self.DisableHyst = self.parameter_array [0]  ## DisableHyst_param
       self.T2Hyst = self.parameter_array [1]  ## T2Hyst_param
       self.T1Hyst = self.parameter_array [2]  ## T1Hyst_param
@@ -569,7 +569,7 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
    def reload_chcfg_settings_from_file(self, ChCFGReg_def_fname_param): ## acr 2018-02-23 new method to reaload from a default file
       self.parameter_array = [0 for i in range(30)] # acr 2018-01-25 [0 for i in range(38)]
       with open(ChCFGReg_def_fname_param, "r") as f:
-         self.parameter_array = map(int, f)
+         self.parameter_array = self.parameter_array = [int(x) for x in f.readlines()]
       self.DisableHyst = self.parameter_array [0]  ## DisableHyst_param
       self.T2Hyst = self.parameter_array [1]  ## T2Hyst_param
       self.T1Hyst = self.parameter_array [2]  ## T1Hyst_param
@@ -606,7 +606,7 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
 
    def print_command_words(self):
       for i in range (0, len(self.command_words)):
-         print '%08X'% self.command_words[i]
+         print ('%08X'% self.command_words[i])
 
    def set_target_GEMROC(self, GEMROC_ID_param): # acr 2017-09-22
       self.TARGET_GEMROC_ID = GEMROC_ID_param & 0x1f
@@ -717,7 +717,7 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
                              self.cmd_word0
                               ]
    def extract_parameters_from_UDP_packet(self):
-      print'\nList of parameters sent to TIGER%d:'%self.target_TIGER_ID
+      print ('\nList of parameters sent to TIGER%d:'%self.target_TIGER_ID)
       print ("\ncmd_word8: DisableHyst:%02X;\t\tT2Hyst:%02X;\t\tT1Hyst:%02X;\t\tCh63ObufMSB:%02X;"                  %( ((self.cmd_word8>>24)&0x1), ((self.cmd_word8>>16)&0x7),  ((self.cmd_word8>>8)&0x7),  ((self.cmd_word8>>0)&0x1)  ) )
       print ("\ncmd_word7: TP_disable_FE:%02X;\t\tTDC_IB_E:%02X;\t\tTDC_IB_T:%02X;\t\tInteg:%02X;"                  %( ((self.cmd_word7>>24)&0x1), ((self.cmd_word7>>16)&0xF),  ((self.cmd_word7>>8)&0xF),  ((self.cmd_word7>>0)&0x1)  ) )
       print ("\ncmd_word6: PostAmpGain:%02X;\t\tFE_delay:%02X;\t\tVth_T2:%02X;\t\tVth_T1:%02X;"                     %( ((self.cmd_word6>>24)&0x3), ((self.cmd_word6>>16)&0x1F), ((self.cmd_word6>>8)&0x3F), ((self.cmd_word6>>0)&0x3F) ) )
@@ -757,7 +757,7 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
       #self.parameter_array = [0 for i in range(34)] # acr 2017-12-07 range extended from 30 to 34
       self.parameter_array = [0 for i in range(GEMROC_CMD_LV_Num_of_params-1)] # acr 2018-01-15
       with open(self.cfg_filename, "r") as f:
-         self.parameter_array = map(int, f)
+         self.parameter_array = [int(x) for x in f.readlines()]
 
       # acr 2018-01-15 NOTE: position of parameters in parameter file and index in parameter array redefined on the basis of GEMROC_CMD_LV_Num_of_params
       # setting of delay of timing signals to TIGER FEB0 in xns units (relative to TIGER_CLK_LVDS)
@@ -862,7 +862,7 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
 
    def print_command_words(self):
       for i in range (0, len(self.command_words)):
-         print '%08X'% self.command_words[i]
+         print ('%08X'% self.command_words[i])
 
    def set_target_GEMROC (self, GEMROC_ID_param):
       self.TARGET_GEMROC_ID = GEMROC_ID_param & 0x1F
@@ -932,37 +932,37 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
                             self.cmd_word0
                             ]
    def extract_parameters_from_UDP_packet(self):
-      print ( "\n   OVT_LIMIT_FEB3 = %04X %d")  % ( ((self.cmd_word10 >> 22) &  0xFF), ((self.cmd_word10 >> 22) &  0xFF) )
-      print ( "\n D_OVV_LIMIT_FEB3 = %04X %d ") % ( ((self.cmd_word10 >> 13) &  0x1FF), ((self.cmd_word10 >> 13) &  0x1FF) )
-      print ( "\n D_OVC_LIMIT_FEB3 = %04X %d")  % ( ((self.cmd_word10 >> 4) &  0x1FF), ((self.cmd_word10 >> 4) &  0x1FF) )
-      print ( "\n   OVT_LIMIT_FEB2 = %04X %d")  % ( ((self.cmd_word9 >> 22) &  0xFF), ((self.cmd_word9 >> 22) &  0xFF) )
-      print ( "\n D_OVV_LIMIT_FEB2 = %04X %d ") % ( ((self.cmd_word9 >> 13) &  0x1FF), ((self.cmd_word9 >> 13) &  0x1FF) )
-      print ( "\n D_OVC_LIMIT_FEB2 = %04X %d")  % ( ((self.cmd_word9 >> 4) &  0x1FF), ((self.cmd_word9 >> 4) &  0x1FF) )
-      print ( "\n   OVT_LIMIT_FEB1 = %04X %d")  % ( ((self.cmd_word8 >> 22) &  0xFF), ((self.cmd_word8 >> 22) &  0xFF) )
-      print ( "\n D_OVV_LIMIT_FEB1 = %04X %d ") % ( ((self.cmd_word8 >> 13) &  0x1FF), ((self.cmd_word8 >> 13) &  0x1FF) )
-      print ( "\n D_OVC_LIMIT_FEB1 = %04X %d")  % ( ((self.cmd_word8 >> 4) &  0x1FF), ((self.cmd_word8 >> 4) &  0x1FF) )
-      print ( "\n   OVT_LIMIT_FEB0 = %04X %d")  % ( ((self.cmd_word7 >> 22) &  0xFF), ((self.cmd_word7 >> 22) &  0xFF) )
-      print ( "\n D_OVV_LIMIT_FEB0 = %04X %d ") % ( ((self.cmd_word7 >> 13) &  0x1FF), ((self.cmd_word7 >> 13) &  0x1FF) )
-      print ( "\n D_OVC_LIMIT_FEB0 = %04X %d")  % ( ((self.cmd_word7 >> 4) &  0x1FF), ((self.cmd_word7 >> 4) &  0x1FF) )
-      print ( "\n A_OVV_LIMIT_FEB3 = %04X %d ") % ( ((self.cmd_word6 >> 13) &  0x1FF), ((self.cmd_word6 >> 13) &  0x1FF) )
-      print ( "\n A_OVC_LIMIT_FEB3 = %04X %d")  % ( ((self.cmd_word6 >> 4) &  0x1FF), ((self.cmd_word6 >> 4) &  0x1FF) )
-      print ( "\n A_OVV_LIMIT_FEB2 = %04X %d ") % ( ((self.cmd_word5 >> 13) &  0x1FF), ((self.cmd_word5 >> 13) &  0x1FF) )
-      print ( "\n A_OVC_LIMIT_FEB2 = %04X %d")  % ( ((self.cmd_word5 >> 4) &  0x1FF), ((self.cmd_word5 >> 4) &  0x1FF) )
-      print ( "\n A_OVV_LIMIT_FEB1 = %04X %d ") % ( ((self.cmd_word4 >> 13) &  0x1FF), ((self.cmd_word4 >> 13) &  0x1FF) )
-      print ( "\n A_OVC_LIMIT_FEB1 = %04X %d")  % ( ((self.cmd_word4 >> 4) &  0x1FF), ((self.cmd_word4 >> 4) &  0x1FF) )
-      print ( "\n A_OVV_LIMIT_FEB0 = %04X %d ") % ( ((self.cmd_word3 >> 13) &  0x1FF), ((self.cmd_word3 >> 13) &  0x1FF) )
-      print ( "\n A_OVC_LIMIT_FEB0 = %04X %d")  % ( ((self.cmd_word3 >> 4) &  0x1FF), ((self.cmd_word3 >> 4) &  0x1FF) )
-      print ( "\n ROC_OVT_LIMIT = %04X %d")  % ( ((self.cmd_word2 >> 24) &  0x3F), ((self.cmd_word2 >> 24) &  0x3F) )
-      print ( "\n XCVR_LPBCK_TST_EN = %d")  % ((self.cmd_word2 >> 18) &  0x1)
-      print ( "\n ROC_OVT_EN = %d")  % ((self.cmd_word2 >> 16) &  0x1)
-      print ( "\n FEB_OVT_EN_pattern = %01X %d")  % ( ((self.cmd_word2 >> 12) &  0xF), ((self.cmd_word2 >> 12) &  0xF) )
-      print ( "\n FEB_OVV_EN_pattern = %01X %d")  % ( ((self.cmd_word2 >> 8) &  0xF), ((self.cmd_word2 >> 8) &  0xF) )
-      print ( "\n FEB_OVC_EN_pattern = %01X %d")  % ( ((self.cmd_word2 >> 4) &  0xF), ((self.cmd_word2 >> 4) &  0xF) )
-      print ( "\n FEB_PWR_EN_pattern = %01X %d")  % ( ((self.cmd_word2 >> 0) &  0xF), ((self.cmd_word2 >> 0) &  0xF) )
-      print ( "\n TIMING_DLY_FEB3 = %02X %d")  % ( ((self.cmd_word1 >> 24) &  0x3F), ((self.cmd_word1 >> 24) &  0x3F) )
-      print ( "\n TIMING_DLY_FEB2 = %02X %d")  % ( ((self.cmd_word1 >> 16) &  0x3F), ((self.cmd_word1 >> 16) &  0x3F) )
-      print ( "\n TIMING_DLY_FEB1 = %02X %d")  % ( ((self.cmd_word1 >>  8) &  0x3F), ((self.cmd_word1 >>  8) &  0x3F) )
-      print ( "\n TIMING_DLY_FEB0 = %02X %d")  % ( ((self.cmd_word1 >>  0) &  0x3F), ((self.cmd_word1 >>  0) &  0x3F) )
+      print (( "\n   OVT_LIMIT_FEB3 = %04X %d")  % ( ((self.cmd_word10 >> 22) &  0xFF), ((self.cmd_word10 >> 22) &  0xFF) ))
+      print (( "\n D_OVV_LIMIT_FEB3 = %04X %d ") % ( ((self.cmd_word10 >> 13) &  0x1FF), ((self.cmd_word10 >> 13) &  0x1FF) ))
+      print (( "\n D_OVC_LIMIT_FEB3 = %04X %d")  % ( ((self.cmd_word10 >> 4) &  0x1FF), ((self.cmd_word10 >> 4) &  0x1FF) ))
+      print (( "\n   OVT_LIMIT_FEB2 = %04X %d")  % ( ((self.cmd_word9 >> 22) &  0xFF), ((self.cmd_word9 >> 22) &  0xFF) ))
+      print (( "\n D_OVV_LIMIT_FEB2 = %04X %d ") % ( ((self.cmd_word9 >> 13) &  0x1FF), ((self.cmd_word9 >> 13) &  0x1FF) ))
+      print (( "\n D_OVC_LIMIT_FEB2 = %04X %d")  % ( ((self.cmd_word9 >> 4) &  0x1FF), ((self.cmd_word9 >> 4) &  0x1FF) ))
+      print (( "\n   OVT_LIMIT_FEB1 = %04X %d")  % ( ((self.cmd_word8 >> 22) &  0xFF), ((self.cmd_word8 >> 22) &  0xFF) ))
+      print (( "\n D_OVV_LIMIT_FEB1 = %04X %d ") % ( ((self.cmd_word8 >> 13) &  0x1FF), ((self.cmd_word8 >> 13) &  0x1FF) ))
+      print (( "\n D_OVC_LIMIT_FEB1 = %04X %d")  % ( ((self.cmd_word8 >> 4) &  0x1FF), ((self.cmd_word8 >> 4) &  0x1FF) ))
+      print (( "\n   OVT_LIMIT_FEB0 = %04X %d")  % ( ((self.cmd_word7 >> 22) &  0xFF), ((self.cmd_word7 >> 22) &  0xFF) ))
+      print (( "\n D_OVV_LIMIT_FEB0 = %04X %d ") % ( ((self.cmd_word7 >> 13) &  0x1FF), ((self.cmd_word7 >> 13) &  0x1FF) ))
+      print (( "\n D_OVC_LIMIT_FEB0 = %04X %d")  % ( ((self.cmd_word7 >> 4) &  0x1FF), ((self.cmd_word7 >> 4) &  0x1FF) ))
+      print (( "\n A_OVV_LIMIT_FEB3 = %04X %d ") % ( ((self.cmd_word6 >> 13) &  0x1FF), ((self.cmd_word6 >> 13) &  0x1FF) ))
+      print (( "\n A_OVC_LIMIT_FEB3 = %04X %d")  % ( ((self.cmd_word6 >> 4) &  0x1FF), ((self.cmd_word6 >> 4) &  0x1FF) ))
+      print (( "\n A_OVV_LIMIT_FEB2 = %04X %d ") % ( ((self.cmd_word5 >> 13) &  0x1FF), ((self.cmd_word5 >> 13) &  0x1FF) ))
+      print (( "\n A_OVC_LIMIT_FEB2 = %04X %d")  % ( ((self.cmd_word5 >> 4) &  0x1FF), ((self.cmd_word5 >> 4) &  0x1FF) ))
+      print (( "\n A_OVV_LIMIT_FEB1 = %04X %d ") % ( ((self.cmd_word4 >> 13) &  0x1FF), ((self.cmd_word4 >> 13) &  0x1FF) ))
+      print (( "\n A_OVC_LIMIT_FEB1 = %04X %d")  % ( ((self.cmd_word4 >> 4) &  0x1FF), ((self.cmd_word4 >> 4) &  0x1FF) ))
+      print (( "\n A_OVV_LIMIT_FEB0 = %04X %d ") % ( ((self.cmd_word3 >> 13) &  0x1FF), ((self.cmd_word3 >> 13) &  0x1FF) ))
+      print (( "\n A_OVC_LIMIT_FEB0 = %04X %d")  % ( ((self.cmd_word3 >> 4) &  0x1FF), ((self.cmd_word3 >> 4) &  0x1FF) ))
+      print (( "\n ROC_OVT_LIMIT = %04X %d")  % ( ((self.cmd_word2 >> 24) &  0x3F), ((self.cmd_word2 >> 24) &  0x3F) ))
+      print (( "\n XCVR_LPBCK_TST_EN = %d")  % ((self.cmd_word2 >> 18) &  0x1))
+      print (( "\n ROC_OVT_EN = %d")  % ((self.cmd_word2 >> 16) &  0x1))
+      print (( "\n FEB_OVT_EN_pattern = %01X %d")  % ( ((self.cmd_word2 >> 12) &  0xF), ((self.cmd_word2 >> 12) &  0xF) ))
+      print (( "\n FEB_OVV_EN_pattern = %01X %d")  % ( ((self.cmd_word2 >> 8) &  0xF), ((self.cmd_word2 >> 8) &  0xF) ))
+      print (( "\n FEB_OVC_EN_pattern = %01X %d")  % ( ((self.cmd_word2 >> 4) &  0xF), ((self.cmd_word2 >> 4) &  0xF) ))
+      print (( "\n FEB_PWR_EN_pattern = %01X %d")  % ( ((self.cmd_word2 >> 0) &  0xF), ((self.cmd_word2 >> 0) &  0xF) ))
+      print (( "\n TIMING_DLY_FEB3 = %02X %d")  % ( ((self.cmd_word1 >> 24) &  0x3F), ((self.cmd_word1 >> 24) &  0x3F) ))
+      print (( "\n TIMING_DLY_FEB2 = %02X %d")  % ( ((self.cmd_word1 >> 16) &  0x3F), ((self.cmd_word1 >> 16) &  0x3F) ))
+      print (( "\n TIMING_DLY_FEB1 = %02X %d")  % ( ((self.cmd_word1 >>  8) &  0x3F), ((self.cmd_word1 >>  8) &  0x3F) ))
+      print (( "\n TIMING_DLY_FEB0 = %02X %d")  % ( ((self.cmd_word1 >>  0) &  0x3F), ((self.cmd_word1 >>  0) &  0x3F) ))
 
 
 # acr 2018-01-13 split the handling of the GEMROC LV and DAQ configuration parameters
@@ -982,7 +982,7 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
       self.cfg_filename = cfg_filename_param # acr 2018-02-19
       self.parameter_array = [0 for i in range(GEMROC_CMD_DAQ_Num_of_params-1)] # acr 2018-01-15
       with open(self.cfg_filename, "r") as f:
-         self.parameter_array = map(int, f)
+         self.parameter_array = [int(x) for x in f.readlines()]
       self.Dbg_functions_ctrl_bits_LoNibble = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-16] # acr 2018-04-24 last parameter written (at the top!) in default configuration file v4
       self.Dbg_functions_ctrl_bits_HiNibble = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-15] # Enable simulated L1 (periodic) Trigger Generation for TCAM[3..0]
       self.UDP_DATA_DESTINATION_IPADDR = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-14] # latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
@@ -1088,7 +1088,7 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
 
    def print_command_words(self):
       for i in range (0, len(self.command_words)):
-         print '%08X'% self.command_words[i]
+         print ('%08X'% self.command_words[i])
 
    def set_target_GEMROC (self, GEMROC_ID_param):
       self.TARGET_GEMROC_ID = GEMROC_ID_param & 0x1F

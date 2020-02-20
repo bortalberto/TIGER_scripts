@@ -4,8 +4,10 @@ import json
 import os
 import pickle
 import time
-import ttk
-from Tkinter import *
+from tkinter import *
+from tkinter import filedialog
+from tkinter.ttk import Progressbar
+from tkinter.ttk import Notebook
 from multiprocessing import Process, Pipe
 import subprocess
 from threading import Thread
@@ -18,16 +20,17 @@ import psutil
 TER=True
 try:
     from influxdb import InfluxDBClient
+
     DB = True
 except:
-    print "Can't find DB library"
+    print ("Can't find DB library")
     DB = False
 from lib import GEM_ACQ_classes as GEM_ACQ
 
 OS = sys.platform
 if OS == 'win32':
     sep = '\\'
-elif OS == 'linux2':
+elif OS == 'linux2' or 'linux':
     sep = '/'
 else:
     print("ERROR: OS {} non compatible".format(OS))
@@ -76,7 +79,7 @@ class menu():
             self.master_window = Toplevel(main_winz)
             self.main_winz = main_winz
             self.GEMROC_reading_dict = GEMROC_reading_dict
-            self.tabControl = ttk.Notebook(self.master_window)  # Create Tab Control
+            self.tabControl = Notebook(self.master_window)  # Create Tab Control
 
         self.master_window.wm_title("GEMROC acquisition")
         self.restart = BooleanVar(self.master_window)
@@ -328,7 +331,7 @@ class menu():
 
             self.run_folder = "RUN_0"
 
-        print "Data folder set: {}".format(self.run_folder)
+        print ("Data folder set: {}".format(self.run_folder))
         self.folder_label['text'] = "Folder : {}".format(self.run_folder)
 
     def new_run_folder(self):
@@ -341,7 +344,7 @@ class menu():
 
     def set_test_folder(self):
         self.run_folder = "test_folder"
-        print "Test folder set: {}".format(self.run_folder)
+        print ("Test folder set: {}".format(self.run_folder))
         self.folder_label['text'] = "Folder : {}".format(self.run_folder)
 
     def open_adv_acq(self):
@@ -361,7 +364,7 @@ class menu():
         self.canvas2.pack(side=LEFT, fill=BOTH)
         Label(frame, text='Acquisition set single TIGERs', font=("Courier", 16)).pack()
         self.button_dict = {}
-        for number, GEMROC in sorted(self.GEMROC_reading_dict.items(), cmp=sort_by_number):
+        for number, GEMROC in sorted(self.GEMROC_reading_dict.items(), key= find_number):
             a = Frame(frame)
             a.pack(pady=5, fill=BOTH)
             Label(a, text='{} Err(8/10):   '.format(number), font=("Courier", 10)).grid(row=1, column=0, sticky=NW, pady=4)
@@ -370,7 +373,7 @@ class menu():
                 self.error_dict810["{} TIGER {}".format(number, T)].grid(row=1, column=T + 1, sticky=NW, pady=4)
             Label(a, text='{} TIGERs:   '.format(number), font=("Courier", 10)).grid(row=0, column=0, sticky=NW, pady=4)
             for T in range(0, 8):
-                self.button_dict["{} TIGER {}".format(number, T)] = Button(a, text='{}'.format(T), width=4, height=1, font=("Courier", 10), command=lambda (number, T)=(number, T): self.Change_Reading_Tigers((number, T)))
+                self.button_dict["{} TIGER {}".format(number, T)] = Button(a, text='{}'.format(T), width=4, height=1, font=("Courier", 10), command=lambda : self.Change_Reading_Tigers(number, T))
                 self.button_dict["{} TIGER {}".format(number, T)].grid(row=0, column=T + 1, sticky=NW, pady=4)
             Label(a, text="___________________________________________________________________________________________________________________________").grid(row=2, column=0, sticky=NW, columnspan=12)
 
@@ -440,7 +443,7 @@ class menu():
     def myfunction(self, event):
         self.canvas2.configure(scrollregion=self.canvas2.bbox("all"), width=1200, height=700)
 
-    def Change_Reading_Tigers(self, (number, T), ForceOff=False):
+    def Change_Reading_Tigers(self, number, T, ForceOff=False):
 
         n = (self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"] >> T) & 0x1
         if n == 1:
@@ -455,7 +458,6 @@ class menu():
         self.refresh_buttons_TIGERs()
 
     def refresh_buttons_TIGERs(self):
-
         for number, GEMROC in self.GEMROC_reading_dict.items():
             for T in range(0, 8):
                 n = (self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"] >> T) & 0x1
@@ -611,30 +613,30 @@ class menu():
 
             time.sleep(4)
             if debug:
-                print "Restarting"
+                print ("Restarting")
             if self.PMT:
                 if debug:
-                    print "PMT down"
+                    print ("PMT down")
                 self.PMT_OFF()
             time.sleep(6)
             # self.father.reactivate_TIGERS()
             # self.refresh_buttons_TIGERs()
             self.father.Synch_reset()
             time.sleep(2)
-            print "Writing configuration"
+            print ("Writing configuration")
             # self.father.Synch_reset()
             self.father.load_default_config_parallel(set_check=False)
             # self.father.Synch_reset()
-            print "Configuration wrote"
+            print ("Configuration wrote")
 
             self.father.Synch_reset()
             if debug:
-                print "Setting pause"
+                print ("Setting pause")
             self.father.set_pause_mode(to_all=True, value=1)
 
             if self.PMT:
                 if debug:
-                    print "PMT ON"
+                    print ("PMT ON")
                 self.PMT_on()
             time.sleep(15)
             self.start_acq(First_launch=False)
@@ -663,7 +665,7 @@ class menu():
             with open(self.conffile, 'a+') as f:
                 f.write(json.dumps(conf_dict_total))
         if save_pickle:
-            with open(self.conffile + ".pkl", 'a+') as f:
+            with open(self.conffile + ".pkl", 'wb+') as f:
                 pickle.dump(conf_dict_total, f)
 
                 # print self.GEMROC_reading_dict.items()
@@ -756,7 +758,7 @@ class menu():
         else:
             self.sub_run_number = 0
 
-        print "Sub_run={}".format(self.sub_run_number)
+        print ("Sub_run={}".format(self.sub_run_number))
 
     def start_acq(self, First_launch=True):
         self.check_sub_run()
@@ -840,16 +842,16 @@ class menu():
                                 diff_E = int(splitted[7]) - GEMROC.c_inst.Channel_cfg_list[int(splitted[1])][int(splitted[3])]['Vth_T2']
                                 if diff_T > th_tollerance[0]:
                                     buff = buff + "{} TIGER {}, CHANNEL {}, thr T at {} from reference\n".format(number, int(splitted[1]), int(splitted[3]), diff_T)
-                                    print "{} TIGER {}, CHANNEL {}, thr T at {} from reference, using instead the reference value\n".format(number, int(splitted[1]), int(splitted[3]), diff_T)
+                                    print ("{} TIGER {}, CHANNEL {}, thr T at {} from reference, using instead the reference value\n".format(number, int(splitted[1]), int(splitted[3]), diff_T))
                                     GEMROC.c_inst.Channel_cfg_list[int(splitted[1])][int(splitted[3])]['Vth_T1']=int(splitted[5])
                                     thr_out_of_position += 1
                                 if diff_E > th_tollerance[1]:
                                     buff = buff + "{} TIGER {}, CHANNEL {}, thr E at {} from reference\n".format(number, int(splitted[1]), int(splitted[3]), diff_E)
-                                    print "{} TIGER {}, CHANNEL {}, thr E at {} from reference, using instead  the reference value\n".format(number, int(splitted[1]), int(splitted[3]), diff_E)
+                                    print ("{} TIGER {}, CHANNEL {}, thr E at {} from reference, using instead  the reference value\n".format(number, int(splitted[1]), int(splitted[3]), diff_E))
                                     GEMROC.c_inst.Channel_cfg_list[int(splitted[1])][int(splitted[3])]['Vth_T2']=int(splitted[7])
                                     thr_out_of_position += 1
                     else:
-                        print "Warning: no reference thr found for {}".format(number)
+                        print ("Warning: no reference thr found for {}".format(number))
                         self.messagge_field['text'] = "No reference thr found for {}!!".format(number)
                         self.LED_UDP['image'] = self.icon_bad
                         self.write_in_log("Warning: no reference thr found for {}".format(number))
@@ -912,9 +914,9 @@ class menu():
         self.run_analysis.set(False)
 
         if self.simple_analysis.get():
-            print "Stopping and analyzing"
+            print ("Stopping and analyzing")
         else:
-            print "Stopping"
+            print ("Stopping")
 
         self.but6.config(state='normal')
         if not self.std_alone:
@@ -1006,7 +1008,7 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
 
     def run(self):
         if self.caller.mode == 'TM':
-            print "Acquiring for {:.2f} seconds".format(float(self.caller.time) * 60)
+            print ("Acquiring for {:.2f} seconds".format(float(self.caller.time) * 60))
         self.start_time = time.time()
         check_time = 5
         check_counter = 0
@@ -1065,7 +1067,7 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
                 check_counter += 1
         self.stopper_thr.running = False
         if debug:
-            print "Error thread stopped"
+            print ("Error thread stopped")
 
     def check_buffer(self):
         """
@@ -1078,7 +1080,7 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
             buffer_status = subprocess.check_output(comm)
             for line in buffer_status.splitlines():
                 if "State" not in line and ("192.168.1.200" in line or "127.0.0.1" in line) and int(line.split()[1]) != 0:
-                    print line
+                    print (line)
                     GEMROC_key = "GEMROC {}".format(int(line.split()[3].split(":")[1]) - 58912 - 1)
                     if GEMROC_key in self.GEMROC_reading_dict:
                         self.GEMROC_reading_dict[GEMROC_key].GEM_COM.hard_flush_rcv_socket()
@@ -1167,20 +1169,20 @@ class stopper(Thread):  # In order to scan during configuration is mandatory to 
             else:
                 time_max = float(self.caller.time)
             if debug:
-                print"Elapsed time {}".format(time.time() - self.start_time)
+                print ("Elapsed time {}".format(time.time() - self.start_time))
             # print (time_max)
             if (time.time() - self.start_time) > (time_max):
                 self.caller.reset_810 = 0  # The stopper resets the reset counter if the subrun finished well
                 self.caller.reset_timedout = 0
                 if debug:
-                    print "Out of time"
+                    print ("Out of time")
                 try:
                     if debug:
-                        print "Stopping and relaunching"
+                        print ("Stopping and relaunching")
                     self.caller.relaunch_acq()
                 except Exception as e:
                     if debug:
-                        print "Something wrong: ".format(e)
+                        print ("Something wrong: ").format(e)
                     time.sleep(10)
                     self.caller.relaunch_acq()
                     return 0
