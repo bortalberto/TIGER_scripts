@@ -29,7 +29,7 @@ else:
     print("ERROR: OS {} non compatible".format(OS))
     sys.exit()
 
-local_test = True
+local_test = False
 
 class communication:  #The directory are declared here to avoid multiple declaration
 

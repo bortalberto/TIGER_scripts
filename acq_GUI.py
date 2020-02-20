@@ -97,7 +97,7 @@ class menu():
         self.save_conf_every_run = BooleanVar(self.master_window)
         self.simple_analysis = IntVar(self.master_window)
         self.run_analysis = IntVar(self.master_window)
-        if OS == 'linux2':
+        if OS == 'linux':
             self.master_window.wm_iconbitmap('@' + "." + sep + 'icons' + sep + 'ACQ_ICON.xbm')
         Label(self.master_window, text='Acquisition setting', font=("Courier", 25)).pack()
         if not std_alone:
@@ -935,8 +935,9 @@ class menu():
                 self.LED[int(i.GEMROC_ID)]['image'] = self.icon_bad
             else:
                 self.LED[int(i.GEMROC_ID)]['image'] = self.icon_on
-        for number, GEMROC in self.GEMROC_reading_dict.items():
-            GEMROC.GEM_COM.flush_rcv_socket()
+        if not self.std_alone:
+            for number, GEMROC in self.GEMROC_reading_dict.items():
+                GEMROC.GEM_COM.flush_rcv_socket()
         if self.simple_analysis.get() or self.run_analysis.get():
             self.build_errors()
         if self.error_GEMROC.get():

@@ -55,7 +55,7 @@ class menu():
         self.configuring_gemroc = 0
         # main window
         self.main_window = Tk()
-        if OS == 'linux2':
+        if OS == 'linux' :
             self.main_window.wm_iconbitmap('@'+"." + sep + 'icons' + sep +'CONF_ICON.xbm')
         self.icon_on = PhotoImage(file="." + sep + 'icons' + sep + 'on.gif')
         self.icon_off = PhotoImage(file="." + sep + 'icons' + sep + 'off.gif')
@@ -105,7 +105,7 @@ class menu():
         self.TP_num = IntVar(self.main_window)
         ##Select window
         self.select_window = Toplevel(self.main_window, height=400, width = 900)
-        if OS == 'linux2':
+        if OS == 'linux':
             self.select_window.wm_iconbitmap('@'+"." + sep + 'icons' + sep +'GUFO_ICON2.xbm')
 
         Title_frame = Frame (self.select_window)
@@ -937,11 +937,11 @@ class menu():
                         j += 1
                     self.field_array[i].grid(row=i + 2, column=1, sticky=W, pady=0)
                 else:
-                    self.label_array[i].grid(row=i + 2 - lenght / 2, column=3, sticky=W, pady=0)
+                    self.label_array[i].grid(row=int(i + 2 - lenght / 2), column=3, sticky=W, pady=0)
                     if line in self.dict_pram_list:
-                        self.input_array[line].grid(row=i + 2 - lenght / 2, column=5, sticky=W, pady=0)
+                        self.input_array[line].grid(row=int(i + 2 - lenght / 2), column=5, sticky=W, pady=0)
                         j += 1
-                    self.field_array[i].grid(row=i + 2 - lenght / 2, column=4, sticky=W, pady=0)
+                    self.field_array[i].grid(row=int(i + 2 - lenght / 2), column=4, sticky=W, pady=0)
 
                 i += 1
             thr_target = StringVar(self.third_row_frame)
@@ -999,13 +999,13 @@ class menu():
                 self.label_array.append(Label(single_use_frame, text=line))
 
                 if i < lenght / 2:
-                    self.label_array[i].grid(row=i + 2, column=0, sticky=W, pady=0)
-                    self.input_array[i].grid(row=i + 2, column=2, sticky=W, pady=0)
-                    self.field_array[i].grid(row=i + 2, column=1, sticky=W, pady=0)
+                    self.label_array[i].grid(row=int(i + 2), column=0, sticky=W, pady=0)
+                    self.input_array[i].grid(row=int(i + 2), column=2, sticky=W, pady=0)
+                    self.field_array[i].grid(row=int(i + 2), column=1, sticky=W, pady=0)
                 else:
-                    self.label_array[i].grid(row=i + 2 - lenght / 2, column=3, sticky=W, pady=0)
-                    self.input_array[i].grid(row=i + 2 - lenght / 2, column=5, sticky=W, pady=0)
-                    self.field_array[i].grid(row=i + 2 - lenght / 2, column=4, sticky=W, pady=0)
+                    self.label_array[i].grid(row=int(i + 2 - lenght / 2), column=3, sticky=W, pady=0)
+                    self.input_array[i].grid(row=int(i + 2 - lenght / 2), column=5, sticky=W, pady=0)
+                    self.field_array[i].grid(row=int(i + 2 - lenght / 2), column=4, sticky=W, pady=0)
 
                 i += 1
         saveframe = Frame(self.third_row_frame)
@@ -1034,7 +1034,6 @@ class menu():
             GEM_NAME = str(self.showing_GEMROC.get())
             File_name = filedialog.askopenfilename(initialdir="." + sep + "conf" + sep + "saves", title="Select file", filetypes=(("Channels configuration saves", "*.cs"), ("all files", "*.*")))
             self.GEMROC_reading_dict[GEM_NAME].c_inst.load_ch_conf(File_name)
-        self.LOAD_ON.config(state='normal')
 
     def LOAD_on_TIGER(self):
         GEMROC = self.showing_GEMROC.get()
@@ -1656,7 +1655,7 @@ class menu():
         TIGER = int(TIGER)
         CHANNEL = int(CHANNEL)
         if update_fields == True:
-            for key, elem in self.input_array.iteritems():
+            for key, elem in self.input_array.items():
                 if CHANNEL != 64:
                     GEMROC.c_inst.Channel_cfg_list[TIGER][CHANNEL][key] = int(elem.get())
                 else:

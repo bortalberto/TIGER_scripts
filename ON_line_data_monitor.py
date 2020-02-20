@@ -514,7 +514,8 @@ class GEMROC_decoder(Thread):
         while self.running:
 
             if len(self.data_buffer) > 0:
-                dato = self.data_buffer.popleft()
+                dato_raw = self.data_buffer.popleft()
+                dato=dato_raw.decode()
                 if "Srt" in dato or "End" in dato:
                     self.RUN = dato.split(" ")[3]
                     self.subRun = dato.split(" ")[5]
@@ -549,7 +550,7 @@ class GEMROC_decoder(Thread):
                                 # print(subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh", "-Q", str(self.RUN.split("_")[1]), str(self.subRun)]))
                                 subprocess.call(["root", "-b", "-l", "-q","/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/data/raw_root/data_status.cpp({})".format(int(self.RUN.split("_")[1]))])
                 else:
-                    self.decode(dato)
+                    self.decode(dato_raw)
             self.caller2.update_buffers(self.GEMROC_id, len(self.data_buffer))
             time.sleep(0.01)
             # def run(self):
@@ -570,7 +571,7 @@ class GEMROC_decoder(Thread):
         send_gem_error_updates = False
         LOCAL_L1_TIMESTAMP = 0
 
-        for i in range(0, len(pacchetto) / 8):
+        for i in range(0, int(len(pacchetto) / 8)):
             data = pacchetto[i * 8:i * 8 + 8]
             hexdata = binascii.hexlify(data)
             string = "{:064b}".format(int(hexdata, 16))

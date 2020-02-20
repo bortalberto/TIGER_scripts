@@ -28,9 +28,9 @@ class menu():
     def __init__(self, main_menu, gemroc_handler, main_menu_istance):
         self.error_window_main = Toplevel(main_menu)
         self.error_window_main.wm_title("Noise and thresholds")
-        if OS == 'linux2':
+        if OS == 'linux':
             self.error_window_main.wm_iconbitmap('@'+"." + sep + 'icons' + sep +'NOISE_ICON.xbm')
-        self.tabControl = ttk.Notebook(self.error_window_main)  # Create Tab Control
+        self.tabControl = Notebook(self.error_window_main)  # Create Tab Control
 
         noise_measure_ = noise_measure(self.error_window_main, gemroc_handler, self.tabControl, main_menu_istance)
         noise_measure_._insert("Noise measure")
@@ -124,7 +124,7 @@ class noise_measure():
         Label(self.second_row_frame, text='TP rate (Hz)   ').pack(side=LEFT)
         Entry(self.second_row_frame, textvariable=self.TP_rate, width=8, ).pack(side=LEFT)
         Label(self.second_row_frame, text='TP per frameword').pack(side=LEFT)
-        fields_optionsr = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
+        fields_optionsr = [int(x) for x in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)]
         OptionMenu(self.second_row_frame, self.number_of_TP, *fields_optionsr).pack(side=LEFT)
 
         self.third_row = Frame(self.error_window)
@@ -646,7 +646,7 @@ class noise_measure():
             GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['Periodic_TP_EN_pattern'] = 15
             GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['number_of_repetitions'] = 512 + self.number_of_TP.get()
             period = 8190 / self.number_of_TP.get()
-            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TP_period'] = period
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TP_period'] = int(period)
             GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TP_width'] = 10
             GEMROC_number.GEM_COM.DAQ_set_with_dict()
 

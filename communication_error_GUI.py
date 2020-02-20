@@ -32,7 +32,7 @@ class menu():
         self.TD_scan_result={}
         number_list=[]
         i=0
-        if OS == 'linux2':
+        if OS == 'linux':
             self.error_window.wm_iconbitmap('@'+"." + sep + 'icons' + sep +'810_ICON.xbm')
         for number, GEMROC in self.GEMROC_reading_dict.items():
             number_int=int(number.split()[1])
