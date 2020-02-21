@@ -610,23 +610,34 @@ class menu():
         self.stop_acq(True)
         if self.restart.get():
             self.messagge_field['text'] = "Restart process ongoing, please wait"
-
-            time.sleep(4)
+            time.sleep(2)
+            print ("Sending hard reset")
+            self.father.hard_reset(1)
             if debug:
                 print ("Restarting")
             if self.PMT:
                 if debug:
                     print ("PMT down")
                 self.PMT_OFF()
-            time.sleep(6)
+            time.sleep(15)
+            print ("Writing GEMROC configuration")
+            for number, GEMROC in self.GEMROC_reading_dict.items():
+                GEMROC.GEM_COM.DAQ_set_with_dict()
+                self.father.write_default_LV_conf(GEMROC)
+                GEMROC.GEM_COM.reload_default_td()
+
+            time.sleep(2)
+
             # self.father.reactivate_TIGERS()
             # self.refresh_buttons_TIGERs()
             self.father.Synch_reset()
-            time.sleep(2)
-            print ("Writing configuration")
+
+            self.father.Synch_reset()
+            print ("Writing TIGER configuration")
             # self.father.Synch_reset()
             self.father.load_default_config_parallel(set_check=False)
-            # self.father.Synch_reset()
+            self.father.Synch_reset()
+            self.father.load_default_config_parallel(set_check=False)
             print ("Configuration wrote")
 
             self.father.Synch_reset()

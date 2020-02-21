@@ -1095,7 +1095,7 @@ class communication:  #The directory are declared here to avoid multiple declara
                         COMMAND_STRING = 'CMD_GEMROC_TIMING_DELAYS_UPDATE'
                         command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
                         # print command_echo
-                        print ("GEMROC{} TD Set {}".format(self.GEMROC_ID, timing_array))
+                        # print ("GEMROC{} TD Set {}".format(self.GEMROC_ID, timing_array))
                         return command_echo
 
         except IOError:

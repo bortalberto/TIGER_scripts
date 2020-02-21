@@ -1048,7 +1048,7 @@ class menu():
         single_use_frame.grid(row=0, column=0, sticky=W, pady=2)
         Button(single_use_frame, text='Read configuration', command=self.read_LV).grid(row=0, column=1, sticky=W, pady=2)
         Button(single_use_frame, text='Read diag status', command=self.read_diagn_dipram).grid(row=0, column=2, sticky=W, pady=2)
-        Button(single_use_frame, text='Write default LV conf', command=self.write_default_LV_conf).grid(row=1, column=2, sticky=W, pady=2)
+        Button(single_use_frame, text='Write default LV conf', command= lambda: self.write_default_LV_conf(self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())])).grid(row=1, column=2, sticky=W, pady=2)
 
         clock_sampling_F=LabelFrame(single_use_frame)
         clock_sampling_F.grid(row=3, column=2, sticky=W, pady=2,columnspan=8, rowspan=8)
@@ -1407,9 +1407,8 @@ class menu():
             field = self.field_array[i]
             field['text'] = read_dict[label['text']]
 
-    def write_default_LV_conf(self):
+    def write_default_LV_conf(self,GEMROC):
         COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
-        GEMROC = self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())]
         GEMROC.GEM_COM.gemroc_LV_XX.set_gemroc_cmd_code(COMMAND_STRING, 1)
         GEMROC.GEM_COM.gemroc_LV_XX.update_command_words()
         # keep gemroc_LV_XX.print_command_words()
