@@ -388,7 +388,7 @@ class noise_measure():
             else:
                 dictio["{}".format(GEMROC_n)] = self.scan_matrixs[GEMROC_n]
 
-            for key in sorted(dictio.keys(), cmp=sort_by_number):
+            for key in sorted(dictio.keys(), key=find_number):
                 for T in range(0, 8):
                     for ch in range(0, 64):
                         for vth in range(0, 64):
@@ -416,7 +416,7 @@ class noise_measure():
         """
          Save the temperature (avoiding the bug)
         :param init:
-        :param branch:
+        :param inbranch:
         :return:
         """
 
@@ -750,12 +750,12 @@ class noise_measure():
         self.canvas.flush_events()
 
     def SAVE(self):
-        File_name = tkFileDialog.asksaveasfilename(initialdir="." + sep + "noise_scan" + sep + "saves", title="Select file", filetypes=(("Noise scan files", "*.ns"), ("all files", "*.*")))
+        File_name = filedialog.asksaveasfilename(initialdir="." + sep + "noise_scan" + sep + "saves", title="Select file", filetypes=(("Noise scan files", "*.ns"), ("all files", "*.*")))
         with  open(File_name, 'wb') as f:
             pickle.dump(self.scan_matrixs, f)
 
     def LOAD(self):
-        filename = tkFileDialog.askopenfilename(initialdir="." + sep + "noise_scan" + sep + "saves", title="Select file", filetypes=(("Noise scan files", "*.ns"), ("all files", "*.*")))
+        filename = filedialog.askopenfilename(initialdir="." + sep + "noise_scan" + sep + "saves", title="Select file", filetypes=(("Noise scan files", "*.ns"), ("all files", "*.*")))
         with open(filename, 'rb') as f:
             self.scan_matrixs = pickle.load(f)
 
