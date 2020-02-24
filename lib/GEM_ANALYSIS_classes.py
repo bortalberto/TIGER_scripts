@@ -350,9 +350,9 @@ class analisys_conf: #Analysis class used for configurations10
         if E_E[0] > maximum_matrix[1]:
             E_E[0] = int(maximum_matrix[1]-3)
 
-        for Vth_t in range(E_T[0],E_T[1]+1):
+        for Vth_t in range(int(E_T[0]), int(E_T[1]+1)):
             self.GEM_COM.Set_param_dict_channel(self.c_inst, "Vth_T1", T, j, Vth_t)
-            for Vth_e in range(E_E[0],E_E[1]+1):
+            for Vth_e in range(int(E_E[0]), int(E_E[1]+1)):
                 self.GEM_COM.Set_param_dict_channel(self.c_inst, "Vth_T2", T, j, Vth_e)
                 self.GEM_COM.set_counter(T, 0, j)
                 self.GEM_COM.SynchReset_to_TgtFEB(0, 1)

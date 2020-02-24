@@ -17,7 +17,7 @@ elif OS == 'linux2' or 'linux':
 else:
     print("ERROR: OS {} non compatible".format(OS))
     sys.exit()
-local_test = False
+local_test = True
 
 
 class Thread_handler(Thread):
@@ -212,6 +212,7 @@ class reader:
     def create_cloning_socket(self):
         self.cloning_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.cloning_sock.bind((self.address_for_cloning_sender, self.cloning_sending_port))
+
     def start_socket(self):
         self.TIMED_out=False
 
@@ -233,6 +234,7 @@ class reader:
 
     def __del__(self):
         return 0
+
     def acquire_rate(self, max_time):
         acq_matrix = np.zeros((8,64))
         self.beginning_time = time.time()
@@ -285,6 +287,7 @@ class reader:
                     acq_matrix[this_word["TIGER"]][this_word["Channel"]]+=1
         self.dataSock.close()
         return acq_matrix
+
     def build_hist_and_miss(self, frameword_check=True):
         self.thr_scan_matrix = np.zeros((8, 64))  # Tiger,Channel
         self.thr_scan_frames = np.ones(8)

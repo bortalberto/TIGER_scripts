@@ -375,7 +375,7 @@ class menu():
         try:
             self.client.write_points(json)
         except Exception as e:
-            print("Unable to log in infludb: {}".format(e))
+            print("Unable to log in infludb: {}\n json: {}".format(e,json))
 
 
 class online_reader(GEM_ACQ.reader):
@@ -512,10 +512,13 @@ class GEMROC_decoder(Thread):
     def run(self):
 
         while self.running:
-
             if len(self.data_buffer) > 0:
                 dato_raw = self.data_buffer.popleft()
-                dato=dato_raw.decode()
+                try:
+                    dato=dato_raw.decode()
+                except:
+                    self.decode(dato_raw)
+                    dato="Dato"
                 if "Srt" in dato or "End" in dato:
                     self.RUN = dato.split(" ")[3]
                     self.subRun = dato.split(" ")[5]
@@ -538,19 +541,18 @@ class GEMROC_decoder(Thread):
                             time.sleep(0.05)
                             os.system("cp ./data_folder/{}/SubRUN_{}_GEMROC_{}_TM.dat ~/data/{}/".format(self.RUN,self.subRun,self.GEMROC_id,self.RUN))
                             # print ("Copy return: {}".format(result))
-                            subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh","-F",str(self.RUN.split("_")[1]), str(self.subRun), str(self.GEMROC_id)])
+                            subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh","-F",str(self.RUN.split("_")[1]), str(self.subRun), str(self.GEMROC_id)],timeout=120)
                             # print(proc.communicate())
-                            key = self.caller2.GEMROC_acquiring_dict.keys()[0] #Only the first gemroc of the list will run the analysis
+                            key = list(self.caller2.GEMROC_acquiring_dict.keys())[0] #Only the first gemroc of the list will run the analysis
                             if self.GEMROC_id == int(key.split(" ")[1]):
+                                time.sleep(30)
                                 print ("GEMROC {} is running the data decode".format(self.GEMROC_id))
-                                subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh", "-V", str(self.RUN.split("_")[1]), str(self.subRun)])
-                                subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh", "-A", str(self.RUN.split("_")[1]), str(self.subRun)])
-                                subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh", "-E", str(self.RUN.split("_")[1]), str(self.subRun)])
-                                subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh", "-C", str(self.RUN.split("_")[1]), str(self.subRun)])
+                                subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh", "-V", str(self.RUN.split("_")[1]), str(self.subRun)],timeout=120)
+                                subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh", "-A", str(self.RUN.split("_")[1]), str(self.subRun)],timeout=120)
+                                # subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh", "-E", str(self.RUN.split("_")[1]), str(self.subRun)])
+                                # subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh", "-C", str(self.RUN.split("_")[1]), str(self.subRun)])
                                 # print(subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh", "-Q", str(self.RUN.split("_")[1]), str(self.subRun)]))
-                                subprocess.call(["root", "-b", "-l", "-q","/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/data/raw_root/data_status.cpp({})".format(int(self.RUN.split("_")[1]))])
-                else:
-                    self.decode(dato_raw)
+                                subprocess.call(["root", "-b", "-l", "-q","/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/data/raw_root/data_status.cpp({})".format(int(self.RUN.split("_")[1]))],timeout=120)
             self.caller2.update_buffers(self.GEMROC_id, len(self.data_buffer))
             time.sleep(0.01)
             # def run(self):
@@ -587,7 +589,7 @@ class GEMROC_decoder(Thread):
                 LOCAL_L1_COUNT = (LOCAL_L1_COUNT_31_6 << 6) + LOCAL_L1_COUNT_5_0
                 LOCAL_L1_TIMESTAMP = int_x & 0xFFFF
                 HITCOUNT = (int_x >> 16) & 0xFF
-                # s = 'HEADER :  ' + 'STATUS BIT[2:0]: %01X: ' % ((int_x >> 58) & 0x7) + 'LOCAL L1 COUNT: %08X ' % (LOCAL_L1_COUNT) + 'HitCount: %02X ' % ((int_x >> 16) & 0xFF) + 'LOCAL L1 TIMESTAMP: %04X; ' % (int_x & 0xFFFF)
+                s = 'HEADER :  ' + 'STATUS BIT[2:0]: %01X: ' % ((int_x >> 58) & 0x7) + 'LOCAL L1 COUNT: %08X ' % (LOCAL_L1_COUNT) + 'HitCount: %02X ' % ((int_x >> 16) & 0xFF) + 'LOCAL L1 TIMESTAMP: %04X; ' % (int_x & 0xFFFF)
                 # # s = 'HEADER :  ' + 'STATUS BIT[2:0]: %01X: '%((int_x >> 58)& 0x7) + 'LOCAL L1 COUNT: %08X '%( LOCAL_L1_COUNT ) + 'HitCount: %02X '%((int_x >> 16) & 0xFF) + 'LOCAL L1 TIMESTAMP: %04X\n'%(int_x & 0xFFFF)
                 # tipo = "h"
                 ##Prints status bits if changed:
@@ -620,8 +622,8 @@ class GEMROC_decoder(Thread):
                 LOCAL_L1_TS_minus_TIGER_COARSE_TS = LOCAL_L1_TIMESTAMP - ((int_x >> 32) & 0xFFFF)
                 channel = ((int_x >> 50) & 0x3F)
                 tiger = (int_x >> 59) & 0x7
-                # s = 'DATA   : TIGER: %01X ' % ((int_x >> 59) & 0x7) + 'L1_TS - TIGERCOARSE_TS: %d ' % (LOCAL_L1_TS_minus_TIGER_COARSE_TS) + 'LAST TIGER FRAME NUM[2:0]: %01X ' % ((int_x >> 56) & 0x7) + 'TIGER DATA: ChID [base10]: %d ' % ((int_x >> 50) & 0x3F) + 'tacID: %01X ' % (
-                #         (int_x >> 48) & 0x3) + 'Tcoarse: %04X ' % ((int_x >> 32) & 0xFFFF) + 'Ecoarse: %03X ' % ((int_x >> 20) & 0x3FF) + 'Tfine: %03X ' % ((int_x >> 10) & 0x3FF) + 'Efine: {} \n'.format(int_x & 0x3FF)
+                s = 'DATA   : TIGER: %01X ' % ((int_x >> 59) & 0x7) + 'L1_TS - TIGERCOARSE_TS: %d ' % (LOCAL_L1_TS_minus_TIGER_COARSE_TS) + 'LAST TIGER FRAME NUM[2:0]: %01X ' % ((int_x >> 56) & 0x7) + 'TIGER DATA: ChID [base10]: %d ' % ((int_x >> 50) & 0x3F) + 'tacID: %01X ' % (
+                         (int_x >> 48) & 0x3) + 'Tcoarse: %04X ' % ((int_x >> 32) & 0xFFFF) + 'Ecoarse: %03X ' % ((int_x >> 20) & 0x3FF) + 'Tfine: %03X ' % ((int_x >> 10) & 0x3FF) + 'Efine: {} \n'.format(int_x & 0x3FF)
                 # tipo = "d"
                 # print LOCAL_L1_TS_minus_TIGER_COARSE_TS
                 if channel == 62:  ##Counts TP
@@ -647,7 +649,7 @@ class GEMROC_decoder(Thread):
             if (((int_x & 0xF000000000000000) >> 60) == 0x4):
                 self.pkts_counter_rst += 1
                 self.pkts_counter += 1
-                # s = 'UDP_SEQNO: ' + 'GEMROC_ID: %02X ' % ((int_x >> 52) & 0x1F) + 'UDP_SEQNO_U48: %f' % (((int_x >> 32) & 0xFFFFF) + ((int_x >> 0) & 0xFFFFFFF)) + "  " \
+                s = 'UDP_SEQNO: ' + 'GEMROC_ID: %02X ' % ((int_x >> 52) & 0x1F) + 'UDP_SEQNO_U48: %f' % (((int_x >> 32) & 0xFFFFF) + ((int_x >> 0) & 0xFFFFFFF)) + "  " \
                     # Check UDP packets                                                                                                                                           "STATUS BIT[5:3]:{}".format((int_x >> 57) & 0x7)
                 if self.caller2.single_status_bit[self.GEMROC_id * 8 + 3]["text"] != ((int_x >> 57) & 0x1):
                     send_gem_error_updates = True
@@ -688,6 +690,7 @@ class GEMROC_decoder(Thread):
                     if self.last_UDP_number==self.caller2.UDP_trigger:
                         self.save_this=False #Stop saving packets
                         self.event_get_done=True
+                print (s)
         if self.pkts_counter_rst > self.number_pkts_to_log:
             eff_list = [elem / (self.number_pkts_to_log+1) for elem in self.number_TP_rst]
             self.log_perf(eff_list)
@@ -696,7 +699,6 @@ class GEMROC_decoder(Thread):
             send_gem_error_updates = True
         if send_gem_error_updates:  ##If any status bit changed, update it on DB
             self.send_gemroc_error_status_to_DB()
-
     def write_log(self, text):
         with open(self.logpath, 'a+') as logfile:
             logfile.write("{}\n".format(text))

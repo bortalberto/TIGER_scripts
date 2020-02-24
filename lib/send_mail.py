@@ -13,10 +13,10 @@ def impacchetta_recievers(rcv_list):
     rcv_string=""
     for elem in rcv_list:
         rcv_string=rcv_string+elem+"; "
-    return  rcv_string
+    return rcv_string
 smtp_server = "smtp.office365.com"
 port = 587  # For starttls
-sender_email = "cgemit@outlook.com"
+sender_email = "cgem_daq@outlook.com"
 with open("conf"+sep+"read_me") as f: pss = f.readline()
 password = (base64.b64decode(pss).decode("utf-8"))
 receiver_email=[]

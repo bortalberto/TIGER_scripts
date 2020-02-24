@@ -1838,6 +1838,16 @@ class menu():
         self.Launch_error_check_op['text']="Synch reset sent"
         self.Launch_error_check['text']="Synch reset sent"
 
+    def TCAM_reset(self, to_all=1):
+        if to_all == 1:
+            for number, GEMROC in self.GEMROC_reading_dict.items():
+                GEMROC.GEM_COM.SynchReset_to_TgtTCAM()
+        else:
+            GEMROC = self.showing_GEMROC.get()
+            self.GEMROC_reading_dict[GEMROC].GEM_COM.SynchReset_to_TgtTCAM()
+        self.Launch_error_check_op['text']="TCAM reset sent"
+        self.Launch_error_check['text']="TCAM reset sent"
+
     def error_led_update(self, update=1):
         self.ERROR_LED["image"] = self.icon_bad
         if update == 1:
@@ -1857,6 +1867,7 @@ class menu():
         self.load_default_config_parallel()
         self.Synch_reset(1)
         self.load_default_config_parallel()
+        self.TCAM_reset(1)
         self.Synch_reset(1)
         self.Synch_reset(1)
         self.Synch_reset(1)

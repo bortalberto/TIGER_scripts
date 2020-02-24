@@ -619,7 +619,7 @@ class menu():
                 if debug:
                     print ("PMT down")
                 self.PMT_OFF()
-            time.sleep(15)
+            time.sleep(17)
             print ("Writing GEMROC configuration")
             for number, GEMROC in self.GEMROC_reading_dict.items():
                 GEMROC.GEM_COM.DAQ_set_with_dict()
@@ -641,6 +641,7 @@ class menu():
             print ("Configuration wrote")
 
             self.father.Synch_reset()
+            self.father.TCAM_reset()
             if debug:
                 print ("Setting pause")
             self.father.set_pause_mode(to_all=True, value=1)
@@ -1230,4 +1231,4 @@ def send_to_db(json):
     try:
         client.write_points(json)
     except Exception as e:
-        print("Unable to log in infludb: {}".format(e))
+        print("Unable to log in infludb: {}\n json: {}".format(e, json))
