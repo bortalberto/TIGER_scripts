@@ -104,7 +104,7 @@ class reader:
                 #     s="Ciao Giulio\n"
                 with open(outfile, 'a') as ff:
                     ff.write("{}     {}".format(raw,s))
-    def write_txt_TM(self, path,outfile="out.txt"):
+    def write_txt_TM(self, path,outfile="out.txt", binary=0):
 
         LOCAL_L1_TIMESTAMP = 0
         HITCOUNT = 0
@@ -126,7 +126,6 @@ class reader:
                 string_inv = "".join(inverted)
                 int_x = int(string_inv, 2)
                 raw = "{:064b}  ".format(int_x)
-
                 s = '%016X \n' % int_x
                     # acr 2018-06-25 out_file.write(s)
 
@@ -156,14 +155,15 @@ class reader:
                 if (((int_x & 0xF000000000000000) >> 60) == 0x4):
                     s = 'UDP_SEQNO: ' + 'GEMROC_ID: %02X ' % ((int_x >> 52) & 0x1F) + 'UDP_SEQNO_U48: %012X' % (((int_x >> 32) & 0xFFFFF) + ((int_x >> 0) & 0xFFFFFFF)) + "  " \
                                                                                                                                                                           "STATUS BIT[5:3]:{}\n\n".format((int_x>>57)&0x7)
-                out_file.write(raw)
+                if binary==1:
+                    out_file.write(raw)
                 out_file.write(s)
 
             print 'finished writing file'
-    def  write_txt_TM_folder(self, path):
+    def  write_txt_TM_folder(self, path,binary=0):
         for data_file in glob.glob(path+"/*TM*.dat"):
             print data_file
-            self.write_txt_TM(data_file, outfile=data_file+"out.txt")
+            self.write_txt_TM(data_file, outfile=data_file+"out.txt",binary=binary)
 
     def  write_txt_TL_folder(self, path):
         for data_file in glob.glob(path+"/*TL*.dat"):

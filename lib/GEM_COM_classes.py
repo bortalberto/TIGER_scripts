@@ -29,7 +29,7 @@ else:
     print("ERROR: OS {} non compatible".format(OS))
     sys.exit()
 
-local_test = True
+local_test = False
 
 class communication:  #The directory are declared here to avoid multiple declaration
 
@@ -434,14 +434,14 @@ class communication:  #The directory are declared here to avoid multiple declara
             'ROC': {}
         }
         for key in (0, 1, 2, 3):
-            status_dict['status']['FEB{}'.format(key)]["TEMP[degC]"] = FEB_T[key]
-            status_dict['status']['FEB{}'.format(key)]["VD[mV]"] = FEB_VD[key]
-            status_dict['status']['FEB{}'.format(key)]["ID[mA]"] = FEB_ID[key]
-            status_dict['status']['FEB{}'.format(key)]["VA[mV]"] = FEB_VA[key]
-            status_dict['status']['FEB{}'.format(key)]["IA[mA]"] = FEB_IA[key]
-        status_dict['status']['ROC']["TEMP"] = ROC_T
+            status_dict['status']['FEB{}'.format(key)]["TEMP[degC]"] = round(FEB_T[key],2)
+            status_dict['status']['FEB{}'.format(key)]["VD[mV]"] = round (FEB_VD[key],2)
+            status_dict['status']['FEB{}'.format(key)]["ID[mA]"] = round (FEB_ID[key],2)
+            status_dict['status']['FEB{}'.format(key)]["VA[mV]"] = round (FEB_VA[key],2)
+            status_dict['status']['FEB{}'.format(key)]["IA[mA]"] = round (FEB_IA[key],2)
+        status_dict['status']['ROC']["TEMP"] = round (ROC_T,2)
         for key in (0, 1, 2, 3):
-            status_dict['limits']['FEB{}'.format(key)]["OVT_flag"] = FEB_OVT_FLAG[key]
+            status_dict['limits']['FEB{}'.format(key)]["OVT_flag"]  = FEB_OVT_FLAG[key]
             status_dict['limits']['FEB{}'.format(key)]["DOVV_flag"] = FEB_DOVV_FLAG[key]
             status_dict['limits']['FEB{}'.format(key)]["DOVC_flag"] = FEB_DOVC_FLAG[key]
             status_dict['limits']['FEB{}'.format(key)]["AOVV_flag"] = FEB_AOVV_FLAG[key]
@@ -1578,7 +1578,7 @@ class communication:  #The directory are declared here to avoid multiple declara
         gemroc_DAQ_inst.set_TL_nTM_ACQ(TL_nTM_ACQ)
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
         self.gemroc_DAQ_XX.DAQ_config_dict["TL_nTM_ACQ"] = (TL_nTM_ACQ & 0x1)
-        command_echo = self.send_GEMROC_DAQ_CMD_num_rep(gemroc_DAQ_inst, COMMAND_STRING, 1)
+        command_echo = self.send_GEMROC_DAQ_CMD_num_rep(COMMAND_STRING, 1)
         return command_echo
 
     def DAQ_TIGER_SET(self, gemroc_DAQ_inst, TCAM_Enable_pattern_param, Per_FEB_TP_Enable_pattern_param=0,
@@ -1601,7 +1601,7 @@ class communication:  #The directory are declared here to avoid multiple declara
         # print '\n number_of_repetitions = %d' % number_of_repetitions
         COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
         # acr 2018-04-023 command_echo = send_GEMROC_DAQ_CMD(self.GEMROC_ID, gemroc_DAQ_inst, COMMAND_STRING)
-        command_echo = self.send_GEMROC_DAQ_CMD_num_rep(gemroc_DAQ_inst, COMMAND_STRING, number_of_repetitions)
+        command_echo = self.send_GEMROC_DAQ_CMD_num_rep( COMMAND_STRING, number_of_repetitions)
         return command_echo
 
     ###-------Enables coommunication with a pattern of TIGER-----------------------------------------------------------###

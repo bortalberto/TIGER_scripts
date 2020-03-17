@@ -17,7 +17,7 @@ elif OS == 'linux2' or 'linux':
 else:
     print("ERROR: OS {} non compatible".format(OS))
     sys.exit()
-local_test = True
+local_test = False
 
 
 class Thread_handler(Thread):
@@ -220,6 +220,7 @@ class reader:
             self.dataSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.dataSock.settimeout(self.timeout_for_sockets)
             self.dataSock.bind((self.HOST_IP, self.HOST_PORT))
+            # self.dataSock.setblocking(False)
         except Exception as e:
 
             print ("--GEMROC {}-{}".format(self.GEMROC_ID,e))
@@ -335,63 +336,63 @@ class reader:
                                                                                                  (int_x >> 56) & 0x7, int(
                                                                                                      int_x >> 48) & 0x3F] + 1
 
-    def acquisition(self, savefile, frameword_check=True):
-        data, addr = self.dataSock.recvfrom(self.BUFSIZE)
-        savefile.write(data)  # Again, could be a similar problem? GM
-
-        hexdata = binascii.hexlify(data)
-
-        for x in range(0, len(hexdata) - 1, 16):
-            int_x = 0
-            for b in range(7, 0, -1):
-                hex_to_int = (int(hexdata[x + b * 2], 16)) * 16 + int(hexdata[x + b * 2 + 1], 16)
-                int_x = (int_x + hex_to_int) << 8
-            hex_to_int = (int(hexdata[x], 16)) * 16 + int(hexdata[x + 1], 16)  # acr 2017-11-17 this should fix the problem
-            int_x = (int_x + hex_to_int)
-            # raw = '%016X ' % int_x
-
-            if (((int_x & 0xFF00000000000000) >> 59) == 0x04):
-                # s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'HB: ' + 'Framecount: %08X ' % (
-                #         (int_x >> 15) & 0xFFFF) + 'SEUcount: %08X\n' % (int_x & 0x7FFF)
-                self.thr_scan_frames[(int_x >> 56) & 0x7] = self.thr_scan_frames[(int_x >> 56) & 0x7] + 1
-
-            # if (((int_x & 0xFF00000000000000) >> 59) == 0x08):
-            # s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'CW: ' + 'ChID: %02X ' % (
-            #         (int_x >> 24) & 0x3F) + ' CounterWord: %016X\n' % (int_x & 0x00FFFFFF)
-            if (((int_x & 0xFF00000000000000) >> 59) == 0x00):
-                # s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'EW: ' + 'ChID: %02X ' % (
-                #         (int_x >> 48) & 0x3F) + 'tacID: %01X ' % ((int_x >> 46) & 0x3) + 'Tcoarse: %04X ' % (
-                #             (int_x >> 30) & 0xFFFF) + 'Ecoarse: %03X ' % (
-                #             (int_x >> 20) & 0x3FF) + 'Tfine: %03X ' % ((int_x >> 10) & 0x3FF) + 'Efine: %03X \n' % (
-                #             int_x & 0x3FF)
-                self.thr_scan_matrix[(int_x >> 56) & 0x7, int(int_x >> 48) & 0x3F] = self.thr_scan_matrix[
-                                                                                         (int_x >> 56) & 0x7, int(
-                                                                                             int_x >> 48) & 0x3F] + 1
-
-            if (((int_x & 0xFF00000000000000) >> 59) == 0x04):  # Framewoird_integrity_check
-
-                self.thr_scan_frames[(int_x >> 56) & 0x7] = self.thr_scan_frames[(int_x >> 56) & 0x7] + 1
-
-                this_framecount = ((int_x >> 15) & 0xFFFF)
-                this_tiger = ((int_x >> 56) & 0x7)
-
-                if frameword_check:
-                    if self.first_framew[this_tiger] == 0:
-                        self.last_framew[this_tiger] = this_framecount
-                        self.first_framew[this_tiger] = 1
-                    else:
-                        if this_framecount == 0xffff:
-                            self.first_framew[this_tiger] = 0
-                        else:
-                            for F in range(int(self.last_framew[this_tiger]), int(this_framecount)):
-                                if self.last_framew[this_tiger] + 1 == this_framecount:
-                                    self.last_framew[this_tiger] = this_framecount
-                                    break
-                                else:
-                                    print ("Frameword {} from Tiger {} missing".format(hex(F + 1), this_tiger))
-                                    self.last_framew[this_tiger] = self.last_framew[this_tiger] + 1
-
-        return 0
+    # def acquisition(self, savefile, frameword_check=True):
+    #     data, addr = self.dataSock.recvfrom(self.BUFSIZE)
+    #     savefile.write(data)  # Again, could be a similar problem? GM
+    #
+    #     hexdata = binascii.hexlify(data)
+    #
+    #     for x in range(0, len(hexdata) - 1, 16):
+    #         int_x = 0
+    #         for b in range(7, 0, -1):
+    #             hex_to_int = (int(hexdata[x + b * 2], 16)) * 16 + int(hexdata[x + b * 2 + 1], 16)
+    #             int_x = (int_x + hex_to_int) << 8
+    #         hex_to_int = (int(hexdata[x], 16)) * 16 + int(hexdata[x + 1], 16)  # acr 2017-11-17 this should fix the problem
+    #         int_x = (int_x + hex_to_int)
+    #         # raw = '%016X ' % int_x
+    #
+    #         if (((int_x & 0xFF00000000000000) >> 59) == 0x04):
+    #             # s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'HB: ' + 'Framecount: %08X ' % (
+    #             #         (int_x >> 15) & 0xFFFF) + 'SEUcount: %08X\n' % (int_x & 0x7FFF)
+    #             self.thr_scan_frames[(int_x >> 56) & 0x7] = self.thr_scan_frames[(int_x >> 56) & 0x7] + 1
+    #
+    #         # if (((int_x & 0xFF00000000000000) >> 59) == 0x08):
+    #         # s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'CW: ' + 'ChID: %02X ' % (
+    #         #         (int_x >> 24) & 0x3F) + ' CounterWord: %016X\n' % (int_x & 0x00FFFFFF)
+    #         if (((int_x & 0xFF00000000000000) >> 59) == 0x00):
+    #             # s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'EW: ' + 'ChID: %02X ' % (
+    #             #         (int_x >> 48) & 0x3F) + 'tacID: %01X ' % ((int_x >> 46) & 0x3) + 'Tcoarse: %04X ' % (
+    #             #             (int_x >> 30) & 0xFFFF) + 'Ecoarse: %03X ' % (
+    #             #             (int_x >> 20) & 0x3FF) + 'Tfine: %03X ' % ((int_x >> 10) & 0x3FF) + 'Efine: %03X \n' % (
+    #             #             int_x & 0x3FF)
+    #             self.thr_scan_matrix[(int_x >> 56) & 0x7, int(int_x >> 48) & 0x3F] = self.thr_scan_matrix[
+    #                                                                                      (int_x >> 56) & 0x7, int(
+    #                                                                                          int_x >> 48) & 0x3F] + 1
+    #
+    #         if (((int_x & 0xFF00000000000000) >> 59) == 0x04):  # Framewoird_integrity_check
+    #
+    #             self.thr_scan_frames[(int_x >> 56) & 0x7] = self.thr_scan_frames[(int_x >> 56) & 0x7] + 1
+    #
+    #             this_framecount = ((int_x >> 15) & 0xFFFF)
+    #             this_tiger = ((int_x >> 56) & 0x7)
+    #
+    #             if frameword_check:
+    #                 if self.first_framew[this_tiger] == 0:
+    #                     self.last_framew[this_tiger] = this_framecount
+    #                     self.first_framew[this_tiger] = 1
+    #                 else:
+    #                     if this_framecount == 0xffff:
+    #                         self.first_framew[this_tiger] = 0
+    #                     else:
+    #                         for F in range(int(self.last_framew[this_tiger]), int(this_framecount)):
+    #                             if self.last_framew[this_tiger] + 1 == this_framecount:
+    #                                 self.last_framew[this_tiger] = this_framecount
+    #                                 break
+    #                             else:
+    #                                 print ("Frameword {} from Tiger {} missing".format(hex(F + 1), this_tiger))
+    #                                 self.last_framew[this_tiger] = self.last_framew[this_tiger] + 1
+    #
+    #     return 0
 
     def fast_acquisition(self, data_list_tmp):  # remove savefile to be added in a new class GM 11.06.18
         if self.local_test:

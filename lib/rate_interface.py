@@ -21,39 +21,40 @@ elif OS == 'linux2' or 'linux':
 else:
     print("ERROR: OS {} non compatible".format(OS))
     sys.exit()
-debug=True
+debug = True
+
 
 class menu():
-    def __init__(self,main_menu,gemroc_handler,main_menu_istance):
-
+    def __init__(self, main_menu, gemroc_handler, main_menu_istance):
         self.error_window_main = Toplevel(main_menu)
         self.error_window_main.wm_title("Noise and thresholds")
         self.tabControl = Notebook(self.error_window_main)  # Create Tab Control
 
-        self.rate_tab=noise_rate_measure(self.error_window_main ,gemroc_handler,self.tabControl,main_menu_istance)
+        self.rate_tab = noise_rate_measure(self.error_window_main, gemroc_handler, self.tabControl, main_menu_istance)
         self.rate_tab._insert("All system")
         self.rate_tab._init_windows()
         self.error_window_main.protocol("WM_DELETE_WINDOW", self.rate_tab.close_stopping)
 
         self.tabControl.pack(expand=1, fill="both")  # Pack to make visible
 
-class noise_rate_measure ():
-    def __init__(self,main_window,gemroc_handler,tab_control,main_menu_istance):
-        self.main_menu = main_menu_istance
-        self.title="Noise rate measure"
-        self.tabControl=tab_control
-        self.main_window=main_window
-        self.sampling_scan=False
-        self.GEMROC_reading_dict=gemroc_handler
-        self.all_sys_window=Frame(self.main_window)
 
-        self.start_frame=Frame(self.main_window)
+class noise_rate_measure():
+    def __init__(self, main_window, gemroc_handler, tab_control, main_menu_istance):
+        self.main_menu = main_menu_istance
+        self.title = "Noise rate measure"
+        self.tabControl = tab_control
+        self.main_window = main_window
+        self.sampling_scan = False
+        self.GEMROC_reading_dict = gemroc_handler
+        self.all_sys_window = Frame(self.main_window)
+
+        self.start_frame = Frame(self.main_window)
         self.start_frame.pack()
         # self.queue = Queue.Queue()
         # self.getterino=Get_rate(self,self.queue)
-        self.GMAX=int(max(int(key.split(" ")[1]) for key in self.GEMROC_reading_dict.keys()))
-        self.count_matrix_channel = np.zeros((self.GMAX+1, 8, 64))
-        self.count_matrix_TIGER = np.zeros((self.GMAX+1, 8))
+        self.GMAX = int(max(int(key.split(" ")[1]) for key in self.GEMROC_reading_dict.keys()))
+        self.count_matrix_channel = np.zeros((self.GMAX + 1, 8, 64))
+        self.count_matrix_TIGER = np.zeros((self.GMAX + 1, 8))
         # self.rate_matrix_channel = np.zeros((GMAX+1, 8, 64))
         # self.rate_matrix_TIGER = np.zeros((GMAX+1, 8))
         self.GEMROC = StringVar(self.main_window)
@@ -63,17 +64,17 @@ class noise_rate_measure ():
 
     def _init_windows(self):
         Label(self.all_sys_window, text=self.title, font=("Courier", 25)).grid(row=0, column=2, sticky=S, pady=4, columnspan=10)
-        self.first_lane_frame=Frame(self.start_frame)
-        self.first_lane_frame.grid(row=1, column=2, sticky=S, pady=4,columnspan=10)
+        self.first_lane_frame = Frame(self.start_frame)
+        self.first_lane_frame.grid(row=1, column=2, sticky=S, pady=4, columnspan=10)
         self.start_button = Button(self.first_lane_frame, text="Acquire one cycle", command=self.start_acq)
         self.start_button.pack(side=LEFT)
-        Button(self.first_lane_frame, text="Update plot", command=self.update_data ).pack(side=LEFT)
-        Button(self.first_lane_frame, text="Clear", command=self.clear ).pack(side=LEFT)
+        Button(self.first_lane_frame, text="Update plot", command=self.update_data).pack(side=LEFT)
+        Button(self.first_lane_frame, text="Clear", command=self.clear).pack(side=LEFT)
         Label(self.first_lane_frame, text="Rate cap").pack(side=LEFT)
-        self.cap=Entry(self.first_lane_frame, width=6)
+        self.cap = Entry(self.first_lane_frame, width=6)
         self.cap.pack(side=LEFT)
-        Button(self.first_lane_frame, text="Lower (T) ch above cap", command=lambda : self.thr_equalizing("a")).pack(side=LEFT)
-        Button(self.first_lane_frame, text="Rise (T) ch below cap", command=lambda : self.thr_equalizing("b")).pack(side=LEFT)
+        Button(self.first_lane_frame, text="Lower (T) ch above cap", command=lambda: self.thr_equalizing("a")).pack(side=LEFT)
+        Button(self.first_lane_frame, text="Rise (T) ch below cap", command=lambda: self.thr_equalizing("b")).pack(side=LEFT)
 
         # Button(self.first_lane_frame, text="Stop rate acquisition", command=self.stop_acq ).pack(side=LEFT)
         fields_optionsG = list(self.GEMROC_reading_dict.keys())
@@ -89,7 +90,7 @@ class noise_rate_measure ():
         """
         Create one plot for each tab mode
         """
-        self.plot_frame_total= Frame(self.all_sys_window)
+        self.plot_frame_total = Frame(self.all_sys_window)
         self.plot_frame_total.grid(row=2, column=2, sticky=S, pady=4, columnspan=20)
         self.fig_total = Figure(figsize=(10, 8))
         self.axe_total = self.fig_total.add_subplot(111)
@@ -101,15 +102,12 @@ class noise_rate_measure ():
         self.toolbar_total = NavigationToolbar2Tk(self.canvas_total, self.plot_frame_total)
         self.toolbar_total.draw()
 
-
-
-
-        self.plot_frame_GEMROC= Frame(self.single_GEMROC)
+        self.plot_frame_GEMROC = Frame(self.single_GEMROC)
         Checkbutton(self.single_GEMROC, text="Log", variable=self.logscale).grid(row=0, column=1, sticky=NW, pady=4)
         self.plot_frame_GEMROC.grid(row=2, column=2, sticky=S, pady=4, columnspan=20)
         self.fig_GEMROC = Figure(figsize=(10, 8))
         self.axe_GEMROC_A = self.fig_GEMROC.add_subplot(121)
-        self.heatmap_GEMROC_A,self.cbar_GEMRORA = heatmap(np.transpose(self.count_matrix_channel[0])[:32], ["Ch {}".format(tig_num) for tig_num in range(0, 32)], ["T {}".format(tig_num) for tig_num in range(0, 8)], ax=self.axe_GEMROC_A, cmap="winter", cbarlabel="Rate [hit/s]",spawn_cb=True)
+        self.heatmap_GEMROC_A, self.cbar_GEMRORA = heatmap(np.transpose(self.count_matrix_channel[0])[:32], ["Ch {}".format(tig_num) for tig_num in range(0, 32)], ["T {}".format(tig_num) for tig_num in range(0, 8)], ax=self.axe_GEMROC_A, cmap="winter", cbarlabel="Rate [hit/s]", spawn_cb=True)
         self.axe_GEMROC_B = self.fig_GEMROC.add_subplot(122)
         self.heatmap_GEMROC_B, self.cbar_GEMRORB = heatmap(np.transpose(self.count_matrix_channel[0])[32:], ["Ch {}".format(tig_num) for tig_num in range(32, 64)], ["T {}".format(tig_num) for tig_num in range(0, 8)], ax=self.axe_GEMROC_B, cmap="winter", cbarlabel="Rate [hit/s]")
         self.canvas_GEMROC = FigureCanvasTkAgg(self.fig_GEMROC, master=self.plot_frame_GEMROC)
@@ -118,8 +116,8 @@ class noise_rate_measure ():
         self.canvas_GEMROC.flush_events()
         self.toolbar_GEMROC = NavigationToolbar2Tk(self.canvas_GEMROC, self.plot_frame_GEMROC)
         self.toolbar_GEMROC.draw()
-        self.acquire_thread= Acquire_rate(self,self.GEMROC_reading_dict)
-        Button(self.first_lane_frame, text="Autotune thr", command=lambda : self.acquire_thread.procedural_scan_handler(self.GEMROC_reading_dict)).pack(side=LEFT)
+        self.acquire_thread = Acquire_rate(self, self.GEMROC_reading_dict)
+        Button(self.first_lane_frame, text="Autotune thr", command=lambda: self.acquire_thread.procedural_scan_handler(self.GEMROC_reading_dict)).pack(side=LEFT)
 
     def change_plot_G(self, sv):
         # print sv.get()
@@ -131,16 +129,16 @@ class noise_rate_measure ():
         #     self.cbar.remov()
         #     self.heatmap,  = heatmap(self.count_matrix_channel[gem_num], ["TIGER {}".format(tig_num) for tig_num in range(0, 8)], ["Channel {}".format(ch_num) for ch_num in range(0, 64)], ax=self.axe, cmap="YlGn", cbarlabel="Rate [hits/s]")
 
-        if sv.get()=="All":
-        #     self.heatmap.remove()
+        if sv.get() == "All":
+            #     self.heatmap.remove()
 
             self.axe_total.set_xticks(np.arange(self.count_matrix_TIGER.shape[1]))
             self.axe_total.set_yticks(np.arange(self.count_matrix_TIGER.shape[0]))
             self.axe_total.set_xticklabels(["GEMROC {}".format(gem_num) for gem_num in range(0, 20)])
             self.axe_total.set_yticklabels(["TIGER {}".format(tig_num) for tig_num in range(0, 11)])
         else:
-            gem_num=int(sv.get().split(" ")[1])
-            print (gem_num)
+            gem_num = int(sv.get().split(" ")[1])
+            print(gem_num)
             self.axe_total.set_xticks(np.arange(self.count_matrix_channel[gem_num].shape[0]))
             self.axe_total.set_yticks(np.arange(self.count_matrix_channel[gem_num].shape[1]))
             self.axe_total.set_xticklabels(["TIGER {}".format(tig_num) for tig_num in range(0, 11)])
@@ -149,10 +147,10 @@ class noise_rate_measure ():
         self.canvas_total.draw()
         self.canvas_total.flush_events()
 
-    def _insert(self,name):
+    def _insert(self, name):
         self.tabControl.add(self.all_sys_window, text=name)  # Add the tab
-        self.single_GEMROC=Frame(self.main_window)
-        self.single_TIGER=Frame(self.main_window)
+        self.single_GEMROC = Frame(self.main_window)
+        self.single_TIGER = Frame(self.main_window)
         self.tabControl.add(self.single_GEMROC, text="Single GEMROC")  # Add the tab
         # self.tabControl.add(self.single_TIGER, text="Single TIGER")  # Add the tab
 
@@ -161,9 +159,9 @@ class noise_rate_measure ():
         Start rate acquisition
         :return:
         """
-        self.start_button["state"]="disabled"
+        self.start_button["state"] = "disabled"
         self.acquire_thread.acquire()
-        self.start_button["state"]="normal"
+        self.start_button["state"] = "normal"
 
     # def stop_acq(self):
     #     """
@@ -177,35 +175,35 @@ class noise_rate_measure ():
     #     except AttributeError:
     #         pass
 
-
     def clear(self):
         """
         clear the matrix
         :return:
         """
-        self.count_matrix_channel = np.zeros((self.GMAX+1, 8, 64))
+        self.count_matrix_channel = np.zeros((self.GMAX + 1, 8, 64))
         self.acquire_thread.number_of_cycles = 0
+
     def thr_equalizing(self, mode):
         """
         Lower all the channel threhsolds with the rate above/below a certain level.
         :return:
         """
-        if mode=="a":
+        if mode == "a":
             self.acquire_thread.lower_thr_above(self.cap.get(), "T")
-        if mode=="b":
+        if mode == "b":
             self.acquire_thread.rise_thr_below(self.cap.get(), "T")
 
     def update_data(self):
-        if self.tabControl.index("current") ==0:
+        if self.tabControl.index("current") == 0:
             for key in self.GEMROC_reading_dict.keys():
-                for T in range (0,8):
+                for T in range(0, 8):
                     G = key.split(" ")[1]
                     self.count_matrix_TIGER[int(G)][T] = np.sum(self.count_matrix_channel[int(G)][T])
-                    self.update_plot(self.count_matrix_TIGER/self.acquire_thread.number_of_cycles,"tot")
-        if self.tabControl.index("current") ==1:
-            self.update_plot(self.count_matrix_channel,"GEMROC")
+                    self.update_plot(self.count_matrix_TIGER / self.acquire_thread.number_of_cycles, "tot")
+        if self.tabControl.index("current") == 1:
+            self.update_plot(self.count_matrix_channel, "GEMROC")
 
-    def update_plot(self,data,mode):
+    def update_plot(self, data, mode):
         if mode == "tot":
             # print "G0 : {}".format(data[0])
             # print "G1 : {}".format(data[1])
@@ -213,16 +211,15 @@ class noise_rate_measure ():
             self.canvas_total.draw()
             self.canvas_total.flush_events()
             try:
-                MIN_count=int(np.min(data))
-                MAX_count=int(np.max(data))
+                MIN_count = int(np.min(data))
+                MAX_count = int(np.max(data))
             except ValueError:
-                MIN_count=1
-                MAX_count=1
+                MIN_count = 1
+                MAX_count = 1
             self.cbar_total.set_clim(vmin=MIN_count, vmax=MAX_count)
             cbar_ticks = np.linspace(MIN_count, MAX_count, num=11, endpoint=True)
             self.cbar_total.set_ticks(cbar_ticks)
             self.cbar_total.draw_all()
-
 
         if mode == "GEMROC":
             G = int(self.GEMROC.get().split(" ")[1])
@@ -231,8 +228,8 @@ class noise_rate_measure ():
             MAX_count = int(np.max(np.transpose(data[G])))
 
             if self.logscale.get():
-                data=np.ma.log10(data)
-                data=data.filled(0)
+                data = np.ma.log10(data)
+                data = data.filled(0)
                 MIN_count = int(np.min(np.transpose(data[G])))
                 MAX_count = int(np.max(np.transpose(data[G])))
 
@@ -268,7 +265,6 @@ class noise_rate_measure ():
         # self.stop_acq()
         self.main_window.destroy()
 
-
     def rework_window(self):
         self.plot_frame_total.destroy()
         self.first_lane_frame.destroy()
@@ -276,13 +272,15 @@ class noise_rate_measure ():
 
         self.main_window.update()
 
+
 class Acquire_rate():
     """
     Multhithread class to acquire rate while updating the plots
     """
+
     def __init__(self, caller, GEMROC_handler):
-        self.caller=caller
-        self.count_matrix = np.zeros((self.caller.GMAX+1, 8, 64))
+        self.caller = caller
+        self.count_matrix = np.zeros((self.caller.GMAX + 1, 8, 64))
         self.number_of_cycles = 0
         self.GEMROC_reading_dic = GEMROC_handler
         self.running = True
@@ -292,7 +290,7 @@ class Acquire_rate():
     def acquire(self):
         # while self.running:
         self.number_of_cycles += 1
-        for key,GEMROC in self.GEMROC_reading_dic.items():
+        for key, GEMROC in self.GEMROC_reading_dic.items():
             number = int(key.split(" ")[1])
             GEMROC.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["TL_nTM_ACQ"] = 1
             GEMROC.GEM_COM.DAQ_set_with_dict()
@@ -314,14 +312,14 @@ class Acquire_rate():
         :param branch:
         :return:
         """
-        for key,GEMROC in self.GEMROC_reading_dic.items():
+        for key, GEMROC in self.GEMROC_reading_dic.items():
             number = int(key.split(" ")[1])
-            for T in range (0,8):
-                for ch in range(0,64):
+            for T in range(0, 8):
+                for ch in range(0, 64):
                     if self.count_matrix[number][T][ch] > int(limit):
                         if branch == "T":
                             GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] - 1
-                            print ("G:{} T:{} Ch:{} Lowering T at {}".format(GEMROC.GEMROC_ID, T, ch, GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1']))
+                            print("G:{} T:{} Ch:{} Lowering T at {}".format(GEMROC.GEMROC_ID, T, ch, GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1']))
                         if branch == "E":
                             GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] - 1
                         if branch == "both":
@@ -335,22 +333,22 @@ class Acquire_rate():
         :param branch:
         :return:
         """
-        #TODO aggiungere blocco per VTH=0
-        for key,GEMROC in self.GEMROC_reading_dic.items():
+        # TODO aggiungere blocco per VTH=0
+        for key, GEMROC in self.GEMROC_reading_dic.items():
             number = int(key.split(" ")[1])
-            for T in range (0,8):
-                for ch in range(0,64):
+            for T in range(0, 8):
+                for ch in range(0, 64):
                     if self.count_matrix[number][T][ch] < int(limit):
                         if branch == "T":
                             GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] + 1
-                            print ("G:{} T:{} Ch:{} Rising T at {}".format(GEMROC.GEMROC_ID, T, ch, GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1']))
+                            print("G:{} T:{} Ch:{} Rising T at {}".format(GEMROC.GEMROC_ID, T, ch, GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1']))
                         if branch == "E":
                             GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] + 1
                         if branch == "both":
                             GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] + 1
                             GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] + 1
 
-    def procedural_scan(self, des_rate=3500, number_of_cycle=2, square_size=5,acq_time=0.1):
+    def procedural_scan(self, des_rate=3500, number_of_cycle=2, square_size=5, acq_time=0.1):
         """
         Scan in a square around the current thr, then set the threshold to the value more near to the desidered value
         :param des_rate:
@@ -361,30 +359,29 @@ class Acquire_rate():
         for cycle in range(number_of_cycle):
             for key, GEMROC in self.GEMROC_reading_dic.items():
                 GEM_COM = GEMROC.GEM_COM
-                for T in range(0,8):
-                    for ch in range(0,64):
-                        vt1_current= GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1']
-                        vt2_current= GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2']
+                for T in range(0, 8):
+                    for ch in range(0, 64):
+                        vt1_current = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1']
+                        vt2_current = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2']
                         c_inst = GEMROC.c_inst
                         g_inst = GEMROC.g_inst
                         test_c = AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst)
-                        scan_matrix=test_c.both_vth_scan(T, ch, extreme_t=(vt1_current-(square_size-1)/2,vt1_current+(square_size-1)/2), extreme_e=((vt2_current-(square_size-1)/2,vt2_current+(square_size-1)/2)),acq_time=acq_time)
-                        scan_matrix=scan_matrix*(1/(acq_time))
-                        diff_matrix=abs(scan_matrix-des_rate)
-                        vt1, vt2 = (np.argmin(diff_matrix)//64, np.argmin(diff_matrix)%64)
-                        print( "Ch {} -set vth1 {}, set vth 2 {}".format(ch,vt1,vt2))
+                        scan_matrix = test_c.both_vth_scan(T, ch, extreme_t=(vt1_current - (square_size - 1) / 2, vt1_current + (square_size - 1) / 2), extreme_e=((vt2_current - (square_size - 1) / 2, vt2_current + (square_size - 1) / 2)), acq_time=acq_time)
+                        scan_matrix = scan_matrix * (1 / (acq_time))
+                        diff_matrix = abs(scan_matrix - des_rate)
+                        vt1, vt2 = (np.argmin(diff_matrix) // 64, np.argmin(diff_matrix) % 64)
+                        print("Ch {} -set vth1 {}, set vth 2 {}".format(ch, vt1, vt2))
                         GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] = vt1
                         GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = vt2
-                        GEMROC.GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg(c_inst,T,ch)
+                        GEMROC.GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg(c_inst, T, ch)
 
-
-    def procedural_scan_handler(self,GEMROC_DICT,des_rate=5000,number_of_cycle=1,square_size=5,acq_time=0.1, scanning_map=np.ones((22,8,64)), conditional=False, tollerance=0.5,map=False):
+    def procedural_scan_handler(self, GEMROC_DICT, des_rate=5000, number_of_cycle=1, square_size=5, acq_time=0.1, scanning_map=np.ones((22, 8, 64)), conditional=False, tollerance=0.5, map=False):
         process_list = []
         pipe_list = []
         for key, GEMROC in GEMROC_DICT.items():
             pipe_in, pipe_out = Pipe()
             if map:
-                where_to_scan=np.where(scanning_map==1)
+                where_to_scan = np.where(scanning_map == 1)
                 p = Process(target=self.procedural_scan_process_map, args=(GEMROC, pipe_out, des_rate, number_of_cycle, square_size, acq_time, where_to_scan, conditional, tollerance))
             else:
                 p = Process(target=self.procedural_scan_process, args=(GEMROC, pipe_out, des_rate, number_of_cycle, square_size, acq_time, conditional, tollerance))
@@ -392,18 +389,17 @@ class Acquire_rate():
             process_list.append(p)
             pipe_list.append(pipe_in)
             p.start()
-        while len(process_list)>0:
-            for process,pipe in zip(process_list,pipe_list):
+        while len(process_list) > 0:
+            for process, pipe in zip(process_list, pipe_list):
                 scan_out = []
                 scan_out.append(pipe.recv())
                 if int(scan_out[0]) != 65:
-
                     scan_out.append(pipe.recv())
                     scan_out.append(pipe.recv())
                     scan_out.append(pipe.recv())
                     scan_out.append(pipe.recv())
 
-                    GEMROC=GEMROC_DICT["GEMROC {}".format(int(scan_out[0]))]
+                    GEMROC = GEMROC_DICT["GEMROC {}".format(int(scan_out[0]))]
                     GEMROC.c_inst.Channel_cfg_list[int(scan_out[1])][int(scan_out[2])]['Vth_T1'] = int(scan_out[3])
                     GEMROC.c_inst.Channel_cfg_list[int(scan_out[1])][int(scan_out[2])]['Vth_T2'] = int(scan_out[4])
 
@@ -411,12 +407,12 @@ class Acquire_rate():
                     process_list.remove(process)
                     pipe_list.remove(pipe)
 
-
-    def procedural_scan_process_map(self,GEMROC, pipeout, des_rate=3500, number_of_cycle=2, square_size=5,acq_time=0.1, scanning_map=np.ones((22,8,64)), conditional=False, tollerance=0.5):
+    def procedural_scan_process_map(self, GEMROC, pipeout, des_rate=3500, number_of_cycle=2, square_size=5, acq_time=0.1, scanning_map=np.ones((22, 8, 64)), conditional=False, tollerance=0.5):
         """
         Procedural scan with multiprocess
         :param GEMROC:
         :param pipeout:
+        :param des_rate:
         :param des_rate:
         :param number_of_cycle:
         :param square_size:
@@ -426,61 +422,62 @@ class Acquire_rate():
         GEM_COM = GEMROC.GEM_COM
 
         if debug:
-            with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "w+") as logfile:
+            with open("./log_folder/auto_thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "w+") as logfile:
                 logfile.write("Aiming at {}, {} cycles, with scanning map, conditional = {}".format(des_rate, number_of_cycle, conditional))
-            print ("Starting")
+            print("Starting")
         for cycle in range(number_of_cycle):
-                # maximum_matrix = GEM_COM.load_thr_max_from_file()
-                for G, T, ch in zip(scanning_map[0], scanning_map[1], scanning_map[2]):
-                    if G==GEM_COM.GEMROC_ID:
-                        if debug:
-                            print ("Cycle: {}/{} -- G{}, T{}, CH{}".format(cycle+1, number_of_cycle, G, T, ch))
-                            with open ("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID),"a+") as logfile:
-                                logfile.write("T {} ch{}\n".format(T,ch))
-                        vt1_current= GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1']
-                        vt2_current= GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2']
-                        c_inst = GEMROC.c_inst
-                        g_inst = GEMROC.g_inst
-                        if debug:
-                            with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
-                                logfile.write("Current VT1-{} VT2-{}\n".format(vt1_current, vt2_current))
-                        test_c = AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst)
+            # maximum_matrix = GEM_COM.load_thr_max_from_file()
+            for G, T, ch in zip(scanning_map[0], scanning_map[1], scanning_map[2]):
+                if G == GEM_COM.GEMROC_ID:
+                    if debug:
+                        print("Cycle: {}/{} -- G{}, T{}, CH{}".format(cycle + 1, number_of_cycle, G, T, ch))
+                        with open("./log_folder/auto_thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
+                            logfile.write("T {} ch{}\n".format(T, ch))
+                    vt1_current = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1']
+                    vt2_current = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2']
+                    c_inst = GEMROC.c_inst
+                    g_inst = GEMROC.g_inst
+                    if debug:
+                        with open("./log_folder/auto_thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
+                            logfile.write("Current VT1-{} VT2-{}\n".format(vt1_current, vt2_current))
+                    test_c = AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst)
 
-
-                        if conditional:
-                            scan_matrix=test_c.both_vth_scan(T, ch, extreme_t=(vt1_current,vt1_current), extreme_e=(vt2_current,vt2_current),acq_time=acq_time)
-                            scan_matrix = scan_matrix * (1 / (acq_time))
-                            if scan_matrix[vt1_current][vt2_current]<des_rate*(1+tollerance) and  scan_matrix[vt1_current][vt2_current]>des_rate*(1-tollerance):
-                                if debug:
-                                    with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
-                                        logfile.write("No need to change gemroc {}, TIGER {}, channel{}\n".format(GEMROC.GEMROC_ID, T, ch))
-                                pipeout.send(GEM_COM.GEMROC_ID)
-                                pipeout.send(T)
-                                pipeout.send(ch)
-                                pipeout.send(vt1_current)
-                                pipeout.send(vt2_current)
-                                continue
-                        scan_matrix=test_c.both_vth_scan(T, ch, extreme_t=(vt1_current-(square_size-1)/2,vt1_current+(square_size-1)/2), extreme_e=((vt2_current-(square_size-1)/2,vt2_current+(square_size-1)/2)),acq_time=acq_time)
-                        scan_matrix=scan_matrix*(1/(acq_time))
-                        diff_matrix=abs(scan_matrix-des_rate)
-                        vt1, vt2 = (np.argmin(diff_matrix)//64, np.argmin(diff_matrix)%64)
-                        # print "T {} Ch {} -set vth1 {}, set vth 2 {}".format(T,ch,vt1,vt2)
-                        GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] = vt1
-                        GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = vt2
-                        if debug:
-                            with open ("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID),"a+") as logfile:
-                                logfile.write("VT1 = {}, VT2 = {}\n".format(vt1,vt2))
-                        GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg(c_inst,T,ch)
-                        pipeout.send(GEM_COM.GEMROC_ID)
-                        pipeout.send(T)
-                        pipeout.send(ch)
-                        pipeout.send(vt1)
-                        pipeout.send(vt2)
-
-
+                    if conditional:
+                        scan_matrix = test_c.both_vth_scan(T, ch, extreme_t=(vt1_current, vt1_current), extreme_e=(vt2_current, vt2_current), acq_time=acq_time)
+                        scan_matrix = scan_matrix * (1 / (acq_time))
+                        if scan_matrix[vt1_current][vt2_current] < des_rate * (1 + tollerance) and scan_matrix[vt1_current][vt2_current] > des_rate * (1 - tollerance):
+                            if debug:
+                                with open("./log_folder/auto_thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
+                                    logfile.write("No need to change gemroc {}, TIGER {}, channel{}\n".format(GEMROC.GEMROC_ID, T, ch))
+                            pipeout.send(GEM_COM.GEMROC_ID)
+                            pipeout.send(T)
+                            pipeout.send(ch)
+                            pipeout.send(vt1_current)
+                            pipeout.send(vt2_current)
+                            continue
+                    scan_matrix = test_c.both_vth_scan(T, ch, extreme_t=(vt1_current - (square_size - 1) / 2, vt1_current + (square_size - 1) / 2), extreme_e=((vt2_current - (square_size - 1) / 2, vt2_current + (square_size - 1) / 2)), acq_time=acq_time)
+                    scan_matrix = scan_matrix * (1 / (acq_time))
+                    diff_matrix = abs(scan_matrix - des_rate)
+                    vt1, vt2 = (np.argmin(diff_matrix) // 64, np.argmin(diff_matrix) % 64)
+                    # print "T {} Ch {} -set vth1 {}, set vth 2 {}".format(T,ch,vt1,vt2)
+                    if vt1 == 0:
+                        vt1 = vt1_current + 1
+                    if vt2 == 0:
+                        vt2 = vt2_current + 1
+                    GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] = vt1
+                    GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = vt2
+                    if debug:
+                        with open("./log_folder/auto_thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
+                            logfile.write("VT1 = {}, VT2 = {}\n".format(vt1, vt2))
+                    GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg(c_inst, T, ch)
+                    pipeout.send(GEM_COM.GEMROC_ID)
+                    pipeout.send(T)
+                    pipeout.send(ch)
+                    pipeout.send(vt1)
+                    pipeout.send(vt2)
 
         pipeout.send(65)
-        print ("GEMROC {} done".format(GEM_COM.GEMROC_ID))
+        print("GEMROC {} done".format(GEM_COM.GEMROC_ID))
         return
 
     def procedural_scan_process(self, GEMROC, pipeout, des_rate=3500, number_of_cycle=2, square_size=5, acq_time=0.1, conditional=False, tollerance=0.5):
@@ -498,22 +495,22 @@ class Acquire_rate():
         GEM_COM = GEMROC.GEM_COM
 
         if debug:
-            with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "w+") as logfile:
+            with open("./log_folder/auto_thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "w+") as logfile:
                 logfile.write("Aiming at {}, {} cycles, conditional = {}".format(des_rate, number_of_cycle, conditional))
-            print ("Starting")
+            print("Starting")
         for cycle in range(number_of_cycle):
             # maximum_matrix = GEM_COM.load_thr_max_from_file()
             for T in range(0, 8):
                 for ch in range(0, 64):
                     if debug:
-                        with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
+                        with open("./log_folder/auto_thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
                             logfile.write("T {} ch{}\n".format(T, ch))
                     vt1_current = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1']
                     vt2_current = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2']
                     c_inst = GEMROC.c_inst
                     g_inst = GEMROC.g_inst
                     if debug:
-                        with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
+                        with open("./log_folder/auto_thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
                             logfile.write("Current VT1-{} VT2-{}\n".format(vt1_current, vt2_current))
                     test_c = AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst)
 
@@ -522,7 +519,7 @@ class Acquire_rate():
                         scan_matrix = scan_matrix * (1 / (acq_time))
                         if scan_matrix[vt1_current][vt2_current] < des_rate * (1 + tollerance) and scan_matrix[vt1_current][vt2_current] > des_rate * (1 - tollerance):
                             if debug:
-                                with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
+                                with open("./log_folder/auto_thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
                                     logfile.write("No need to change gemroc {}, TIGER {}, channel{}\n".format(GEMROC.GEMROC_ID, T, ch))
                             pipeout.send(GEM_COM.GEMROC_ID)
                             pipeout.send(T)
@@ -531,8 +528,8 @@ class Acquire_rate():
                             pipeout.send(vt2_current)
                             continue
                         elif debug:
-                            with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
-                                logfile.write("Tollerated rate {}-{}, acquired rate: {}\n".format(des_rate * (1 + tollerance),des_rate * (1 - tollerance),scan_matrix[vt1_current][vt2_current]))
+                            with open("./log_folder/auto_thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
+                                logfile.write("Tollerated rate {}-{}, acquired rate: {}\n".format(des_rate * (1 + tollerance), des_rate * (1 - tollerance), scan_matrix[vt1_current][vt2_current]))
                     scan_matrix = test_c.both_vth_scan(T, ch, extreme_t=(vt1_current - (square_size - 1) / 2, vt1_current + (square_size - 1) / 2), extreme_e=((vt2_current - (square_size - 1) / 2, vt2_current + (square_size - 1) / 2)), acq_time=acq_time)
                     scan_matrix = scan_matrix * (1 / (acq_time))
                     diff_matrix = abs(scan_matrix - des_rate)
@@ -541,7 +538,7 @@ class Acquire_rate():
                     GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] = vt1
                     GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = vt2
                     if debug:
-                        with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
+                        with open("./log_folder/auto_thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:
                             logfile.write("VT1 = {}, VT2 = {}\n".format(vt1, vt2))
                     GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg(c_inst, T, ch)
                     pipeout.send(GEM_COM.GEMROC_ID)
@@ -549,54 +546,55 @@ class Acquire_rate():
                     pipeout.send(ch)
                     pipeout.send(vt1)
                     pipeout.send(vt2)
-                print ("T {} done".format(T))
+                print("T {} done".format(T))
 
         pipeout.send(65)
         return
+
     def diagonal_walk(self, limit=(3000, 4500), number_of_cycle=45):
-        ch_status={}
+        ch_status = {}
         for key, GEMROC in self.GEMROC_reading_dic.items():
-            ch_status[key]={}
-            for T in range (0,8):
-                ch_status[key][T]={}
-                for k in range (0,64):
-                    ch_status[key][T][k]={"last_br" : "E",
-                                       # "last_last_br":"T",
-                                       "last_move":1,
-                                       # "last_last_move": 1,
-                                       "done": False}
+            ch_status[key] = {}
+            for T in range(0, 8):
+                ch_status[key][T] = {}
+                for k in range(0, 64):
+                    ch_status[key][T][k] = {"last_br": "E",
+                                            # "last_last_br":"T",
+                                            "last_move": 1,
+                                            # "last_last_move": 1,
+                                            "done": False}
         for cycle in range(number_of_cycle):
             for key, GEMROC in self.GEMROC_reading_dic.items():
                 number = int(key.split(" ")[1])
                 for T in range(0, 2):
                     for ch in range(0, 64):
-                        status=ch_status[key][T][ch]
-                        if T==0 and ch ==51:
+                        status = ch_status[key][T][ch]
+                        if T == 0 and ch == 51:
                             # print ("----\nTIGER {} CH {}:\n, rate : {}".format(T,ch, self.count_matrix[number][T][ch]))
                             # print (status)
-                            print ("Vth1: {} , VTh2: {}".format(GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'],GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2']))
-                            print (self.count_matrix[number][T][ch])
+                            print("Vth1: {} , VTh2: {}".format(GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'], GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2']))
+                            print(self.count_matrix[number][T][ch])
                         if not status["done"]:
                             if self.count_matrix[number][T][ch] < limit[0]:
 
-                                if status["last_move"]==-1:#If i arrive here coming back from a change in the other direction,
+                                if status["last_move"] == -1:  # If i arrive here coming back from a change in the other direction,
                                     # status["last_last_br"] = status["last_br"] #Save last last br
-                                    self.change_thr(GEMROC, T, ch, status["last_br"], 1)  #undo_last_op
+                                    self.change_thr(GEMROC, T, ch, status["last_br"], 1)  # undo_last_op
                                     status["last_br"] = self.swap_branch(status["last_br"])  # Change branch
                                     self.change_thr(GEMROC, T, ch, status["last_br"], -1)  # Move on the other branch in the opposite direction
                                     status["last_move"] = 1
                                 else:
                                     # Standard
                                     # status["last_last_br"] = status["last_br"] #Save last last br
-                                    status["last_br"] = self.swap_branch( status["last_br"]) #Change branch
-                                    self.change_thr(GEMROC,T,ch,status["last_br"],1) #Move on the other branch
-                                    status["last_move"]=1
+                                    status["last_br"] = self.swap_branch(status["last_br"])  # Change branch
+                                    self.change_thr(GEMROC, T, ch, status["last_br"], 1)  # Move on the other branch
+                                    status["last_move"] = 1
 
                             elif self.count_matrix[number][T][ch] > limit[1]:
 
-                                if status["last_move"]==1: #If i arrive here coming back from a change in the other direction,
+                                if status["last_move"] == 1:  # If i arrive here coming back from a change in the other direction,
                                     # status["last_last_br"] = status["last_br"] #Save last last br
-                                    self.change_thr(GEMROC, T, ch, status["last_br"], -1)  #undo_last_op
+                                    self.change_thr(GEMROC, T, ch, status["last_br"], -1)  # undo_last_op
                                     status["last_br"] = self.swap_branch(status["last_br"])  # Change branch
                                     self.change_thr(GEMROC, T, ch, status["last_br"], 1)  # Move on the other branch in the opposite direction
                                     status["last_move"] = -1
@@ -610,31 +608,32 @@ class Acquire_rate():
                             else:
                                 status["done"] = True
                         else:
-                            if self.count_matrix[number][T][ch] < limit[0]/3 or self.count_matrix[number][T][ch] > limit[1]*3:
+                            if self.count_matrix[number][T][ch] < limit[0] / 3 or self.count_matrix[number][T][ch] > limit[1] * 3:
                                 status["done"] = False
-
 
             self.caller.main_menu.load_default_config_parallel(set_check=False)
             self.caller.clear()
             self.acquire()
 
-    def change_thr(self,GEMROC,T,ch,branch,move):
+    def change_thr(self, GEMROC, T, ch, branch, move):
         if branch == "E":
-            if GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2']+move<63:
+            if GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] + move < 63:
                 GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] + move
-            if GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2']+move<1:
-                GEMROC.c_inst.Channel_cfg_list[T][ch]['TriggerMode']=3
+            if GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] + move < 1:
+                GEMROC.c_inst.Channel_cfg_list[T][ch]['TriggerMode'] = 3
         if branch == "T":
-            if GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1']+move<63:
+            if GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] + move < 63:
                 GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] + move
-            if GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1']+move<1:
-                GEMROC.c_inst.Channel_cfg_list[T][ch]['TriggerMode']=3
-        return branch,move
+            if GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] + move < 1:
+                GEMROC.c_inst.Channel_cfg_list[T][ch]['TriggerMode'] = 3
+        return branch, move
 
     def swap_branch(self, last_branch):
-        if last_branch=="E":
+        if last_branch == "E":
             return "T"
         return "E"
+
+
 # class Get_rate(Thread):
 #     """
 #     Thread to get the numbers and update plots
@@ -656,7 +655,7 @@ class Acquire_rate():
 #                 time.sleep(0.2)
 
 def heatmap(data, row_labels, col_labels, ax=None,
-            cbar_kw={}, cbarlabel="",spawn_cb=True, **kwargs):
+            cbar_kw={}, cbarlabel="", spawn_cb=True, **kwargs):
     """
     Create a heatmap from a numpy array and two lists of labels.
 
@@ -709,8 +708,8 @@ def heatmap(data, row_labels, col_labels, ax=None,
     for edge, spine in ax.spines.items():
         spine.set_visible(False)
 
-    ax.set_xticks(np.arange(data.shape[1]+1)-.5, minor=True)
-    ax.set_yticks(np.arange(data.shape[0]+1)-.5, minor=True)
+    ax.set_xticks(np.arange(data.shape[1] + 1) - .5, minor=True)
+    ax.set_yticks(np.arange(data.shape[0] + 1) - .5, minor=True)
     ax.grid(which="minor", color="w", linestyle='-', linewidth=1)
     ax.tick_params(which="minor", bottom=False, left=False)
     if spawn_cb:
@@ -754,7 +753,7 @@ def annotate_heatmap(im, data=None, valfmt="{x:.2f}",
     if threshold is not None:
         threshold = im.norm(threshold)
     else:
-        threshold = im.norm(data.max())/2.
+        threshold = im.norm(data.max()) / 2.
 
     # Set default alignment to center, but allow it to be
     # overwritten by textkw.
@@ -776,4 +775,3 @@ def annotate_heatmap(im, data=None, valfmt="{x:.2f}",
             texts.append(text)
 
     return texts
-

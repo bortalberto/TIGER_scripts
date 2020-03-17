@@ -327,7 +327,7 @@ class analisys_conf: #Analysis class used for configurations10
         E_T=[extreme_t[0],extreme_t[1]]
         E_E=[extreme_e[0],extreme_e[1]]
         if DEBUG:
-            with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(self.GEMROC_ID), "a") as logfile:
+            with open("./log_folder/auto_thr_setting_log_GEMROC{}.txt".format(self.GEMROC_ID), "a") as logfile:
                 logfile.write("Scan T from {} to {}, E from {} to {}\n".format(E_T[0], E_T[1], E_E[0], E_E[1]))
         if E_T[1]>63:
             E_T[1]=63
@@ -363,8 +363,9 @@ class analisys_conf: #Analysis class used for configurations10
                 value = self.GEM_COM.GEMROC_counter_get()
                 scan_matrix[Vth_t , Vth_e] = value
                 if DEBUG:
-                    with open("./log_folder/thr_setting_log_GEMROC{}.txt".format(self.GEMROC_ID), "a") as logfile:
+                    with open("./log_folder/auto_thr_setting_log_GEMROC{}.txt".format(self.GEMROC_ID), "a") as logfile:
                         logfile.write("THR T{}, THR E{}  rate: {}\n".format(Vth_t, Vth_e, value/acq_time))                # print ("vth_t:{},vth_e:{}".format(Vth_t,Vth_e))
+                self.GEM_COM.SynchReset_to_TgtFEB()
                 # print ("rate {}".format(scan_matrix[Vth_t, Vth_e]/acq_time))
         # np.savetxt('test.out', scan_matrix, delimiter=',')
         # fig = plt.figure()

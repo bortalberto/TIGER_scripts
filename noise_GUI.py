@@ -32,9 +32,9 @@ class menu():
             self.error_window_main.wm_iconbitmap('@'+"." + sep + 'icons' + sep +'NOISE_ICON.xbm')
         self.tabControl = Notebook(self.error_window_main)  # Create Tab Control
 
-        noise_measure_ = noise_measure(self.error_window_main, gemroc_handler, self.tabControl, main_menu_istance)
-        noise_measure_._insert("Noise measure")
-        noise_measure_._init_windows()
+        self.noise_measure_ = noise_measure(self.error_window_main, gemroc_handler, self.tabControl, main_menu_istance)
+        self.noise_measure_._insert("Noise measure")
+        self.noise_measure_._init_windows()
         baseline_exit_ = baseline_exit(noise_measure, self.error_window_main, gemroc_handler, self.tabControl, main_menu_istance)
         baseline_exit_._insert("Baseline estimation")
         baseline_exit_._init_windows()
@@ -84,10 +84,10 @@ class noise_measure():
         self.save_in_txt = BooleanVar(self.error_window)
         self.save_in_txt.set(False)
 
-        self.T_with_tp.set(True)
-        self.E_with_tp.set(True)
-        self.T_without_tp.set(True)
-        self.E_without_tp.set(True)
+        self.T_with_tp.set(False)
+        self.E_with_tp.set(False)
+        self.T_without_tp.set(False)
+        self.E_without_tp.set(False)
 
         self.GEMROC_num = StringVar(self.error_window)
         self.TIGER_num_first = IntVar(self.error_window)

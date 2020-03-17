@@ -690,7 +690,7 @@ class GEMROC_decoder(Thread):
                     if self.last_UDP_number==self.caller2.UDP_trigger:
                         self.save_this=False #Stop saving packets
                         self.event_get_done=True
-                print (s)
+                # print (s)
         if self.pkts_counter_rst > self.number_pkts_to_log:
             eff_list = [elem / (self.number_pkts_to_log+1) for elem in self.number_TP_rst]
             self.log_perf(eff_list)
