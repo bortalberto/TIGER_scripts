@@ -1859,10 +1859,10 @@ class menu():
         pipe_out.send(Errors)
     def Synch_reset(self, to_all=1):
         if to_all == 1:
+            print ("Synch reset to all\n")
             for number, GEMROC in self.GEMROC_reading_dict.items():
                 GEMROC.GEM_COM.SynchReset_to_TgtFEB()
                 #GEMROC.GEM_COM.SynchReset_to_TgtTCAM()
-                print ("{} reset".format(number))
         else:
             GEMROC = self.showing_GEMROC.get()
             self.GEMROC_reading_dict[GEMROC].GEM_COM.SynchReset_to_TgtFEB()
@@ -2031,6 +2031,7 @@ def find_number(stringa):
 def get_tuning_rate(number):
     with open("./log_folder/auto_thr_setting_log_GEMROC{}.txt".format(number), "r") as logfile:
         return int(logfile.readline().split(",")[0].split(" ")[2])
+
 if __name__ == '__main__':
     Main_menu = menu()
     Main_menu.runna()

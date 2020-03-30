@@ -1073,14 +1073,19 @@ class analisys_read:
         efine=[]
         while True:
             data, addr = self.dataSock.recvfrom(BUFSIZE)
-            hexdata = binascii.hexlify(data)
-            for x in range(0, len(hexdata) - 1, 16):
-                int_x = 0
-                for b in range(7, 0, -1):
-                    hex_to_int = (int(hexdata[x + b * 2], 16)) * 16 + int(hexdata[x + b * 2 + 1], 16)
-                    int_x = (int_x + hex_to_int) << 8
-                hex_to_int = (int(hexdata[x], 16)) * 16 + int(hexdata[x + 1], 16)  # acr 2017-11-17 this should fix the problem
-                int_x = (int_x + hex_to_int)
+            print (data)
+            print (len(data))
+            for j in range(0, int(len(data)/8)):
+                hexdata = binascii.hexlify(data[j*8:j*8+8])
+                string = "{:064b}".format(int(hexdata, 16))
+
+                inverted = []
+                for i in range(8, 0, -1):
+                    inverted.append(string[(i - 1) * 8:i * 8])
+                print(string)
+
+                string_inv = "".join(inverted)
+                int_x = int(string_inv, 2)
 
                 if (((int_x & 0xFF00000000000000) >> 59) == 0x00):
                     s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'EW: ' + 'ChID: %02X ' % (
@@ -1088,25 +1093,13 @@ class analisys_read:
                                 (int_x >> 30) & 0xFFFF) + 'Ecoarse: %03X ' % (
                                 (int_x >> 20) & 0x3FF) + 'Tfine: %03X ' % ((int_x >> 10) & 0x3FF) + 'Efine: %03X \n' % (
                                 int_x & 0x3FF)
+                    print("Data: {}".format(s))
                     if ((ch & 0x3F)==(int(int_x >> 48) & 0x3F) and (TIG == (int_x >> 56) & 0x7)):
                         efine.append(int(int_x & 0x3FF))
-                raw = "{}".format(bin((int_x & 0xFFFFFFFFFFFFFFFF)))
 
-                if (((int_x & 0xFF00000000000000) >> 59) == 0x04):  # It's a frameword
-                    s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'HB: ' + 'Framecount: %08X ' % (
-                            (int_x >> 15) & 0xFFFF) + 'SEUcount: %08X\n' % (int_x & 0x7FFF)
 
-                if (((int_x & 0xFF00000000000000) >> 59) == 0x08):
-                    s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'CW: ' + 'ChID: %02X ' % (
-                            (int_x >> 24) & 0x3F) + ' CounterWord: %016X\n' % (int_x & 0x00FFFFFF)
-                if (((int_x & 0xFF00000000000000) >> 59) == 0x00):
-                    s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'EW: ' + 'ChID: %02X ' % (
-                            (int_x >> 48) & 0x3F) + 'tacID: %01X ' % ((int_x >> 46) & 0x3) + 'Tcoarse: %04X ' % (
-                                (int_x >> 30) & 0xFFFF) + 'Ecoarse: %03X ' % (
-                                (int_x >> 20) & 0x3FF) + 'Tfine: %03X ' % ((int_x >> 10) & 0x3FF) + 'Efine: %03X \n' % (
-                                int_x & 0x3FF)
                 # print "RAW: {}".format(raw)
-                # print "Data: {}".format(s)
+
 
             if (time.time()-start_time) >run_time:
                 break
@@ -1115,12 +1108,12 @@ class analisys_read:
         sigma=np.std(efine)
         total=len(efine)
         self.dataSock.close()
-        with open("calibration_FEB_5",'a+') as filein:
-            filein.write("TIG:{}, CH:{}\n".format(TIG,ch))
-            filein.write("Total events: {2}, average Efine {0}, sigma {1}\n".format(average, sigma,total))
-            filein.write("{}\n".format(efine))
+        # with open("calibration_FEB_5",'a+') as filein:
+        #     filein.write("TIG:{}, CH:{}\n".format(TIG,ch))
+        #     filein.write("Total events: {2}, average Efine {0}, sigma {1}\n".format(average, sigma,total))
+        #     filein.write("{}\n".format(efine))
         print ("Total events: {2}, average Efine {0}, sigma {1}".format(average, sigma, total))
-        print ("{}".format(efine))
+        # print ("{}".format(efine))
         return (average,sigma,total)
 
     def data_save_thr_scan_with_counter(self, ch, vth, TIG, frame_count, save_binout=False, save_txt=False):

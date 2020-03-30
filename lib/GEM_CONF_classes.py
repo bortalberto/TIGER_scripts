@@ -519,7 +519,9 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
       "CounterMode": self.parameter_array [25],  ## CounterMode_param
       "TriggerMode": self.parameter_array [29],  ## TriggerMode_param
       "MaxIntegTime": self.parameter_array [13] ,
-      "MinIntegTime":self.parameter_array [14]
+      "MinIntegTime":self.parameter_array [14],
+      "BranchEnableT": self.parameter_array[17],  ## BranchEnableT_param
+      "BranchEnableEQ" : self.parameter_array[18]  ## BranchEnableEQ_param
       }
       sav_channel_chlist=[]
       for ch in range (0,64):
@@ -692,12 +694,13 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
           TriggerMode= self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["TriggerMode"]  & 0x3
           MaxIntegTime= self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["MaxIntegTime"] & 0x7F
           MinIntegTime= self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["MinIntegTime"] & 0X7F
-
+          BranchEnableT = self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["BranchEnableT"] & 0X1  ## BranchEnableT_param
+          BranchEnableEQ = self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["BranchEnableEQ"] & 0X1  ## BranchEnableEQ_param
           self.cmd_word8 = ((self.DisableHyst & 0x1) << 24) + ((self.T2Hyst & 0x7) << 16) + ((self.T1Hyst & 0x7) << 8) + ((self.Ch63ObufMSB & 0x1))
           self.cmd_word7 = (TP_disable_FE << 24) + ((self.TDC_IB_E & 0xF) << 16) + ((self.TDC_IB_T & 0xF) << 8) + (Integ )
           self.cmd_word6 = ((self.PostAmpGain & 0x3) << 24) + ((self.FE_delay & 0x1F) << 16) + (Vth_T2 << 8) + (Vth_T1 )
           self.cmd_word5 = ((self.QTx2Enable & 0x1) << 24) + ((MaxIntegTime) << 16) + ((MinIntegTime) << 8) + ((TriggerBLatched))
-          self.cmd_word4 = (QdcMode << 24) + ((self.BranchEnableT & 0x1) << 16) + ((self.BranchEnableEQ & 0x1) << 8) + (TriggerMode2B )
+          self.cmd_word4 = (QdcMode << 24) + ((BranchEnableT) << 16) + ((BranchEnableEQ) << 8) + (TriggerMode2B )
           self.cmd_word3 = (TriggerMode2Q << 24) + (TriggerMode2E << 16) + (TriggerMode2T << 8) + ((self.TACMinAge & 0x1F))
           self.cmd_word2 = ((self.TACMaxAge & 0x1F) << 24) + (CounterMode << 16) + ((self.DeadTime & 0x3F) << 8) + ((self.SyncChainLen & 0x3))
           self.cmd_word1 = ((self.Ch_DebugMode & 0x3) << 24) + (TriggerMode  << 16)

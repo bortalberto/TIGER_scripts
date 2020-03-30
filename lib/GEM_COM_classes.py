@@ -1135,7 +1135,7 @@ class communication:  #The directory are declared here to avoid multiple declara
         self.gemroc_LV_XX.HIT_counter_disable = int(ERROR_counter_enable)
         self.gemroc_LV_XX.CHANNEL_for_counter = int(CHANNEL_for_counter)
         COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
-        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING, retry=False)
+        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING, retry=True)
         return command_echo
 
     def reset_counter(self):

@@ -127,7 +127,6 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
                     print (e)
                     with open(self.reader.log_path, 'a') as f:
                         f.write("{} -- GEMROC {} TIMED_OUT\n".format(time.ctime(), self.reader.GEMROC_ID))
-
                     print ("\n---GEMROC {} - {}\n".format(self.reader.GEMROC_ID, e))
                     self.reader.TIMED_out = True
                     Exception("GEMROC {} TIMED_OUT".format(self.reader.GEMROC_ID))
@@ -220,7 +219,6 @@ class reader:
             self.dataSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.dataSock.settimeout(self.timeout_for_sockets)
             self.dataSock.bind((self.HOST_IP, self.HOST_PORT))
-            # self.dataSock.setblocking(False)
         except Exception as e:
 
             print ("--GEMROC {}-{}".format(self.GEMROC_ID,e))

@@ -29,7 +29,9 @@ else:
 class menu():
     def __init__(self):
         self.main_win = Tk()
-        self.client = InfluxDBClient(host='localhost', port=8086)
+        # self.client = InfluxDBClient(host='localhost', port=8086)
+        self.client = InfluxDBClient(host='192.168.38.191', port=8086)
+
         self.client.switch_database('GUFI_DB')
         if OS == 'linux2' or OS =='linux':
             self.main_win.wm_iconbitmap('@' + "." + sep + 'icons' + sep + 'GUFO_ICON.xbm')

@@ -159,6 +159,7 @@ class noise_measure():
             self.mapping_matrix = pickle.load(filein)
         self.master_frame = Frame(self.error_window)
         self.master_frame.grid(row=4, column=2, sticky=N, pady=4, columnspan=1, rowspan=2)
+        self.master_frame.grid(row=4, column=2, sticky=N, pady=4, columnspan=1, rowspan=2)
 
         self.corn0 = Frame(self.master_frame)
         self.corn0.grid(row=4, column=0, sticky=S, pady=10, columnspan=1)
@@ -553,20 +554,19 @@ class noise_measure():
 
         for T in range(first, last):  # TIGER
             for J in range(firstch, lastch):  # Channel
-                GEM_COM.Set_param_dict_channel(c_inst, "TP_disable_FE", T, J, 0)
+                # GEM_COM.Set_param_dict_channel(c_inst, "TP_disable_FE", T, J, 0)
 
                 self.efine_average["GEMROC {}".format(GEMROC_ID)]["TIG{}".format(T)]["CH{}".format(J)] = []
-                self.efine_average["GEMROC {}".format(GEMROC_ID)]["TIG{}".format(T)]["CH{}".format(J)] = []
                 print ("TIGER {},Ch: {}".format(T, J))
-                for i in range(5, 6):
+                for i in range(0, 1):
                     # print "Min Max integ time = {}".format(i)
-                    GEM_COM.Set_param_dict_channel(c_inst, "MaxIntegTime", T, J, i)
-                    GEM_COM.Set_param_dict_channel(c_inst, "MinIntegTime", T, J, i)
+                    # GEM_COM.Set_param_dict_channel(c_inst, "MaxIntegTime", T, J, i)
+                    # GEM_COM.Set_param_dict_channel(c_inst, "MinIntegTime", T, J, i)
                     GEM_COM.SynchReset_to_TgtFEB()
-                    average, stdv, total = test_r.acquire_Efine(J, T, 0.5)
+                    average, stdv, total = test_r.acquire_Efine(J, T, 2)
                     self.efine_average["GEMROC {}".format(GEMROC_ID)]["TIG{}".format(T)]["CH{}".format(J)].append(average)
                     self.efine_stdv["GEMROC {}".format(GEMROC_ID)]["TIG{}".format(T)]["CH{}".format(J)].append(stdv)
-                GEM_COM.Set_param_dict_channel(c_inst, "TP_disable_FE", T, J, 1)
+                # GEM_COM.Set_param_dict_channel(c_inst, "TP_disable_FE", T, J, 1)
 
     def noise_scan_process(self, number, pipe_out, vth2):
         self.sampling_scan = False
