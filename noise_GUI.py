@@ -2,21 +2,22 @@ import os
 import pickle
 import sys
 import time
-import tkFileDialog
-import ttk
-from Tkinter import *
 from multiprocessing import Process, Pipe
-from ttk import Progressbar
 import datetime
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
 
+
+from tkinter import *
+from tkinter import filedialog
+from tkinter.ttk import Progressbar
+from tkinter.ttk import Notebook
 OS = sys.platform
 if OS == 'win32':
     sep = '\\'
-elif OS == 'linux2':
+elif OS == 'linux2' or 'linux':
     sep = '/'
 else:
     print("ERROR: OS {} non compatible".format(OS))
@@ -27,13 +28,13 @@ class menu():
     def __init__(self, main_menu, gemroc_handler, main_menu_istance):
         self.error_window_main = Toplevel(main_menu)
         self.error_window_main.wm_title("Noise and thresholds")
-        if OS == 'linux2':
+        if OS == 'linux':
             self.error_window_main.wm_iconbitmap('@'+"." + sep + 'icons' + sep +'NOISE_ICON.xbm')
-        self.tabControl = ttk.Notebook(self.error_window_main)  # Create Tab Control
+        self.tabControl = Notebook(self.error_window_main)  # Create Tab Control
 
-        noise_measure_ = noise_measure(self.error_window_main, gemroc_handler, self.tabControl, main_menu_istance)
-        noise_measure_._insert("Noise measure")
-        noise_measure_._init_windows()
+        self.noise_measure_ = noise_measure(self.error_window_main, gemroc_handler, self.tabControl, main_menu_istance)
+        self.noise_measure_._insert("Noise measure")
+        self.noise_measure_._init_windows()
         baseline_exit_ = baseline_exit(noise_measure, self.error_window_main, gemroc_handler, self.tabControl, main_menu_istance)
         baseline_exit_._insert("Baseline estimation")
         baseline_exit_._init_windows()
@@ -83,10 +84,10 @@ class noise_measure():
         self.save_in_txt = BooleanVar(self.error_window)
         self.save_in_txt.set(False)
 
-        self.T_with_tp.set(True)
-        self.E_with_tp.set(True)
-        self.T_without_tp.set(True)
-        self.E_without_tp.set(True)
+        self.T_with_tp.set(False)
+        self.E_with_tp.set(False)
+        self.T_without_tp.set(False)
+        self.E_without_tp.set(False)
 
         self.GEMROC_num = StringVar(self.error_window)
         self.TIGER_num_first = IntVar(self.error_window)
@@ -98,7 +99,7 @@ class noise_measure():
         self.TP_rate.set(49000)
         self.number_of_TP = IntVar(self.error_window)
         self.number_of_TP.set(2)
-        fields_optionsG = self.GEMROC_reading_dict.keys()
+        fields_optionsG = list(self.GEMROC_reading_dict.keys())
         fields_optionsG.append("All")
         OptionMenu(self.second_row_frame, self.GEMROC_num, *fields_optionsG).pack(side=LEFT)
 
@@ -123,7 +124,7 @@ class noise_measure():
         Label(self.second_row_frame, text='TP rate (Hz)   ').pack(side=LEFT)
         Entry(self.second_row_frame, textvariable=self.TP_rate, width=8, ).pack(side=LEFT)
         Label(self.second_row_frame, text='TP per frameword').pack(side=LEFT)
-        fields_optionsr = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
+        fields_optionsr = [int(x) for x in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)]
         OptionMenu(self.second_row_frame, self.number_of_TP, *fields_optionsr).pack(side=LEFT)
 
         self.third_row = Frame(self.error_window)
@@ -157,6 +158,7 @@ class noise_measure():
         with open("." + sep + "lib" + sep + "mapping.pickle", "rb") as filein:
             self.mapping_matrix = pickle.load(filein)
         self.master_frame = Frame(self.error_window)
+        self.master_frame.grid(row=4, column=2, sticky=N, pady=4, columnspan=1, rowspan=2)
         self.master_frame.grid(row=4, column=2, sticky=N, pady=4, columnspan=1, rowspan=2)
 
         self.corn0 = Frame(self.master_frame)
@@ -387,7 +389,7 @@ class noise_measure():
             else:
                 dictio["{}".format(GEMROC_n)] = self.scan_matrixs[GEMROC_n]
 
-            for key in sorted(dictio.keys(), cmp=sort_by_number):
+            for key in sorted(dictio.keys(), key=find_number):
                 for T in range(0, 8):
                     for ch in range(0, 64):
                         for vth in range(0, 64):
@@ -415,7 +417,7 @@ class noise_measure():
         """
          Save the temperature (avoiding the bug)
         :param init:
-        :param branch:
+        :param inbranch:
         :return:
         """
 
@@ -552,20 +554,19 @@ class noise_measure():
 
         for T in range(first, last):  # TIGER
             for J in range(firstch, lastch):  # Channel
-                GEM_COM.Set_param_dict_channel(c_inst, "TP_disable_FE", T, J, 0)
+                # GEM_COM.Set_param_dict_channel(c_inst, "TP_disable_FE", T, J, 0)
 
                 self.efine_average["GEMROC {}".format(GEMROC_ID)]["TIG{}".format(T)]["CH{}".format(J)] = []
-                self.efine_average["GEMROC {}".format(GEMROC_ID)]["TIG{}".format(T)]["CH{}".format(J)] = []
                 print ("TIGER {},Ch: {}".format(T, J))
-                for i in range(5, 6):
+                for i in range(0, 1):
                     # print "Min Max integ time = {}".format(i)
-                    GEM_COM.Set_param_dict_channel(c_inst, "MaxIntegTime", T, J, i)
-                    GEM_COM.Set_param_dict_channel(c_inst, "MinIntegTime", T, J, i)
+                    # GEM_COM.Set_param_dict_channel(c_inst, "MaxIntegTime", T, J, i)
+                    # GEM_COM.Set_param_dict_channel(c_inst, "MinIntegTime", T, J, i)
                     GEM_COM.SynchReset_to_TgtFEB()
-                    average, stdv, total = test_r.acquire_Efine(J, T, 0.5)
+                    average, stdv, total = test_r.acquire_Efine(J, T, 2)
                     self.efine_average["GEMROC {}".format(GEMROC_ID)]["TIG{}".format(T)]["CH{}".format(J)].append(average)
                     self.efine_stdv["GEMROC {}".format(GEMROC_ID)]["TIG{}".format(T)]["CH{}".format(J)].append(stdv)
-                GEM_COM.Set_param_dict_channel(c_inst, "TP_disable_FE", T, J, 1)
+                # GEM_COM.Set_param_dict_channel(c_inst, "TP_disable_FE", T, J, 1)
 
     def noise_scan_process(self, number, pipe_out, vth2):
         self.sampling_scan = False
@@ -599,7 +600,7 @@ class noise_measure():
         with  open(filename, 'wb') as f:
             pickle.dump(test_r.thr_scan_rate, f)
 
-        print "GEMROC {} done".format(GEMROC_ID)
+        print ("GEMROC {} done".format(GEMROC_ID))
         position = (last * (lastch - firstch) + 1) + (lastch)
         pipe_out.send(position)
 
@@ -645,7 +646,7 @@ class noise_measure():
             GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['Periodic_TP_EN_pattern'] = 15
             GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['number_of_repetitions'] = 512 + self.number_of_TP.get()
             period = 8190 / self.number_of_TP.get()
-            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TP_period'] = period
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TP_period'] = int(period)
             GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TP_width'] = 10
             GEMROC_number.GEM_COM.DAQ_set_with_dict()
 
@@ -717,7 +718,7 @@ class noise_measure():
                         noise = "Canno't fit"
 
                     if Bas_parameters_fit[0] != "Fail" and TPparameters[0] != "Fail":
-                        print Bas_parameters_fit
+                        print (Bas_parameters_fit)
                         translated_gas = AN_CLASS.gaus(np.arange(TPparameters[0], 64, 1.0), *Bas_parameters_fit) + TPparameters[2]
                         self.line_list.append(self.plot_rate.plot(np.arange(TPparameters[0], 64, 1.0), translated_gas, '--', label="Gaussian baseline estimation"))
                     self.plot_rate.set_title("ROC {},TIG {}, CH {} , Sigma Noise={} fC".format(self.plotting_gemroc, self.plotting_TIGER, self.plotting_Channel, noise))
@@ -749,12 +750,12 @@ class noise_measure():
         self.canvas.flush_events()
 
     def SAVE(self):
-        File_name = tkFileDialog.asksaveasfilename(initialdir="." + sep + "noise_scan" + sep + "saves", title="Select file", filetypes=(("Noise scan files", "*.ns"), ("all files", "*.*")))
+        File_name = filedialog.asksaveasfilename(initialdir="." + sep + "noise_scan" + sep + "saves", title="Select file", filetypes=(("Noise scan files", "*.ns"), ("all files", "*.*")))
         with  open(File_name, 'wb') as f:
             pickle.dump(self.scan_matrixs, f)
 
     def LOAD(self):
-        filename = tkFileDialog.askopenfilename(initialdir="." + sep + "noise_scan" + sep + "saves", title="Select file", filetypes=(("Noise scan files", "*.ns"), ("all files", "*.*")))
+        filename = filedialog.askopenfilename(initialdir="." + sep + "noise_scan" + sep + "saves", title="Select file", filetypes=(("Noise scan files", "*.ns"), ("all files", "*.*")))
         with open(filename, 'rb') as f:
             self.scan_matrixs = pickle.load(f)
 

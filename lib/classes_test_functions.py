@@ -3,7 +3,7 @@
 # date: 29 Jan 2018
 # purpose: to debug TIGER configuration and data acquisition through the GEMROC prototype
 # last modifications / additions
-import GEM_CONF_classes
+from lib import GEM_CONF_classes
 
 # NIOS GCFG words definitions
 #//INTERFACE DPRAM word 5
@@ -330,7 +330,7 @@ def print_GReg_bitstring_TO_format( GCFG_word_array, log_enable, log_fname):
     Config_bit_string = (Config_bit_string << 32) + GCFG_word_array[5] #GCFG_8_m23
     ##print hex(Config_bit_string)
     Config_bit_string = Config_bit_string >> 23
-    print hex(Config_bit_string)
+    print (hex(Config_bit_string))
     if ( log_enable == 1):
         log_fname.write ('\nprint_GReg_bitstring_TO_format output: %s' %(hex(Config_bit_string)))
     
@@ -543,15 +543,15 @@ def get_Ch_CfgReg_GEMROC_words( ch_cfg_reg_setting_object ):
 def print_Ch_CfgReg_bitstring_TO_format( ChCFG_word_array ):
     Config_bit_string = 0
     Config_bit_string = ChCFG_word_array[0] #CHCFG_124_93
-    print hex(Config_bit_string)
+    print( hex(Config_bit_string))
     Config_bit_string = (Config_bit_string << 32) + ChCFG_word_array[1] #CHCFG_92_61
-    print hex(Config_bit_string)
+    print (hex(Config_bit_string))
     Config_bit_string = (Config_bit_string << 32) + ChCFG_word_array[2] #CHCFG_60_29
-    print hex(Config_bit_string)
+    print (hex(Config_bit_string))
     Config_bit_string = (Config_bit_string << 32) + ChCFG_word_array[3] #CHCFG_28_m3
-    print hex(Config_bit_string)
+    print (hex(Config_bit_string))
     Config_bit_string = Config_bit_string >> 3
-    print hex(Config_bit_string)
+    print (hex(Config_bit_string))
                         
 ### create an instance of the TIGER global configuration settings object and test its parameters
 ####    parameter list:

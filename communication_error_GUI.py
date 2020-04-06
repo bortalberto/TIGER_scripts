@@ -1,4 +1,4 @@
-from Tkinter import *
+from tkinter import *
 from multiprocessing import Process,Pipe
 import time
 from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
@@ -9,7 +9,7 @@ import sys
 OS = sys.platform
 if OS == 'win32':
 	sep = '\\'
-elif OS == 'linux2':
+elif OS == 'linux2' or 'linux':
 	sep = '/'
 else:
 	print("ERROR: OS {} non compatible".format(OS))
@@ -32,7 +32,7 @@ class menu():
         self.TD_scan_result={}
         number_list=[]
         i=0
-        if OS == 'linux2':
+        if OS == 'linux':
             self.error_window.wm_iconbitmap('@'+"." + sep + 'icons' + sep +'810_ICON.xbm')
         for number, GEMROC in self.GEMROC_reading_dict.items():
             number_int=int(number.split()[1])
@@ -54,9 +54,9 @@ class menu():
                     riga=3
 
             self.GEMROC_OPENER.append(Button(self.grid_frame, text=number, command=lambda number_int=number_int: self.toggle(number_int)))
-            self.GEMROC_OPENER[i].grid(row=riga, column=colonna-1, sticky=NW,   pady=15)
+            self.GEMROC_OPENER[i].grid(row=riga, column=int(colonna-1), sticky=NW,   pady=15)
             self.GEMROC_error_counters_display[number]=Label(self.grid_frame, text='----', padx=30)
-            self.GEMROC_error_counters_display[number].grid(row=riga, column=colonna)
+            self.GEMROC_error_counters_display[number].grid(row=riga, column=int(colonna))
             i+=1
         self.second_row_frame=Frame(self.error_window)
         self.second_row_frame.pack()

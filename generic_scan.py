@@ -2,12 +2,11 @@ import os
 import pickle
 import sys
 import time
-import tkFileDialog
-import ttk
-from Tkinter import *
-from multiprocessing import Process, Pipe
-from ttk import Progressbar
-from multiprocessing import Pool
+
+from tkinter import *
+from tkinter import filedialog
+from tkinter.ttk import Progressbar
+from tkinter.ttk import Notebook
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
@@ -17,7 +16,7 @@ from lib import GEM_ANALYSIS_classes as AN_CLASS
 OS = sys.platform
 if OS == 'win32':
 	sep = '\\'
-elif OS == 'linux2':
+elif OS == 'linux2' or 'linux':
 	sep = '/'
 else:
 	print("ERROR: OS {} non compatible".format(OS))
@@ -31,7 +30,7 @@ class menu():
     def __init__(self,main_menu,gemroc_handler):
         self.error_window_main = Toplevel(main_menu)
         self.error_window_main.wm_title("Generic scan interface")
-        self.tabControl = ttk.Notebook(self.error_window_main)  # Create Tab Control
+        self.tabControl = Notebook(self.error_window_main)  # Create Tab Control
 
         noise_measure_=generic_scan(self.error_window_main ,gemroc_handler,self.tabControl)
         noise_measure_._insert("Generic scan")
@@ -211,7 +210,7 @@ class generic_scan ():
                 self.total_events["GEMROC {}".format(GEMROC_ID)]["TIG{}".format(T)]["CH{}".format(J)]=[]
 
                 for i in range(int(self.param_first.get()), int(self.param_last.get())):
-                    print "{} set {}".format(self.scan_key.get(),i)
+                    print ("{} set {}".format(self.scan_key.get(),i))
                     if self.Activate_TP:
                         GEM_COM.Set_param_dict_channel(c_inst,"TP_disable_FE", T, J, 0)
                     GEM_COM.Set_param_dict_channel(c_inst, "TriggerMode", T, J, 0)

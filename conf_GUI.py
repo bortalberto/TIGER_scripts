@@ -1,6 +1,8 @@
-from Tkinter import *
-from ttk import Progressbar
-import tkFileDialog
+from tkinter import *
+from tkinter import filedialog
+from tkinter.ttk import Progressbar
+from tkinter.ttk import Notebook
+import tkinter.font as tkfont
 import numpy as np
 from lib import GEM_COM_classes as COM_class
 import communication_error_GUI as error_GUI
@@ -15,28 +17,52 @@ from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
 import sys
 import array
 import time
-import ttk
 import pickle
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 
+def cmp_to_key(mycmp):
+    'Convert a cmp= function into a key= function'
+    class K:
+        def __init__(self, obj, *args):
+            self.obj = obj
+        def __lt__(self, other):
+            return mycmp(self.obj, other.obj) < 0
+        def __gt__(self, other):
+            return mycmp(self.obj, other.obj) > 0
+        def __eq__(self, other):
+            return mycmp(self.obj, other.obj) == 0
+        def __le__(self, other):
+            return mycmp(self.obj, other.obj) <= 0
+        def __ge__(self, other):
+            return mycmp(self.obj, other.obj) >= 0
+        def __ne__(self, other):
+            return mycmp(self.obj, other.obj) != 0
+    return K
+
 OS = sys.platform
 if OS == 'win32':
     sep = '\\'
-elif OS == 'linux2':
+elif OS == 'linux2' or 'linux':
     sep = '/'
 else:
-    print("ERROR: OS {} non compatible".format(OS))
+    print("ERROR: OS {} not compatible".format(OS))
     sys.exit()
-
 
 class menu():
     def __init__(self):
         self.GEM_to_config = np.zeros((20))
         self.configuring_gemroc = 0
         # main window
+
+
         self.main_window = Tk()
-        if OS == 'linux2':
+        default_font = tkfont.nametofont("TkDefaultFont")
+        default_font.configure(size=9)
+        defaultT_font = tkfont.nametofont("TkTextFont")
+        defaultT_font.configure(size=9)
+
+        if OS == 'linux' :
             self.main_window.wm_iconbitmap('@'+"." + sep + 'icons' + sep +'CONF_ICON.xbm')
         self.icon_on = PhotoImage(file="." + sep + 'icons' + sep + 'on.gif')
         self.icon_off = PhotoImage(file="." + sep + 'icons' + sep + 'off.gif')
@@ -63,7 +89,7 @@ class menu():
         self.rate = IntVar(self.main_window)
         # fields_options=["DAQ configuration", "LV configuration", "Global Tiger configuration", "Channel Tiger configuration"]
         fields_options = ["DAQ configuration", "Global Tiger configuration", "Channel Tiger configuration", "LV and diagnostic"]
-        Label(self.main_window, text='Configuration', font=("Courier", 25)).pack()
+        Label(self.main_window, text='Configuration', font=("TkDefaultFont", 15)).pack()
         self.conf_frame = Frame(self.main_window)
         self.conf_frame.pack()
         self.first_row_frame = Frame(self.conf_frame)
@@ -86,22 +112,22 @@ class menu():
         self.TP_num = IntVar(self.main_window)
         ##Select window
         self.select_window = Toplevel(self.main_window, height=400, width = 900)
-        if OS == 'linux2':
+        if OS == 'linux':
             self.select_window.wm_iconbitmap('@'+"." + sep + 'icons' + sep +'GUFO_ICON2.xbm')
 
         Title_frame = Frame (self.select_window)
         Title_frame2 = Frame(self.select_window)
-        Label(Title_frame2, text="         ",font=("Times", 10, "italic")).pack(side=LEFT)
+        Label(Title_frame2, text="         ",font=("TkDefaultFont", 10, "italic")).pack(side=LEFT)
 
         Label(Title_frame2, image=self.icon_GUFI1).pack(side=LEFT)
-        Label(Title_frame2, text="GUFI software",font=("Times", 25)).pack(side=LEFT)
+        Label(Title_frame2, text="GUFI software",font=("TkDefaultFont", 25)).pack(side=LEFT)
         Label(Title_frame2, image=self.icon_GUFI2).pack(side=LEFT)
 
-        Label(Title_frame, text="             v.3.3 -- 2019 -- INFN-TO (abortone@to.infn.it)", font=("Times", 10, "italic")).pack(anchor=SE, side=RIGHT)
+        Label(Title_frame, text="             v.4.0 -- 2019 -- INFN-TO (abortone@to.infn.it)", font=("TkDefaultFont", 7, "italic")).pack(anchor=SE, side=RIGHT)
         Title_frame2.pack(anchor=S)
         Title_frame.pack(fill=BOTH)
 
-        self.tabControl = ttk.Notebook(self.select_window)  # Create Tab Control
+        self.tabControl = Notebook(self.select_window)  # Create Tab Control
         self.select_frame = Frame(self.select_window)
         Tante_frame = Frame(self.select_window)
         self.tabControl.add(self.select_frame,text = "Selection")
@@ -110,7 +136,7 @@ class menu():
         self.select_window.wm_title("Selection window")
         self.tabControl.pack(expand=1, fill="both")  # Pack to make visible
 
-        Label(self.select_frame, text='GEMROC selection', font=("Times", 25)).pack()
+        Label(self.select_frame, text='GEMROC selection', font=("TkDefaultFont", 25)).pack()
         self.grid_frame = Frame(self.select_frame)
         self.grid_frame.pack()
         Button(self.grid_frame, text='ROC 00', command=lambda: self.toggle(0)).grid(row=0, column=0, sticky=NW, pady=15)
@@ -140,7 +166,7 @@ class menu():
         self.Launch_error_check.grid(row=0, column=2, sticky=NW, pady=4)
         title_frame=Frame(Tante_frame)
         title_frame.grid(row=0, column=5, sticky=N, pady=4,columnspan=20)
-        Label(title_frame, text='Functions', font=("Times", 25)).pack()
+        Label(title_frame, text='Functions', font=("TkDefaultFont", 25)).pack()
 
         first_row_coperations= Frame (Tante_frame)
         first_row_coperations.grid(row=2, column=5, sticky=N, pady=10,columnspan=20)
@@ -157,7 +183,7 @@ class menu():
         Button(Tantissime_frame, text="Open communication error interface", command=self.open_communicaton_GUI, activeforeground="#f77f00").pack(side=LEFT)
         Button(Tantissime_frame, text="System rate measure", command=self.open_rate_window, activeforeground="#f77f00").pack(side=LEFT)
         Button(Tantissime_frame, text="Channel rate measure", command=self.open_rate_measure, activeforeground="#f77f00").pack(side=LEFT)
-        Button(Tantissime_frame, text="Run prearation (TD + both scans)", command=self.run_prep, activeforeground="#f77f00").pack(side=LEFT)
+        Button(Tantissime_frame, text="Run prearation (Th scah, TH EQ, Noise scan) remember EQ settings!", command=self.run_prep, activeforeground="#f77f00").pack(side=LEFT)
         Button(Tantissime_frame, text="ToT Mode", command=self.ToT, activeforeground="blue").pack(side=RIGHT)
         Button(Tantissime_frame, text="Launch TP", command=self.start_TP, activeforeground="blue").pack(side=RIGHT)
         Button(Tantissime_frame, text='Flush socket', command=self.flush).pack(side=LEFT)
@@ -178,8 +204,7 @@ class menu():
         Entry(cornice, textvar=self.rate, width=5).pack(side=LEFT)
         Button(cornice, text="Set threshold aiming to a certain rate", command=lambda: self.auto_tune(-1, -1, 15), activeforeground="#f77f00").pack(side=LEFT)
         Button(cornice, text="Load thresholds to all", command=lambda: self.load_thr(True, source="scan"), activeforeground="#f77f00").pack(side=LEFT)
-
-        Button(cornice, text="Load auto-thr to all", command=lambda: self.load_thr(True, source="auto"), activeforeground="#f77f00").pack(side=LEFT)
+        # Button(cornice, text="Load auto-thr to all", command=lambda: self.load_thr(True, source="auto"), activeforeground="#f77f00").pack(side=LEFT)
         self.error_frame2 = Frame(Tante_frame)
         self.error_frame2.grid(row=5, column=5, sticky=N, pady=10,columnspan=20)
         Label(self.error_frame2, text='Message ').grid(row=0, column=1, sticky=NW, pady=4)
@@ -277,9 +302,7 @@ class menu():
 
         Button(equaliz_frame_3, text = "Start equalization", command =self.start_ecq_map).pack(side=LEFT)
 
-        if COM_class.local_test == True:
-            for G in range (0,11):
-                self.toggle(G)
+
 
         self.status_tab = Frame (self.select_window)
         self.tabControl.add(self.status_tab, text = "Version & status")
@@ -303,8 +326,15 @@ class menu():
     #     self.save_current_thr()
     #     self.rate_window.error_window_main.destroy()
     #     print ("Equalization done and saved")
+        if COM_class.local_test == True:
+            for G in range (0,11):
+                self.toggle(G)
+
+
 
     def start_ecq_map(self):
+        with open("./log_folder/thr_setting.txt", "a+") as logfile:
+            logfile.write("{} - Tuning rate @ {}Hz\n".format(time.ctime(),self.desired_rate.get()))
         self.rate_window = rate_interface.menu(self.main_window, self.GEMROC_reading_dict,self)
         self.rate_window.rate_tab.rework_window()
         strip_to_scan = self.build_scan_matrix()
@@ -349,23 +379,37 @@ class menu():
                             strip_scan_map[GEMROC][TIGER][channel]=1
         return strip_scan_map
     def run_prep(self):
-        print ("TD scan")
-        conf_wind = error_GUI.menu(self.main_window, self.GEMROC_reading_dict)
-        conf_wind.TD_scan(0,True)
-        conf_wind.load_TD_from_file()
-        conf_wind.error_window.destroy()
-        self.Synch_reset()
-        self.Synch_reset()
-        time.sleep(0.5)
-        self.Synch_reset()
-        time.sleep(0.5)
+        # print ("TD scan")
+        # conf_wind = error_GUI.menu(self.main_window, self.GEMROC_reading_dict)
+        # conf_wind.TD_scan(0,True)
+        # conf_wind.load_TD_from_file()
+        # conf_wind.error_window.destroy()
+        # self.Synch_reset()
+        # self.Synch_reset()
+        # time.sleep(0.5)
+        # self.Synch_reset()
+        # time.sleep(0.5)
         self.Synch_reset()
         print ("Vthr-1 scan")
         self.thr_Scan(-1, -1, 1)
         self.Synch_reset()
         print ("Vthr-2 scan")
         self.thr_Scan(-1, -1, 2)
-
+        self.Synch_reset()
+        self.load_thr(True, "scan", 3, 2, 0, 0, 8)
+        self.load_default_config_parallel(True)
+        self.start_ecq_map()
+        self.Synch_reset()
+        self.launch_noise_window()
+        time.sleep(2)
+        self.noise_wind.noise_measure_.number_of_TP.set(4)
+        self.noise_wind.noise_measure_.GEMROC_num.set("All")
+        self.noise_wind.noise_measure_.TIGER_num_last.set(7)
+        self.noise_wind.noise_measure_.CHANNEL_num_last.set(63)
+        self.noise_wind.noise_measure_.T_with_tp.set(True)
+        self.noise_wind.noise_measure_.fast_noise_scan(log=True)
+        self.noise_wind.noise_measure_.TP_rate.set(19700)
+        self.noise_wind.noise_measure_.fit()
 
     def start_TP(self):
         for number, GEMROC_number in self.GEMROC_reading_dict.items():
@@ -392,22 +436,22 @@ class menu():
         frame.bind("<Configure>", self.myfunction)
         self.canvas2.pack(side=LEFT, fill=BOTH)
 
-        for number, GEMROC in sorted(self.GEMROC_reading_dict.items(),cmp = sort_by_number):
+        for number, GEMROC in sorted(self.GEMROC_reading_dict.items(),key = find_number):
             this_ROC_IVT = self.IVT_dict[number]
             a = Frame(frame)
             a.pack(pady=5, fill=BOTH)
-            Label(a, text='{} - Firmware version: {}'.format(number,self.version_dict[number]), font=("Times",14)).pack()
-            Label(a, text='---Status---',font=("Times",12)).pack()
+            Label(a, text='{} - Firmware version: {}'.format(number,self.version_dict[number]), font=("TkDefaultFont",14)).pack()
+            Label(a, text='---Status---',font=("TkDefaultFont",12)).pack()
             for device in sorted(this_ROC_IVT['status'].keys()):
                 if device[0] == "F":
                     string='FEB {}:    '.format(device[3])
                     for key,value in sorted(this_ROC_IVT['status'][device].items()):
                         string += ' {}: {} ---'.format(key,value)
-                    Label(a, text=string,font=("Times",10)).pack()
+                    Label(a, text=string,font=("TkDefaultFont",10)).pack()
                 if device[0] == 'R':
-                    Label(a, text="GEMROC TEMP [degC] = {}".format(this_ROC_IVT['status']["ROC"]["TEMP"]),font=("Times",10)).pack()
+                    Label(a, text="GEMROC TEMP [degC] = {}".format(this_ROC_IVT['status']["ROC"]["TEMP"]),font=("TkDefaultFont",10)).pack()
 
-            Label(a, text='---Limit flags---', font=("Times", 12)).pack()
+            Label(a, text='---Limit flags---', font=("TkDefaultFont", 12)).pack()
             for device in sorted(this_ROC_IVT['limits'].keys()):
                 if device[0] == "F":
                     string='FEB {}:    '.format(device[3])
@@ -415,7 +459,7 @@ class menu():
                         string += ' {}: {} ---'.format(key,value)
                     Label(a, text=string,font=("Times",10)).pack()
                 if device[0] == 'R':
-                    Label(a, text="GEMROC OVT_FLAG = {}".format(this_ROC_IVT['limits']["ROC"]["OVT_FLAG"]),font=("Times",10)).pack()
+                    Label(a, text="GEMROC OVT_FLAG = {}".format(this_ROC_IVT['limits']["ROC"]["OVT_FLAG"]),font=("TkDefaultFont",10)).pack()
             Label(a, text="___________________________________________________________________________________________________________________________").pack(side=BOTTOM)
 
     def acquire_IVT_version(self):
@@ -599,7 +643,7 @@ class menu():
             self.GEMROC_reading_dict["GEMROC {}".format(ID)] = self.handler_list[i]
         Label(self.second_row_frame, text='GEMROC   ').grid(row=0, column=0, sticky=NW, pady=4)
         # print self.GEMROC_reading_dict.keys()
-        self.select_GEMROC = OptionMenu(self.second_row_frame, self.showing_GEMROC, *sorted(self.GEMROC_reading_dict.keys(),cmp = sort_by_number))
+        self.select_GEMROC = OptionMenu(self.second_row_frame, self.showing_GEMROC, *sorted(self.GEMROC_reading_dict.keys(),key = find_number))
         self.select_GEMROC.grid(row=1, column=0, sticky=NW, pady=4)
         fields_options = ["DAQ configuration", "LV and diagnostic", "Global Tiger configuration", "Channel Tiger configuration"]
 
@@ -839,12 +883,10 @@ class menu():
         rate = int(self.rate.get())
         if TIGER != -1:
             test_r = AN_CLASS.analisys_read(GEM_COM, c_inst)
-
             auto_tune_C = AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst)
-            GEM_COM.Load_VTH_from_scan_file(c_inst, TIGER, 2, 1, 0)
+            # GEM_COM.Load_VTH_from_scan_file(c_inst, TIGER, 2, 1, 0)
             print ("\nVth Loaded on TIGER {}".format(TIGER))
             auto_tune_C.fill_VTHR_matrix(3, 0, TIGER)
-
             auto_tune_C.thr_autotune_wth_counter_progress(TIGER, rate, test_r, pipe_out, iter, 0.03)
             # auto_tune_C.thr_autotune_wth_counter_progress(TIGER, rate, test_r,pipe_out, 2, 1)
             pipe_out.send(1)
@@ -857,7 +899,7 @@ class menu():
                 test_r = AN_CLASS.analisys_read(GEM_COM, c_inst)
 
                 auto_tune_C = AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst)
-                GEM_COM.Load_VTH_from_scan_file(c_inst, T, 2, 1, 0)
+                # GEM_COM.Load_VTH_from_scan_file(c_inst, T, 2, 1, 0)
                 print ("\nVth Loaded on TIGER {}".format(T))
                 auto_tune_C.fill_VTHR_matrix(3, 0, T)
 
@@ -918,11 +960,11 @@ class menu():
                         j += 1
                     self.field_array[i].grid(row=i + 2, column=1, sticky=W, pady=0)
                 else:
-                    self.label_array[i].grid(row=i + 2 - lenght / 2, column=3, sticky=W, pady=0)
+                    self.label_array[i].grid(row=int(i + 2 - lenght / 2), column=3, sticky=W, pady=0)
                     if line in self.dict_pram_list:
-                        self.input_array[line].grid(row=i + 2 - lenght / 2, column=5, sticky=W, pady=0)
+                        self.input_array[line].grid(row=int(i + 2 - lenght / 2), column=5, sticky=W, pady=0)
                         j += 1
-                    self.field_array[i].grid(row=i + 2 - lenght / 2, column=4, sticky=W, pady=0)
+                    self.field_array[i].grid(row=int(i + 2 - lenght / 2), column=4, sticky=W, pady=0)
 
                 i += 1
             thr_target = StringVar(self.third_row_frame)
@@ -980,13 +1022,13 @@ class menu():
                 self.label_array.append(Label(single_use_frame, text=line))
 
                 if i < lenght / 2:
-                    self.label_array[i].grid(row=i + 2, column=0, sticky=W, pady=0)
-                    self.input_array[i].grid(row=i + 2, column=2, sticky=W, pady=0)
-                    self.field_array[i].grid(row=i + 2, column=1, sticky=W, pady=0)
+                    self.label_array[i].grid(row=int(i + 2), column=0, sticky=W, pady=0)
+                    self.input_array[i].grid(row=int(i + 2), column=2, sticky=W, pady=0)
+                    self.field_array[i].grid(row=int(i + 2), column=1, sticky=W, pady=0)
                 else:
-                    self.label_array[i].grid(row=i + 2 - lenght / 2, column=3, sticky=W, pady=0)
-                    self.input_array[i].grid(row=i + 2 - lenght / 2, column=5, sticky=W, pady=0)
-                    self.field_array[i].grid(row=i + 2 - lenght / 2, column=4, sticky=W, pady=0)
+                    self.label_array[i].grid(row=int(i + 2 - lenght / 2), column=3, sticky=W, pady=0)
+                    self.input_array[i].grid(row=int(i + 2 - lenght / 2), column=5, sticky=W, pady=0)
+                    self.field_array[i].grid(row=int(i + 2 - lenght / 2), column=4, sticky=W, pady=0)
 
                 i += 1
         saveframe = Frame(self.third_row_frame)
@@ -996,26 +1038,25 @@ class menu():
 
     def SAVE(self):
         if self.configure_MODE.get() == "Global Tiger configuration":
-            File_name = tkFileDialog.asksaveasfilename(initialdir="." + sep + "conf" + sep + "saves", title="Select file name", filetypes=(("Global configuration saves", "*.gs"), ("all files", "*.*")))
+            File_name = filedialog.asksaveasfilename(initialdir="." + sep + "conf" + sep + "saves", title="Select file name", filetypes=(("Global configuration saves", "*.gs"), ("all files", "*.*")))
             GEM_NAME = str(self.showing_GEMROC.get())
             self.GEMROC_reading_dict[GEM_NAME].g_inst.save_glob_conf(File_name)
 
         if self.configure_MODE.get() == "Channel Tiger configuration":
-            File_name = tkFileDialog.asksaveasfilename(initialdir="." + sep + "conf" + sep + "saves", title="Select file name", filetypes=(("Channels configuration saves", "*.cs"), ("all files", "*.*")))
+            File_name = filedialog.asksaveasfilename(initialdir="." + sep + "conf" + sep + "saves", title="Select file name", filetypes=(("Channels configuration saves", "*.cs"), ("all files", "*.*")))
             GEM_NAME = str(self.showing_GEMROC.get())
             self.GEMROC_reading_dict[GEM_NAME].c_inst.save_ch_conf(File_name)
 
     def LOAD(self):
         if self.configure_MODE.get() == "Global Tiger configuration":
             GEM_NAME = str(self.showing_GEMROC.get())
-            File_name = tkFileDialog.askopenfilename(initialdir="." + sep + "conf" + sep + "saves", title="Select file", filetypes=(("Global configuration saves", "*.gs"), ("all files", "*.*")))
+            File_name = filedialog.askopenfilename(initialdir="." + sep + "conf" + sep + "saves", title="Select file", filetypes=(("Global configuration saves", "*.gs"), ("all files", "*.*")))
             self.GEMROC_reading_dict[GEM_NAME].g_inst.load_glob_conf(File_name)
 
         if self.configure_MODE.get() == "Channel Tiger configuration":
             GEM_NAME = str(self.showing_GEMROC.get())
-            File_name = tkFileDialog.askopenfilename(initialdir="." + sep + "conf" + sep + "saves", title="Select file", filetypes=(("Channels configuration saves", "*.cs"), ("all files", "*.*")))
+            File_name = filedialog.askopenfilename(initialdir="." + sep + "conf" + sep + "saves", title="Select file", filetypes=(("Channels configuration saves", "*.cs"), ("all files", "*.*")))
             self.GEMROC_reading_dict[GEM_NAME].c_inst.load_ch_conf(File_name)
-        self.LOAD_ON.config(state='normal')
 
     def LOAD_on_TIGER(self):
         GEMROC = self.showing_GEMROC.get()
@@ -1030,15 +1071,19 @@ class menu():
         single_use_frame.grid(row=0, column=0, sticky=W, pady=2)
         Button(single_use_frame, text='Read configuration', command=self.read_LV).grid(row=0, column=1, sticky=W, pady=2)
         Button(single_use_frame, text='Read diag status', command=self.read_diagn_dipram).grid(row=0, column=2, sticky=W, pady=2)
-        Button(single_use_frame, text='Write default LV conf', command=self.write_default_LV_conf).grid(row=1, column=2, sticky=W, pady=2)
+        Button(single_use_frame, text='Write default LV conf', command= lambda: self.write_default_LV_conf(self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())])).grid(row=1, column=2, sticky=W, pady=2)
 
         clock_sampling_F=LabelFrame(single_use_frame)
         clock_sampling_F.grid(row=3, column=2, sticky=W, pady=2,columnspan=8, rowspan=8)
-        Label(clock_sampling_F, text="Clock sampling polarity (HEX)", font=("Courier", 10)).grid(row=0, column=0, columnspan=8, sticky=S, pady=5)
+        Label(clock_sampling_F, text="Clock sampling polarity (HEX)", font=("TkDefaultFont", 10)).grid(row=0, column=0, columnspan=8, sticky=S, pady=5)
         self.samp_pol_pattern =Entry(clock_sampling_F, width=4)
         self.samp_pol_pattern.grid(row=1, column=0, columnspan=1, sticky=S, pady=5)
         Button (clock_sampling_F, command = self.write_clock_pol,text="Write").grid(row=1, column=1, columnspan=1, sticky=S, pady=5)
         Button (clock_sampling_F, command = self.default_pol,text="Load_default (all GEMROC)").grid(row=1, column=2, columnspan=1, sticky=S, pady=5)
+        Button (clock_sampling_F, command = lambda: self.shut_down_FEB(0), text="Shut down F0").grid(row=2, column=0, columnspan=1, sticky=S, pady=5)
+        Button (clock_sampling_F, command = lambda: self.shut_down_FEB(1), text="Shut down F1").grid(row=2, column=1, columnspan=1, sticky=S, pady=5)
+        Button (clock_sampling_F, command = lambda: self.shut_down_FEB(2), text="Shut down F2").grid(row=2, column=2, columnspan=1, sticky=S, pady=5)
+        Button (clock_sampling_F, command = lambda: self.shut_down_FEB(3), text="Shut down F3").grid(row=2, column=3, columnspan=1, sticky=S, pady=5)
 
         self.field_array = []
         self.input_array = []
@@ -1052,6 +1097,11 @@ class menu():
                 self.field_array.append(Label(single_use_frame, text='-'))
                 self.field_array[i].grid(row=i + 1, column=1, sticky=W, pady=1)
                 i += 1
+    def shut_down_FEB(self,num):
+        pwr_pattern=self.GEMROC_reading_dict[self.showing_GEMROC.get()].GEM_COM.gemroc_LV_XX.FEB_PWR_EN_pattern
+        pwr_pattern = pwr_pattern & ~(1 << num)
+        print (pwr_pattern)
+        self.GEMROC_reading_dict[self.showing_GEMROC.get()].GEM_COM.FEBPwrEnPattern_set(pwr_pattern)
 
     def DAQ_configurator(self):
         self.third_row_frame.destroy()
@@ -1068,11 +1118,11 @@ class menu():
 
             for line in f.readlines():
                 self.label_array.append(Label(single_use_frame, text=line.rstrip('\n')))
-                self.label_array[i].grid(row=i + 1, column=0, sticky=W, pady=1)
+                self.label_array[i].grid(row=i + 1, column=0, sticky=W, pady=0.2)
                 self.field_array.append(Label(single_use_frame, text='-'))
-                self.field_array[i].grid(row=i + 1, column=1, sticky=W, pady=1)
+                self.field_array[i].grid(row=i + 1, column=1, sticky=W, pady=0.2)
                 self.input_array.append(Entry(single_use_frame, width="4"))
-                self.input_array[i].grid(row=i + 1, column=2, sticky=W, pady=1)
+                self.input_array[i].grid(row=i + 1, column=2, sticky=W, pady=0.2)
                 i += 1
         Label(single_use_frame, text="TP_repeat_burst_param").grid(row=i + 1, column=0, pady=1, sticky=W)
         Label(single_use_frame, text="---").grid(row=i + 1, column=1, pady=1, sticky=W)
@@ -1104,7 +1154,7 @@ class menu():
 
         another1 = LabelFrame(another0)
         another1.grid(row=1, column=1, sticky=W, pady=2)
-        Label(another1, text="Trigger window settings", font=("Courier", 20)).grid(row=0, column=0, columnspan=8, sticky=S, pady=5)
+        Label(another1, text="Trigger window settings", font=("TkDefaultFont", 20)).grid(row=0, column=0, columnspan=8, sticky=S, pady=5)
 
         Label(another1, text="L1_lat_B3clk_param").grid(row=1, column=2, sticky=S, pady=0)
         self.L1_field1 = Label(another1, text="---", width=4)
@@ -1131,7 +1181,7 @@ class menu():
         GEMROC = self.GEMROC_reading_dict[self.showing_GEMROC.get()]
         GEMROC.GEM_COM.set_FnR_pattern(int(self.samp_pol_pattern.get(),16))
     def default_pol(self):
-        for number, GEMROC in sorted(self.GEMROC_reading_dict.items(),cmp = sort_by_number):
+        for number, GEMROC in sorted(self.GEMROC_reading_dict.items(),key = find_number):
             GEMROC.GEM_COM.reload_default_pol_pattern()
     def set_L1_window(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():
@@ -1389,9 +1439,8 @@ class menu():
             field = self.field_array[i]
             field['text'] = read_dict[label['text']]
 
-    def write_default_LV_conf(self):
+    def write_default_LV_conf(self,GEMROC):
         COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
-        GEMROC = self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())]
         GEMROC.GEM_COM.gemroc_LV_XX.set_gemroc_cmd_code(COMMAND_STRING, 1)
         GEMROC.GEM_COM.gemroc_LV_XX.update_command_words()
         # keep gemroc_LV_XX.print_command_words()
@@ -1637,7 +1686,7 @@ class menu():
         TIGER = int(TIGER)
         CHANNEL = int(CHANNEL)
         if update_fields == True:
-            for key, elem in self.input_array.iteritems():
+            for key, elem in self.input_array.items():
                 if CHANNEL != 64:
                     GEMROC.c_inst.Channel_cfg_list[TIGER][CHANNEL][key] = int(elem.get())
                 else:
@@ -1695,6 +1744,7 @@ class menu():
                 if source == "auto":
                     GEMROC.GEM_COM.Load_VTH_fromfile_autotuned(GEMROC.c_inst, T)
                 if source == "scan":
+                    GEMROC.thr="3T-2E"
                     GEMROC.GEM_COM.Load_VTH_from_scan_file(GEMROC.c_inst, T, sigma_T, sigma_E, offset)
         else:
             for number, GEMROC in self.GEMROC_reading_dict.items():
@@ -1702,6 +1752,7 @@ class menu():
                     if source == "auto":
                         GEMROC.GEM_COM.Load_VTH_fromfile_autotuned(GEMROC.c_inst, T)
                     if source == "scan":
+                        GEMROC.thr = "3T-2E"
                         GEMROC.GEM_COM.Load_VTH_from_scan_file(GEMROC.c_inst, T, sigma_T, sigma_E, offset, send_command=False)
     def save_current_thr(self):
         """
@@ -1734,7 +1785,9 @@ class menu():
         :return:
         """
         for number, GEMROC in self.GEMROC_reading_dict.items():
+            rate=get_tuning_rate(GEMROC.GEMROC_ID)
             GEMROC.GEM_COM.load_vth(GEMROC.c_inst)
+            GEMROC.thr = "Tuned @ {}".format(rate)
 
     def load_default_config(self,set_check=True):
         for number, GEMROC in self.GEMROC_reading_dict.items():
@@ -1809,10 +1862,10 @@ class menu():
         pipe_out.send(Errors)
     def Synch_reset(self, to_all=1):
         if to_all == 1:
+            print ("Synch reset to all\n")
             for number, GEMROC in self.GEMROC_reading_dict.items():
                 GEMROC.GEM_COM.SynchReset_to_TgtFEB()
                 #GEMROC.GEM_COM.SynchReset_to_TgtTCAM()
-                print ("{} reset".format(number))
         else:
             GEMROC = self.showing_GEMROC.get()
             self.GEMROC_reading_dict[GEMROC].GEM_COM.SynchReset_to_TgtFEB()
@@ -1820,6 +1873,16 @@ class menu():
             print ("{} reset".format(self.showing_GEMROC.get()))
         self.Launch_error_check_op['text']="Synch reset sent"
         self.Launch_error_check['text']="Synch reset sent"
+
+    def TCAM_reset(self, to_all=1):
+        if to_all == 1:
+            for number, GEMROC in self.GEMROC_reading_dict.items():
+                GEMROC.GEM_COM.SynchReset_to_TgtTCAM()
+        else:
+            GEMROC = self.showing_GEMROC.get()
+            self.GEMROC_reading_dict[GEMROC].GEM_COM.SynchReset_to_TgtTCAM()
+        self.Launch_error_check_op['text']="TCAM reset sent"
+        self.Launch_error_check['text']="TCAM reset sent"
 
     def error_led_update(self, update=1):
         self.ERROR_LED["image"] = self.icon_bad
@@ -1840,6 +1903,7 @@ class menu():
         self.load_default_config_parallel()
         self.Synch_reset(1)
         self.load_default_config_parallel()
+        self.TCAM_reset(1)
         self.Synch_reset(1)
         self.Synch_reset(1)
         self.Synch_reset(1)
@@ -1885,12 +1949,12 @@ class menu():
         Funcion to import the channel configuration from old RUNS. Needs the pickle containing the data
         :return:
         """
-        File_name = tkFileDialog.askopenfilename(initialdir="." + sep + "data_folder", title="Select file", filetypes=(("Configuration log", "*.pkl"), ("all files", "*.*")))
+        File_name = filedialog.askopenfilename(initialdir="." + sep + "data_folder", title="Select file", filetypes=(("Configuration log", "*.pkl"), ("all files", "*.*")))
 
         with open(File_name, 'rb') as f:
             old_conf_dict = pickle.load(f)
 
-        for GEMROC_key, dict in sorted(old_conf_dict.items(),cmp = sort_by_number):
+        for GEMROC_key, dict in sorted(old_conf_dict.items(),key = find_number):
             for TIGER_key, dict2 in dict.items():
                 if TIGER_key.split(" ")[0] == "TIGER":
                     TIGER_id = int(TIGER_key.split(" ")[1])
@@ -1937,12 +2001,14 @@ def character_limit(entry_text):
 class GEMROC_HANDLER:
     def __init__(self, GEMROC_ID):
         self.GEMROC_ID = GEMROC_ID
-        self.GEM_COM = COM_class.communication(GEMROC_ID, 0)  # Create communication class
+        self.GEM_COM = COM_class.communication(GEMROC_ID, 15)  # Create communication class
+        self.GEM_COM.change_acq_mode(0)
         default_g_inst_settigs_filename = self.GEM_COM.conf_folder + sep + "TIGER_def_g_cfg_2018.txt"
         self.g_inst = GEM_CONF.g_reg_settings(GEMROC_ID, default_g_inst_settigs_filename)
         self.g_inst.load_specif_settings(filename=self.GEM_COM.conf_folder+sep+"specific_conf")
         default_ch_inst_settigs_filename = self.GEM_COM.conf_folder + sep + "TIGER_def_ch_cfg_2018.txt"
         self.c_inst = GEM_CONF.ch_reg_settings(GEMROC_ID, default_ch_inst_settigs_filename)
+        self.thr="None"
         if GEMROC_ID<4:
             self.layer=1
         elif GEMROC_ID<10:
@@ -1953,8 +2019,8 @@ class GEMROC_HANDLER:
         self.GEM_COM.__del__()
 
 def sort_by_number(stringa1,stringa2):
-    number1=find_number(stringa1)
-    number2=find_number(stringa2)
+    number1 = find_number(stringa1)
+    number2 = find_number(stringa2)
     return number1-number2
 
 def find_number(stringa):
@@ -1964,6 +2030,10 @@ def find_number(stringa):
         number = int(stringa[0].split(" ")[1])
 
     return number
+
+def get_tuning_rate(number):
+    with open("./log_folder/auto_thr_setting_log_GEMROC{}.txt".format(number), "r") as logfile:
+        return int(logfile.readline().split(",")[0].split(" ")[2])
 
 if __name__ == '__main__':
     Main_menu = menu()

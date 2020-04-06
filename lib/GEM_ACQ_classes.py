@@ -12,7 +12,7 @@ import numpy as np
 OS = sys.platform
 if OS == 'win32':
     sep = '\\'
-elif OS == 'linux2':
+elif OS == 'linux2' or 'linux':
     sep = '/'
 else:
     print("ERROR: OS {} non compatible".format(OS))
@@ -41,7 +41,7 @@ class Thread_handler(Thread):
         self.TIMED_out = False
         with open(datapath, 'wb'):
             pass
-        print "Acquiring GEMROC {} for {} seconds".format(self.reader.GEMROC_ID, self.acq_time)
+        print ("Acquiring GEMROC {} for {} seconds".format(self.reader.GEMROC_ID, self.acq_time))
         self.reader.start_socket()
         while time.time() - time0 < self.acq_time and self.running:
             Total_Data = 0
@@ -51,7 +51,7 @@ class Thread_handler(Thread):
                     x = self.reader.fast_acquisition(data_list)  # self.reader.fast_acquisition(data_list)
                     Total_Data += x
                 except Exception as e:
-                    print e
+                    print(e)
                     print ("\n---TIMED_OUT!!!...\n")
                     self.reader.dataSock.close()
                     self.running = False
@@ -70,7 +70,7 @@ class Thread_handler(Thread):
 
         self.reader.dataSock.close()
         self.reader.data_list = list(data_list)
-        print len(self.reader.data_list)
+        print (len(self.reader.data_list))
 
         # with open(self.reader.log_path, 'a') as log_file:
         #     log_file.write("{} -- Closing acquisition on GEMROC {}\n".format(time.ctime(),self.reader.GEMROC_ID))
@@ -83,7 +83,7 @@ class Thread_handler(Thread):
                 print ("\n----SOMETHING WRONG---FILE MISSING\n")
                 return 0
         self.reader.datapath = datapath
-        print "Done acquiring"
+        print ("Done acquiring")
 
 
 class Thread_handler_TM(Thread):  # In order to scan during configuration is mandatory to use multithreading
@@ -124,10 +124,9 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
                     Totallissimi_packets += 1
                     #print ("Packet from GEMROC {}".format(self.reader.GEMROC_ID))
                 except Exception as e:
-                    print e
+                    print (e)
                     with open(self.reader.log_path, 'a') as f:
                         f.write("{} -- GEMROC {} TIMED_OUT\n".format(time.ctime(), self.reader.GEMROC_ID))
-
                     print ("\n---GEMROC {} - {}\n".format(self.reader.GEMROC_ID, e))
                     self.reader.TIMED_out = True
                     Exception("GEMROC {} TIMED_OUT".format(self.reader.GEMROC_ID))
@@ -194,7 +193,7 @@ class reader:
         self.datalist = []
         self.log_path=logfile
         self.data_online_monitor = online_monitor
-        self.timeout_for_sockets = 25
+        self.timeout_for_sockets = 20
         if self.data_online_monitor:
             if local_reader:
                 self.port_for_cloning = 58880 + self.GEMROC_ID
@@ -212,6 +211,7 @@ class reader:
     def create_cloning_socket(self):
         self.cloning_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.cloning_sock.bind((self.address_for_cloning_sender, self.cloning_sending_port))
+
     def start_socket(self):
         self.TIMED_out=False
 
@@ -221,18 +221,19 @@ class reader:
             self.dataSock.bind((self.HOST_IP, self.HOST_PORT))
         except Exception as e:
 
-            print "--GEMROC {}-{}".format(self.GEMROC_ID,e)
+            print ("--GEMROC {}-{}".format(self.GEMROC_ID,e))
             Exception("TIMED_OUT")
             with open(self.log_path, 'a') as f:
                 f.write("{} -- GEMROC {} TIMED_OUT\n".format(time.ctime(), self.GEMROC_ID))
             self.TIMED_out=True
-            print "Can't bind the socket"
+            print ("Can't bind the socket")
 
         # self.dataSock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 8388608 )
         # print self.dataSock.getsockopt(socket.SOL_SOCKET,socket.SO_RCVBUF)
 
     def __del__(self):
         return 0
+
     def acquire_rate(self, max_time):
         acq_matrix = np.zeros((8,64))
         self.beginning_time = time.time()
@@ -285,6 +286,7 @@ class reader:
                     acq_matrix[this_word["TIGER"]][this_word["Channel"]]+=1
         self.dataSock.close()
         return acq_matrix
+
     def build_hist_and_miss(self, frameword_check=True):
         self.thr_scan_matrix = np.zeros((8, 64))  # Tiger,Channel
         self.thr_scan_frames = np.ones(8)
@@ -332,63 +334,63 @@ class reader:
                                                                                                  (int_x >> 56) & 0x7, int(
                                                                                                      int_x >> 48) & 0x3F] + 1
 
-    def acquisition(self, savefile, frameword_check=True):
-        data, addr = self.dataSock.recvfrom(self.BUFSIZE)
-        savefile.write(data)  # Again, could be a similar problem? GM
-
-        hexdata = binascii.hexlify(data)
-
-        for x in range(0, len(hexdata) - 1, 16):
-            int_x = 0
-            for b in range(7, 0, -1):
-                hex_to_int = (int(hexdata[x + b * 2], 16)) * 16 + int(hexdata[x + b * 2 + 1], 16)
-                int_x = (int_x + hex_to_int) << 8
-            hex_to_int = (int(hexdata[x], 16)) * 16 + int(hexdata[x + 1], 16)  # acr 2017-11-17 this should fix the problem
-            int_x = (int_x + hex_to_int)
-            # raw = '%016X ' % int_x
-
-            if (((int_x & 0xFF00000000000000) >> 59) == 0x04):
-                # s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'HB: ' + 'Framecount: %08X ' % (
-                #         (int_x >> 15) & 0xFFFF) + 'SEUcount: %08X\n' % (int_x & 0x7FFF)
-                self.thr_scan_frames[(int_x >> 56) & 0x7] = self.thr_scan_frames[(int_x >> 56) & 0x7] + 1
-
-            # if (((int_x & 0xFF00000000000000) >> 59) == 0x08):
-            # s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'CW: ' + 'ChID: %02X ' % (
-            #         (int_x >> 24) & 0x3F) + ' CounterWord: %016X\n' % (int_x & 0x00FFFFFF)
-            if (((int_x & 0xFF00000000000000) >> 59) == 0x00):
-                # s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'EW: ' + 'ChID: %02X ' % (
-                #         (int_x >> 48) & 0x3F) + 'tacID: %01X ' % ((int_x >> 46) & 0x3) + 'Tcoarse: %04X ' % (
-                #             (int_x >> 30) & 0xFFFF) + 'Ecoarse: %03X ' % (
-                #             (int_x >> 20) & 0x3FF) + 'Tfine: %03X ' % ((int_x >> 10) & 0x3FF) + 'Efine: %03X \n' % (
-                #             int_x & 0x3FF)
-                self.thr_scan_matrix[(int_x >> 56) & 0x7, int(int_x >> 48) & 0x3F] = self.thr_scan_matrix[
-                                                                                         (int_x >> 56) & 0x7, int(
-                                                                                             int_x >> 48) & 0x3F] + 1
-
-            if (((int_x & 0xFF00000000000000) >> 59) == 0x04):  # Framewoird_integrity_check
-
-                self.thr_scan_frames[(int_x >> 56) & 0x7] = self.thr_scan_frames[(int_x >> 56) & 0x7] + 1
-
-                this_framecount = ((int_x >> 15) & 0xFFFF)
-                this_tiger = ((int_x >> 56) & 0x7)
-
-                if frameword_check:
-                    if self.first_framew[this_tiger] == 0:
-                        self.last_framew[this_tiger] = this_framecount
-                        self.first_framew[this_tiger] = 1
-                    else:
-                        if this_framecount == 0xffff:
-                            self.first_framew[this_tiger] = 0
-                        else:
-                            for F in range(int(self.last_framew[this_tiger]), int(this_framecount)):
-                                if self.last_framew[this_tiger] + 1 == this_framecount:
-                                    self.last_framew[this_tiger] = this_framecount
-                                    break
-                                else:
-                                    print ("Frameword {} from Tiger {} missing".format(hex(F + 1), this_tiger))
-                                    self.last_framew[this_tiger] = self.last_framew[this_tiger] + 1
-
-        return 0
+    # def acquisition(self, savefile, frameword_check=True):
+    #     data, addr = self.dataSock.recvfrom(self.BUFSIZE)
+    #     savefile.write(data)  # Again, could be a similar problem? GM
+    #
+    #     hexdata = binascii.hexlify(data)
+    #
+    #     for x in range(0, len(hexdata) - 1, 16):
+    #         int_x = 0
+    #         for b in range(7, 0, -1):
+    #             hex_to_int = (int(hexdata[x + b * 2], 16)) * 16 + int(hexdata[x + b * 2 + 1], 16)
+    #             int_x = (int_x + hex_to_int) << 8
+    #         hex_to_int = (int(hexdata[x], 16)) * 16 + int(hexdata[x + 1], 16)  # acr 2017-11-17 this should fix the problem
+    #         int_x = (int_x + hex_to_int)
+    #         # raw = '%016X ' % int_x
+    #
+    #         if (((int_x & 0xFF00000000000000) >> 59) == 0x04):
+    #             # s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'HB: ' + 'Framecount: %08X ' % (
+    #             #         (int_x >> 15) & 0xFFFF) + 'SEUcount: %08X\n' % (int_x & 0x7FFF)
+    #             self.thr_scan_frames[(int_x >> 56) & 0x7] = self.thr_scan_frames[(int_x >> 56) & 0x7] + 1
+    #
+    #         # if (((int_x & 0xFF00000000000000) >> 59) == 0x08):
+    #         # s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'CW: ' + 'ChID: %02X ' % (
+    #         #         (int_x >> 24) & 0x3F) + ' CounterWord: %016X\n' % (int_x & 0x00FFFFFF)
+    #         if (((int_x & 0xFF00000000000000) >> 59) == 0x00):
+    #             # s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'EW: ' + 'ChID: %02X ' % (
+    #             #         (int_x >> 48) & 0x3F) + 'tacID: %01X ' % ((int_x >> 46) & 0x3) + 'Tcoarse: %04X ' % (
+    #             #             (int_x >> 30) & 0xFFFF) + 'Ecoarse: %03X ' % (
+    #             #             (int_x >> 20) & 0x3FF) + 'Tfine: %03X ' % ((int_x >> 10) & 0x3FF) + 'Efine: %03X \n' % (
+    #             #             int_x & 0x3FF)
+    #             self.thr_scan_matrix[(int_x >> 56) & 0x7, int(int_x >> 48) & 0x3F] = self.thr_scan_matrix[
+    #                                                                                      (int_x >> 56) & 0x7, int(
+    #                                                                                          int_x >> 48) & 0x3F] + 1
+    #
+    #         if (((int_x & 0xFF00000000000000) >> 59) == 0x04):  # Framewoird_integrity_check
+    #
+    #             self.thr_scan_frames[(int_x >> 56) & 0x7] = self.thr_scan_frames[(int_x >> 56) & 0x7] + 1
+    #
+    #             this_framecount = ((int_x >> 15) & 0xFFFF)
+    #             this_tiger = ((int_x >> 56) & 0x7)
+    #
+    #             if frameword_check:
+    #                 if self.first_framew[this_tiger] == 0:
+    #                     self.last_framew[this_tiger] = this_framecount
+    #                     self.first_framew[this_tiger] = 1
+    #                 else:
+    #                     if this_framecount == 0xffff:
+    #                         self.first_framew[this_tiger] = 0
+    #                     else:
+    #                         for F in range(int(self.last_framew[this_tiger]), int(this_framecount)):
+    #                             if self.last_framew[this_tiger] + 1 == this_framecount:
+    #                                 self.last_framew[this_tiger] = this_framecount
+    #                                 break
+    #                             else:
+    #                                 print ("Frameword {} from Tiger {} missing".format(hex(F + 1), this_tiger))
+    #                                 self.last_framew[this_tiger] = self.last_framew[this_tiger] + 1
+    #
+    #     return 0
 
     def fast_acquisition(self, data_list_tmp):  # remove savefile to be added in a new class GM 11.06.18
         if self.local_test:
@@ -408,7 +410,7 @@ class reader:
 
     def dump_list(self, savefile, data_list_tmp):
         for item in data_list_tmp:
-            savefile.write('%s' % item)
+            savefile.write(item)
         # with open(self.log_path, 'ab') as f:
         #     f.write("{} -- Dumping Data for GEMROC {} in file {}\n".format(time.ctime(), self.GEMROC_ID,savefile))
 
@@ -417,7 +419,7 @@ class reader:
         self.thr_scan_frames = np.ones(8)
         self.thr_scan_rate = np.zeros((8, 64))
         statinfo = os.stat(path)
-        print statinfo.st_size
+        print (statinfo.st_size)
         with open(path, 'r') as f:
             for i in range(0, statinfo.st_size / 8):
 
@@ -558,7 +560,7 @@ class reader:
             axarray[i].bar(np.arange(0, 64), thr_scan_copy[i, :])
 
     def check_TM_continuity(self, path):
-        print "OPEN {}".format(path)
+        print ("OPEN {}".format(path))
         LOCAL_L1_COUNT_31_6 = 0
         LOCAL_L1_COUNT_5_0 = 0
         LOCAL_L1_COUNT = 0
@@ -574,74 +576,73 @@ class reader:
         TIGER_not_missing = np.zeros((8))
         packet_missing = []
         print ("size={}\n".format(statinfo.st_size))
-        with open(path, 'r') as f:
-            for i in range(0, statinfo.st_size / 8):
+        with open(path, 'rb') as f:
+            for i in range(0, int(statinfo.st_size / 8)):
                 data = f.read(8)
                 hexdata = binascii.hexlify(data)
-                for x in range(0, len(hexdata) - 1, 16):
-                    int_x = 0
-                    for b in range(7, 0, -1):
-                        hex_to_int = (int(hexdata[x + b * 2], 16)) * 16 + int(hexdata[x + b * 2 + 1], 16)
-                        int_x = (int_x + hex_to_int) << 8
-                    hex_to_int = (int(hexdata[x], 16)) * 16 + int(hexdata[x + 1], 16)  # acr 2017-11-17 this should fix the problem
-                    int_x = (int_x + hex_to_int)
-                    s = '%016X \n' % int_x
-                    # acr 2018-06-25 out_file.write(s)
+                string = "{:064b}".format(int(hexdata, 16))
+                inverted = []
+                for i in range(8, 0, -1):
+                    inverted.append(string[(i - 1) * 8:i * 8])
+                string_inv = "".join(inverted)
+                int_x = int(string_inv, 2)
+                s = '%016X \n' % int_x
+                # acr 2018-06-25 out_file.write(s)
 
-                    ## comment this block to avoid parsing
-                    ##acr 2017-11-16        if (((int_x & 0xFF00000000000000)>>56) == 0x20):
-                    if (((int_x & 0xE000000000000000) >> 61) == 0x6):
-                        LOCAL_L1_COUNT_31_6 = int_x >> 32 & 0x3FFFFFF
-                        LOCAL_L1_COUNT_5_0 = int_x >> 24 & 0x3F
-                        LOCAL_L1_COUNT = (LOCAL_L1_COUNT_31_6 << 6) + LOCAL_L1_COUNT_5_0
-                        if first_counter == 0:
-                            last_counter = LOCAL_L1_COUNT
-                            first_counter = 1
+                ## comment this block to avoid parsing
+                ##acr 2017-11-16        if (((int_x & 0xFF00000000000000)>>56) == 0x20):
+                if (((int_x & 0xE000000000000000) >> 61) == 0x6):
+                    LOCAL_L1_COUNT_31_6 = int_x >> 32 & 0x3FFFFFF
+                    LOCAL_L1_COUNT_5_0 = int_x >> 24 & 0x3F
+                    LOCAL_L1_COUNT = (LOCAL_L1_COUNT_31_6 << 6) + LOCAL_L1_COUNT_5_0
+                    if first_counter == 0:
+                        last_counter = LOCAL_L1_COUNT
+                        first_counter = 1
+                    else:
+                        if LOCAL_L1_COUNT == 0xffff:
+                            first_counter = 0
                         else:
-                            if LOCAL_L1_COUNT == 0xffff:
-                                first_counter = 0
-                            else:
-                                for F in range(int(last_counter), int(LOCAL_L1_COUNT)):
-                                    if last_counter + 1 == LOCAL_L1_COUNT:
-                                        last_counter = LOCAL_L1_COUNT
-                                        break
-                                    else:
-                                        packet_missing.append(hex(F + 1))
-                                        print ("Missing packet number {}, GEMROC {}".format(hex(F + 1),self.GEMROC_ID))
-                                        last_counter = last_counter + 1
+                            for F in range(int(last_counter), int(LOCAL_L1_COUNT)):
+                                if last_counter + 1 == LOCAL_L1_COUNT:
+                                    last_counter = LOCAL_L1_COUNT
+                                    break
+                                else:
+                                    packet_missing.append(hex(F + 1))
+                                    print ("Missing packet number {}, GEMROC {}".format(hex(F + 1),self.GEMROC_ID))
+                                    last_counter = last_counter + 1
 
-                        LOCAL_L1_TIMESTAMP = int_x & 0xFFFF
-                        HITCOUNT = (int_x >> 16) & 0xFF
-                        if (((int_x & 0xFFFF) - previous_L1_TS) > 0):
-                            L1_TS_abs_diff = ((int_x & 0xFFFF) - previous_L1_TS)
-                        else:
-                            # THIS PRODUCES WRONG RESULTS (INCONSISTENT PERIOD) FOR PERIODS L1_TS_abs_diff = 65536 +((int_x & 0xFFFF) - previous_L1_TS)
-                            # THIS ALSO PRODUCES WRONG RESULTS (INCONSISTENT PERIOD) FOR PERIODS L1_TS_abs_diff = 32768 - ((int_x & 0xFFFF) - previous_L1_TS)
-                            L1_TS_abs_diff = 65536 + ((int_x & 0xFFFF) - previous_L1_TS)
-                        s = 'HEADER :  ' + 'STATUS BIT[2:0]: %01X: ' % ((int_x >> 58) & 0x7) + 'LOCAL L1 COUNT: %08X ' % (LOCAL_L1_COUNT) + 'HitCount: %02X ' % ((int_x >> 16) & 0xFF) + 'LOCAL L1 TIMESTAMP: %04X; ' % (int_x & 0xFFFF) + 'Diff w.r.t. previous L1_TS: %04f us\n' % (
-                                    L1_TS_abs_diff * 6 / 1000)
-                        previous_L1_TS = (int_x & 0xFFFF)
-                        # s = 'HEADER :  ' + 'STATUS BIT[2:0]: %01X: '%((int_x >> 58)& 0x7) + 'LOCAL L1 COUNT: %08X '%( LOCAL_L1_COUNT ) + 'HitCount: %02X '%((int_x >> 16) & 0xFF) + 'LOCAL L1 TIMESTAMP: %04X\n'%(int_x & 0xFFFF)
-                    if (((int_x & 0xE000000000000000) >> 61) == 0x7):
-                        s = 'TRAILER: ' + 'LOCAL L1  FRAMENUM [23:0]: %06X: ' % ((int_x >> 37) & 0xFFFFFF) + 'GEMROC_ID: %02X ' % ((int_x >> 32) & 0x1F) + 'TIGER_ID: %01X ' % ((int_x >> 27) & 0x7) + 'LOCAL L1 COUNT[2:0]: %01X ' % (
-                                    (int_x >> 24) & 0x7) + 'LAST COUNT WORD FROM TIGER:CH_ID[5:0]: %02X ' % ((int_x >> 18) & 0x3F) + 'LAST COUNT WORD FROM TIGER: DATA[17:0]: %05X \n' % (int_x & 0x3FFFF)
-                    if (((int_x & 0xC000000000000000) >> 62) == 0x0):
+                    LOCAL_L1_TIMESTAMP = int_x & 0xFFFF
+                    HITCOUNT = (int_x >> 16) & 0xFF
+                    if (((int_x & 0xFFFF) - previous_L1_TS) > 0):
+                        L1_TS_abs_diff = ((int_x & 0xFFFF) - previous_L1_TS)
+                    else:
+                        # THIS PRODUCES WRONG RESULTS (INCONSISTENT PERIOD) FOR PERIODS L1_TS_abs_diff = 65536 +((int_x & 0xFFFF) - previous_L1_TS)
+                        # THIS ALSO PRODUCES WRONG RESULTS (INCONSISTENT PERIOD) FOR PERIODS L1_TS_abs_diff = 32768 - ((int_x & 0xFFFF) - previous_L1_TS)
+                        L1_TS_abs_diff = 65536 + ((int_x & 0xFFFF) - previous_L1_TS)
+                    s = 'HEADER :  ' + 'STATUS BIT[2:0]: %01X: ' % ((int_x >> 58) & 0x7) + 'LOCAL L1 COUNT: %08X ' % (LOCAL_L1_COUNT) + 'HitCount: %02X ' % ((int_x >> 16) & 0xFF) + 'LOCAL L1 TIMESTAMP: %04X; ' % (int_x & 0xFFFF) + 'Diff w.r.t. previous L1_TS: %04f us\n' % (
+                                L1_TS_abs_diff * 6 / 1000)
+                    previous_L1_TS = (int_x & 0xFFFF)
+                    # s = 'HEADER :  ' + 'STATUS BIT[2:0]: %01X: '%((int_x >> 58)& 0x7) + 'LOCAL L1 COUNT: %08X '%( LOCAL_L1_COUNT ) + 'HitCount: %02X '%((int_x >> 16) & 0xFF) + 'LOCAL L1 TIMESTAMP: %04X\n'%(int_x & 0xFFFF)
+                if (((int_x & 0xE000000000000000) >> 61) == 0x7):
+                    s = 'TRAILER: ' + 'LOCAL L1  FRAMENUM [23:0]: %06X: ' % ((int_x >> 37) & 0xFFFFFF) + 'GEMROC_ID: %02X ' % ((int_x >> 32) & 0x1F) + 'TIGER_ID: %01X ' % ((int_x >> 27) & 0x7) + 'LOCAL L1 COUNT[2:0]: %01X ' % (
+                                (int_x >> 24) & 0x7) + 'LAST COUNT WORD FROM TIGER:CH_ID[5:0]: %02X ' % ((int_x >> 18) & 0x3F) + 'LAST COUNT WORD FROM TIGER: DATA[17:0]: %05X \n' % (int_x & 0x3FFFF)
+                if (((int_x & 0xC000000000000000) >> 62) == 0x0):
 
-                        LOCAL_L1_TS_minus_TIGER_COARSE_TS = LOCAL_L1_TIMESTAMP - ((int_x >> 32) & 0xFFFF)
-                        s = 'DATA   : TIGER: %01X ' % ((int_x >> 59) & 0x7) + 'L1_TS - TIGERCOARSE_TS: %d ' % (LOCAL_L1_TS_minus_TIGER_COARSE_TS) + 'LAST TIGER FRAME NUM[2:0]: %01X ' % ((int_x >> 56) & 0x7) + 'TIGER DATA: ChID: %02X ' % ((int_x >> 50) & 0x3F) + 'tacID: %01X ' % (
-                                    (int_x >> 48) & 0x3) + 'Tcoarse: %04X ' % ((int_x >> 32) & 0xFFFF) + 'Ecoarse: %03X ' % ((int_x >> 20) & 0x3FF) + 'Tfine: %03X ' % ((int_x >> 10) & 0x3FF) + 'Efine: %03X \n' % (int_x & 0x3FF)
-                        TIGER_not_missing[int((int_x >> 59) & 0x7)] = 1
-                        self.thr_scan_rate[((int_x >> 59) & 0x7)][(int_x >> 50) & 0x3F]+=1
-                        #print "C'e il TIGER!"
-                    #print s
+                    LOCAL_L1_TS_minus_TIGER_COARSE_TS = LOCAL_L1_TIMESTAMP - ((int_x >> 32) & 0xFFFF)
+                    s = 'DATA   : TIGER: %01X ' % ((int_x >> 59) & 0x7) + 'L1_TS - TIGERCOARSE_TS: %d ' % (LOCAL_L1_TS_minus_TIGER_COARSE_TS) + 'LAST TIGER FRAME NUM[2:0]: %01X ' % ((int_x >> 56) & 0x7) + 'TIGER DATA: ChID: %02X ' % ((int_x >> 50) & 0x3F) + 'tacID: %01X ' % (
+                                (int_x >> 48) & 0x3) + 'Tcoarse: %04X ' % ((int_x >> 32) & 0xFFFF) + 'Ecoarse: %03X ' % ((int_x >> 20) & 0x3FF) + 'Tfine: %03X ' % ((int_x >> 10) & 0x3FF) + 'Efine: %03X \n' % (int_x & 0x3FF)
+                    TIGER_not_missing[int((int_x >> 59) & 0x7)] = 1
+                    self.thr_scan_rate[((int_x >> 59) & 0x7)][(int_x >> 50) & 0x3F]+=1
+                    #print "C'e il TIGER!"
+                #print s
 
-            ##-- field size in bits (56 total):   2      6        2       16         10       10     10
-            ##-- received_tdata                 "10" & ch_ID & tac_ID & tcoarse & ecoarse & tfine & efine
-            # ff.write("{}\n".format(raw))
-            TIGER_out=[]
-            for i in range (0,8):
-                if TIGER_not_missing[i]==0:
-                    TIGER_out.append(i)
+        ##-- field size in bits (56 total):   2      6        2       16         10       10     10
+        ##-- received_tdata                 "10" & ch_ID & tac_ID & tcoarse & ecoarse & tfine & efine
+        # ff.write("{}\n".format(raw))
+        TIGER_out=[]
+        for i in range (0,8):
+            if TIGER_not_missing[i]==0:
+                TIGER_out.append(i)
         return TIGER_out, packet_missing
 
     def check_TL_Frame_TIGERS(self, path):
@@ -706,8 +707,8 @@ class reader:
 
     def send_start_packet(self, run, subrun,datapath):
 
-        self.cloning_sock.sendto("Srt - RUN {} SUBRUN {} FOLDER {} GEMROC{}".format(run, subrun, datapath, self.GEMROC_ID), (self.address_for_cloning_rcv, self.port_for_cloning))
+        self.cloning_sock.sendto("Srt - RUN {} SUBRUN {} FOLDER {} GEMROC{}".format(run, subrun, datapath, self.GEMROC_ID).encode(), (self.address_for_cloning_rcv, self.port_for_cloning))
 
     def send_end_packet(self, run, subrun, datapath):
-        self.cloning_sock.sendto("End - RUN {} SUBRUN {} FOLDER {} GEMROC{}".format(run, subrun, datapath, self.GEMROC_ID), (self.address_for_cloning_rcv, self.port_for_cloning))
+        self.cloning_sock.sendto("End - RUN {} SUBRUN {} FOLDER {} GEMROC{}".format(run, subrun, datapath, self.GEMROC_ID).encode(), (self.address_for_cloning_rcv, self.port_for_cloning))
 
