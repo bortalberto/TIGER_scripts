@@ -302,9 +302,7 @@ class menu():
 
         Button(equaliz_frame_3, text = "Start equalization", command =self.start_ecq_map).pack(side=LEFT)
 
-        if COM_class.local_test == True:
-            for G in range (0,11):
-                self.toggle(G)
+
 
         self.status_tab = Frame (self.select_window)
         self.tabControl.add(self.status_tab, text = "Version & status")
@@ -328,6 +326,11 @@ class menu():
     #     self.save_current_thr()
     #     self.rate_window.error_window_main.destroy()
     #     print ("Equalization done and saved")
+        if COM_class.local_test == True:
+            for G in range (0,11):
+                self.toggle(G)
+
+
 
     def start_ecq_map(self):
         with open("./log_folder/thr_setting.txt", "a+") as logfile:

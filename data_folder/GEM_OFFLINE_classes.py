@@ -25,8 +25,8 @@ class reader:
         last_framecount = np.zeros(8)
         first_frameword = np.zeros(8)
         print ("size={}\n".format(statinfo.st_size))
-        with open(path, 'r') as f, open(path + "_missing_framewords", 'w') as fmiss:
-            for i in range(0, statinfo.st_size / 8):
+        with open(path, 'rb') as f, open(path + "_missing_framewords", 'w') as fmiss:
+            for i in range(0, int(statinfo.st_size / 8)):
                 data = f.read(8)
                 hexdata = binascii.hexlify(data)
 
@@ -68,16 +68,19 @@ class reader:
 
                     # with open ("out.txt", 'a') as ff:
                     # ff.write("{}\n".format(raw))
+
     def write_txt(self, path,outfile="out.txt"):
         statinfo = os.stat(path)
         f = open("out.txt", 'w')
         f.close()
 
-        with open(path, 'r') as f:
-            for i in range(0, statinfo.st_size / 8):
+        with open(path, 'rb') as f:
+            for i in range(0, int(statinfo.st_size / 8)):
                 data = f.read(8)
                 hexdata = binascii.hexlify(data)
                 string= "{:064b}".format(int(hexdata,16))
+                raw_raw="{} \n".format(string)
+                print (string)
                 inverted=[]
                 for i in range (8,0,-1):
                     inverted.append(string[(i-1)*8:i*8])
@@ -100,10 +103,8 @@ class reader:
                                 (int_x >> 20) & 0x3FF) + 'Tfine: %03X ' % ((int_x >> 10) & 0x3FF) + 'Efine: %03X \n' % (
                                 int_x & 0x3FF)
                     self.thr_scan_matrix[(int_x >> 56) & 0x7, int(int_x >> 48) & 0x3F] = self.thr_scan_matrix[(int_x >> 56) & 0x7, int(int_x >> 48) & 0x3F] + 1
-                # if ((int_x >> 48) & 0x3F)==5:
-                #     s="Ciao Giulio\n"
                 with open(outfile, 'a') as ff:
-                    ff.write("{}     {}".format(raw,s))
+                    ff.write("{} {}     {}".format(raw_raw,raw,s))
     def write_txt_TM(self, path,outfile="out.txt", binary=0):
 
         LOCAL_L1_TIMESTAMP = 0
@@ -115,8 +116,8 @@ class reader:
         f.close()
         previous_L1_TS = 0
         L1_TS_abs_diff = 0
-        with open(path, 'r') as f, open(outfile, 'w') as out_file:
-            for i in range(0, statinfo.st_size / 8):
+        with open(path, 'rb') as f, open(outfile, 'w') as out_file:
+            for i in range(0, int(statinfo.st_size / 8)):
                 data = f.read(8)
                 hexdata = binascii.hexlify(data)
                 string = "{:064b}".format(int(hexdata, 16))
@@ -159,15 +160,15 @@ class reader:
                     out_file.write(raw)
                 out_file.write(s)
 
-            print 'finished writing file'
+            print ('finished writing file')
     def  write_txt_TM_folder(self, path,binary=0):
         for data_file in glob.glob(path+"/*TM*.dat"):
-            print data_file
+            print (data_file)
             self.write_txt_TM(data_file, outfile=data_file+"out.txt",binary=binary)
 
     def  write_txt_TL_folder(self, path):
         for data_file in glob.glob(path+"/*TL*.dat"):
-            print data_file
+            print (data_file)
             self.write_txt(data_file, outfile=data_file+"out.txt")
 
     def create_rate_plot(self):

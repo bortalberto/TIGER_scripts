@@ -663,7 +663,7 @@ class menu():
             #     self.father.write_default_LV_conf(GEMROC)
             #     GEMROC.GEM_COM.reload_default_td()
             #
-            time.sleep(5)
+            time.sleep(10)
 
             # self.father.reactivate_TIGERS()
             # self.refresh_buttons_TIGERs()
@@ -1103,7 +1103,8 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
             time.sleep(0.2)
 
             if (time.time() - self.start_time) > check_counter * check_time:
-                print ("DEBUG: reading counters @{}".format(time.time()))
+                if debug:
+                    print ("DEBUG: reading counters @{}".format(time.time()))
                 if self.caller.run_analysis.get():
                     self.update_err_and_plot_onrun()
                     time.sleep(10)
@@ -1243,7 +1244,13 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
                         IVT['status']['FEB{}'.format(FEB)]
 
                 }]
-                send_to_db(body)
+                if (IVT['status']['FEB{}'.format(FEB)]["TEMP[degC]"] < 117):
+                    if not ( (GEMROC.GEM_COM.GEMROC_ID==8 and FEB in (1,2)) or (GEMROC.GEM_COM.GEMROC_ID==12 and FEB in (2,3)) ):
+                        if IVT['status']['FEB{}'.format(FEB)]["TEMP[degC]"] > 42 :
+                            self.shut_down_FEB(GEMROC.GEM_COM, FEB)
+                        send_to_db(body)
+                else:
+                    print ("Rejected IVT value")
 
             body = [{
                 "measurement": "Offline",
@@ -1258,6 +1265,13 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
             }]
             send_to_db(body)
 
+    def shut_down_FEB(self, gemcom, num):
+        pwr_pattern=gemcom.gemroc_LV_XX.FEB_PWR_EN_pattern
+        pwr_pattern = pwr_pattern & ~(1 << num)
+        print (pwr_pattern)
+        print("SHUT DOWN FEB {}, GEMROC{}".format(num,gemcom.GEMROC_ID))
+        self.caller.write_in_log("SHUT DOWN FEB {}, GEMROC{}".format(num,gemcom.GEMROC_ID))
+        gemcom.FEBPwrEnPattern_set(pwr_pattern)
 
 class stopper(Thread):  #
     def __init__(self, caller, start_time):

@@ -29,7 +29,7 @@ else:
     print("ERROR: OS {} non compatible".format(OS))
     sys.exit()
 
-local_test = False
+local_test = True
 
 class communication:  #The directory are declared here to avoid multiple declaration
 
@@ -61,12 +61,12 @@ class communication:  #The directory are declared here to avoid multiple declara
             self.HOST_IP = "127.0.0.1"  # uncomment for test only
 
             self.HOST_PORT = 54816 + 1 + self.GEMROC_ID
-            self.HOST_PORT_RECEIVE = 58912 + 1 + self.GEMROC_ID
+            self.HOST_PORT_RECEIVE = 58913 + 1 + self.GEMROC_ID
 
             # DEST_IP_ADDRESS = "192.168.1.%d" %(GEMROC_ID+16) # offset 16 is determined by Stefano's MAC
             # DEST_PORT_NO = 58912+1 # STEFANO CHIOZZI - 2018-03-08 offset 0 is reserved by the MAC for a custom protocol; offset 3 is also a special debug port
             self.DEST_IP_ADDRESS = "127.0.0.1"
-            self.DEST_PORT_NO = 58912 + 1 + self.GEMROC_ID
+            self.DEST_PORT_NO = 58913 + 1 + self.GEMROC_ID
         else:
             self.HOST_IP = "192.168.1.200"
             self.HOST_PORT = 54816 + 1 + self.GEMROC_ID  # Port from where send to the gemroc

@@ -51,7 +51,7 @@ class Thread_handler(Thread):
                     x = self.reader.fast_acquisition(data_list)  # self.reader.fast_acquisition(data_list)
                     Total_Data += x
                 except Exception as e:
-                    print( e)
+                    print(e)
                     print ("\n---TIMED_OUT!!!...\n")
                     self.reader.dataSock.close()
                     self.running = False
@@ -193,7 +193,7 @@ class reader:
         self.datalist = []
         self.log_path=logfile
         self.data_online_monitor = online_monitor
-        self.timeout_for_sockets = 25
+        self.timeout_for_sockets = 20
         if self.data_online_monitor:
             if local_reader:
                 self.port_for_cloning = 58880 + self.GEMROC_ID
