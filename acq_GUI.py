@@ -15,16 +15,9 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 import ctypes
 import psutil
-
 TER = True
 
-try:
-    from influxdb import InfluxDBClient
 
-    DB = True
-except:
-    print("Can't find DB library")
-    DB = False
 from lib import GEM_ACQ_classes as GEM_ACQ
 
 OS = sys.platform
@@ -37,18 +30,21 @@ else:
     sys.exit()
 
 debug = False
-if DB:
-    try:
-        # client = InfluxDBClient(host='localhost', port=8086)
-        client = InfluxDBClient(host='192.168.38.191', port=8086)
-        client.switch_database('GUFI_DB')
-    except:
-        print("Can't connect to BD")
-        DB = False
+db_address = '127.0.0.1'
+# db_address = '192.168.38.191'
+db_port = 8086
+
 
 
 class menu():
     def __init__(self, std_alone=True, main_winz=None, GEMROC_reading_dict=None, father=None):
+        try:
+            from influxdb import InfluxDBClient
+            from lib import DB_classes
+            self.DB = True
+        except:
+            print("Can't find DB library")
+            self.DB = False
 
         self.father = father
         self.PMT = True
@@ -58,6 +54,12 @@ class menu():
         self.errors_counters_810 = {}
         self.logfile = "." + sep + "log_folder" + sep + "ACQ_log_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         self.conffile = "." + sep + "log_folder" + sep + "CONF_log_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
+        if self.DB:
+            try:
+                self.db_sender = DB_classes.Database_Manager()
+            except:
+                print("Can't connect to BD")
+                self.DB = False
 
         self.sub_run_number = 0
         self.mode = 'TL'
@@ -93,7 +95,7 @@ class menu():
         self.online_monitor = BooleanVar(self.master_window)
         self.online_monitor.set(False)
         self.online_monitor_data = BooleanVar(self.master_window)
-        self.online_monitor_data.set(True)
+        self.online_monitor_data.set(False)
 
         self.save_conf_every_run = BooleanVar(self.master_window)
         self.simple_analysis = IntVar(self.master_window)
@@ -219,7 +221,7 @@ class menu():
             self.open_adv_acq()
             self.open_on_run_tab()
             self.online_monitor.set(True)
-            self.online_monitor_data.set(False)
+            self.online_monitor_data.set(True)
             Checkbutton(self.start_frame, text="Online monitor", variable=self.online_monitor).grid(row=0, column=6, sticky=NW, pady=4)
             Checkbutton(self.start_frame, text="Online data monitor", variable=self.online_monitor_data).grid(row=0, column=7, sticky=NW, pady=4)
 
@@ -281,9 +283,11 @@ class menu():
         self.map_frame.pack(side=RIGHT)
         Label(self.map_frame, image=self.mappa).pack()
         ##Variables for network stats logging
-        self.last_net_time = 0
-        self.last_net_values = {}
-
+        self.master_window.protocol("WM_DELETE_WINDOW", self._delete_window)
+        # self.master_window.bind("<Destroy>", self._destroy)
+        #
+        # button = Button(self.master_window, text="Destroy", command=self.master_window.destroy)
+        # button.pack()
     def build_DCT_matrix(self):
         """
         Don't care matrix, TIGER that will not stop the acquisition if they do too many errors
@@ -423,9 +427,9 @@ class menu():
         self.check_thr = BooleanVar(self.master_window)
         self.check_thr.set(True)
         self.vth_t_toll = IntVar(self.master_window)
-        self.vth_t_toll.set(4)
+        self.vth_t_toll.set(7)
         self.vth_e_toll = IntVar(self.master_window)
-        self.vth_e_toll.set(4)
+        self.vth_e_toll.set(7)
         self.numb_of_viol = IntVar(self.master_window)
         self.numb_of_viol.set(40)
         Checkbutton(second_row, var=self.check_thr, text="Check on thr before start").pack(side=LEFT)
@@ -479,9 +483,9 @@ class menu():
 
     def refresh_8_10_counters_and_TimeOut(self):
 
-        if DB and self.online_monitor_data.get() and time.time() - self.last_810_log > 10:
-            self.send_810b_error_to_DB()
-            self.send_PC_stats()
+        if self.DB and self.online_monitor_data.get() and time.time() - self.last_810_log > 10:
+            self.db_sender.send_810b_error_to_DB(self.GEMROC_reading_dict, self.error_dict810)
+            self.db_sender.log_PC_stats()
             self.last_810_log = time.time()
 
         for key, label in self.error_dict810.items():
@@ -557,83 +561,9 @@ class menu():
                     self.stop_acq(True)
                     break
 
-    def send_810b_error_to_DB(self):
-        """
-        Log the error GEMROC status in DB
-        :return:
-        """
-        for GEMROC in self.GEMROC_reading_dict.keys():
-            body = [{
-                "measurement": "Offline",
-                "tags": {
-                    "type": "8_10_b_errors",
-                    "gemroc": GEMROC.split(" ")[1],
-                    "tiger": -1
-                },
-                "time": str(datetime.datetime.utcnow()),
-                "fields": {
-                }
-            }]
-            for T in range(0, 8):
-                body[0]["tags"]["tiger"] = T
-                if self.error_dict810["{} TIGER {}".format(GEMROC, T)]["text"] != "-----":
-                    body[0]["fields"]["8_10_errors"] = int(self.error_dict810["{} TIGER {}".format(GEMROC, T)]["text"])
-                else:
-                    body[0]["fields"]["8_10_errors"] = 0
-                send_to_db(body)
-                time.sleep(0.01)
 
-    def send_PC_stats(self):
-        """
-        Log the PC status
-        :return:
-        """
-        perf_field = {
-            "CPU_usage": psutil.cpu_percent(),
-            "Memory usage": psutil.virtual_memory().percent
-        }
-        raw_dict = psutil.net_io_counters(True, True)
-        key_list = [key for key in raw_dict]
-        net_field = {}
-        this_net_time = time.time()
 
-        for key in key_list:
-            if self.last_net_time != 0:
-                speed_rcv_byte = (raw_dict[key].bytes_recv - self.last_net_values[key + "_bytes_recv"]) / (this_net_time - self.last_net_time)
-                speed_snd_byte = (raw_dict[key].bytes_sent - self.last_net_values[key + "_bytes_sent"]) / (this_net_time - self.last_net_time)
-                speed_rcv_pkts = (raw_dict[key].packets_recv - self.last_net_values[key + "_packets_recv"]) / (this_net_time - self.last_net_time)
-                speed_snd_pkts = (raw_dict[key].packets_sent - self.last_net_values[key + "_packets_sent"]) / (this_net_time - self.last_net_time)
-                net_field.update({
-                                 key + "_speed_bytes_recv": speed_rcv_byte,
-                                 key + "_speed_bytes_sent": speed_snd_byte,
-                                 key + "_speed_packets_recv": speed_rcv_pkts,
-                                 key + "_speed_packets_sent": speed_snd_pkts,
-                                 key + "_err_in": raw_dict[key].errin,
-                                 key + "_err_out": raw_dict[key].errout,
-                                 key + "_drop_in": raw_dict[key].dropin,
-                                 key + "_drop_out": raw_dict[key].dropout,
-                                 })
 
-            self.last_net_values.update({
-                                        key + "_bytes_recv": raw_dict[key].bytes_recv,
-                                        key + "_bytes_sent": raw_dict[key].bytes_sent,
-                                        key + "_packets_recv": raw_dict[key].packets_recv,
-                                        key + "_packets_sent": raw_dict[key].packets_sent
-                                        })
-
-        self.last_net_time = this_net_time
-        perf_field.update(net_field)
-        body = [{
-            "measurement": "Online",
-            "tags": {
-                "type": "PC_status",
-            },
-            "time": str(datetime.datetime.utcnow()),
-            "fields": perf_field,
-            "retention_policy": "online_data"
-        }]
-
-        send_to_db(body)
 
     def PMT_on(self):
         os.system("./HVWrappdemo_0 ttyUSB0 VSet 2000")
@@ -675,6 +605,7 @@ class menu():
             # self.father.load_default_config_parallel(set_check=False)
             # self.father.Synch_reset()
             self.father.load_default_config_parallel(set_check=False)
+            self.father.doing_something=False
             print("Configuration wrote")
             time.sleep(2)
 
@@ -984,10 +915,20 @@ class menu():
             # self.refresh_8_10_counters_and_TimeOut()
         for i in range(0, len(self.GEM)):
             self.thread[i].running = False
+        print([thr.isAlive() for thr in self.thread])
 
-        for i in range(0, len(self.GEM)):
-            if self.thread[i].isAlive():
-                self.thread[i].join(timeout=26)
+        while True in [thr.isAlive() for thr in self.thread]:
+            print([thr.isAlive() for thr in self.thread])
+            print ("At least one alive thread")
+            for i in range(0, len(self.GEM)):
+                if self.thread[i].isAlive():
+                    print ("Thread {} is alive, joining".format(i))
+                    self.thread[i].join(timeout=15)
+                if self.thread[i].isAlive():
+                    print ("Can't join one of the threads (this time)")
+                time.sleep (0.1)
+            print([thr.isAlive() for thr in self.thread])
+
         for i in self.GEM:
             if i.TIMED_out == True:
                 self.LED[int(i.GEMROC_ID)]['image'] = self.icon_bad
@@ -1067,6 +1008,18 @@ class menu():
         self.messagge_field['text'] = "Avg number of triggers in this run: {}".format(avg)
         return avg
 
+    def _delete_window(self):
+        if not self.std_alone:
+            self.father.run_control_Button.config(state='normal')
+            self.father.doing_something=False
+        self.master_window.destroy()
+   #
+    # def _destroy(self, event):
+    #     print( "destroy")
+
+
+
+
 
 if __name__ == '__main__':
     Main_menu = menu()
@@ -1091,7 +1044,7 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
         if self.caller.mode == 'TM':
             print("Acquiring for {:.2f} seconds".format(float(self.caller.time) * 60))
         self.start_time = time.time()
-        check_time = 5
+        check_time = 7
         check_counter = 0
         self.stopper_thr = stopper(self.caller, self.start_time, )
         self.stopper_thr.daemon = True
@@ -1107,7 +1060,7 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
                     print ("DEBUG: reading counters @{}".format(time.time()))
                 if self.caller.run_analysis.get():
                     self.update_err_and_plot_onrun()
-                    time.sleep(10)
+                    time.sleep(1)
                 process_list = []
                 pipe_list = []
                 TIGER_LIST = [0, 1, 2, 3, 4, 5, 6, 7]
@@ -1142,17 +1095,26 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
                     process.terminate()
 
                 process_list_2 = []
+                pipe_list_2 = []
+
                 if check_counter % 2 == 0 and self.caller.online_monitor_data.get():
+                    self.check_buffer()
                     for number, GEMROC in self.GEMROC_reading_dict.items():
-                        p = Process(target=self.log_IVT_in_DB, args=(number,))
+                        pipe_in, pipe_out = Pipe()
+                        p = Process(target=self.caller.db_sender.log_IVT_in_DB, args=(number,self.GEMROC_reading_dict, pipe_in))
+                        pipe_list_2.append(pipe_out)
                         process_list_2.append(p)
                         p.start()
                         time.sleep(0.05)
 
-                    for process in process_list_2:
+                    for process, pipe_out in zip(process_list_2, pipe_list_2):
                         if self.running:
                             try:
                                 process.join(timeout=2)
+                                gem_number, FEBs_to_off = pipe_out.recv()
+                                if len(FEBs_to_off)>0:
+                                    for FEB in FEBs_to_off:
+                                        self.shut_down_FEB(self.GEMROC_reading_dict[gem_number].GEM_COM, FEB)
                             except Exception as e:
                                 print("IVT logger controller timeout: {}".format(e))
 
@@ -1225,46 +1187,6 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
         pipe_in.send((tiger_string, counter_value))
         pipe_in.close()
 
-    def log_IVT_in_DB(self, GEMROC_num):
-
-        if DB:
-            GEMROC = self.GEMROC_reading_dict[GEMROC_num]
-            IVT = GEMROC.GEM_COM.save_IVT()
-
-            for FEB in range(0, 4):
-                body = [{
-                    "measurement": "Offline",
-                    "tags": {
-                        "type": "IVT_LOG_FEB",
-                        "gemroc": GEMROC.GEM_COM.GEMROC_ID,
-                        "FEB": FEB
-                    },
-                    "time": str(datetime.datetime.utcnow()),
-                    "fields":
-                        IVT['status']['FEB{}'.format(FEB)]
-
-                }]
-                if (IVT['status']['FEB{}'.format(FEB)]["TEMP[degC]"] < 117):
-                    if not ( (GEMROC.GEM_COM.GEMROC_ID==8 and FEB in (1,2)) or (GEMROC.GEM_COM.GEMROC_ID==12 and FEB in (2,3)) ):
-                        if IVT['status']['FEB{}'.format(FEB)]["TEMP[degC]"] > 42 :
-                            self.shut_down_FEB(GEMROC.GEM_COM, FEB)
-                        send_to_db(body)
-                else:
-                    print ("Rejected IVT value")
-
-            body = [{
-                "measurement": "Offline",
-                "tags": {
-                    "type": "IVT_LOG_GEMROC",
-                    "gemroc": GEMROC.GEM_COM.GEMROC_ID,
-                },
-                "time": str(datetime.datetime.utcnow()),
-                "fields":
-                    IVT['status']['ROC']
-
-            }]
-            send_to_db(body)
-
     def shut_down_FEB(self, gemcom, num):
         pwr_pattern=gemcom.gemroc_LV_XX.FEB_PWR_EN_pattern
         pwr_pattern = pwr_pattern & ~(1 << num)
@@ -1272,6 +1194,9 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
         print("SHUT DOWN FEB {}, GEMROC{}".format(num,gemcom.GEMROC_ID))
         self.caller.write_in_log("SHUT DOWN FEB {}, GEMROC{}".format(num,gemcom.GEMROC_ID))
         gemcom.FEBPwrEnPattern_set(pwr_pattern)
+
+
+
 
 class stopper(Thread):  #
     def __init__(self, caller, start_time):
@@ -1333,9 +1258,3 @@ def find_number(stringa):
 
     return number
 
-
-def send_to_db(json):
-    try:
-        client.write_points(json)
-    except Exception as e:
-        print("Unable to log in infludb: {}\n json: {}".format(e, json))

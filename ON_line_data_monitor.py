@@ -29,8 +29,8 @@ else:
 class menu():
     def __init__(self):
         self.main_win = Tk()
-        # self.client = InfluxDBClient(host='localhost', port=8086)
-        self.client = InfluxDBClient(host='192.168.38.191', port=8086)
+        self.client = InfluxDBClient(host='localhost', port=8086)
+        # self.client = InfluxDBClient(host='192.168.38.191', port=8086)
 
         self.client.switch_database('GUFI_DB')
         if OS == 'linux2' or OS =='linux':
@@ -384,7 +384,7 @@ class online_reader(GEM_ACQ.reader):
     def __init__(self, GEMROC_ID, logfile="ACQ_log"):
         GEM_ACQ.reader.__init__(self, GEMROC_ID)
         self.HOST_IP = "127.0.0.1"
-        self.HOST_PORT = 58880 + self.GEMROC_ID  # 58880 + 1 # original +2
+        self.HOST_PORT = 57880 + self.GEMROC_ID  # 57880 + 1 # original +2
         self.TIMED_out = False
         self.timeout_for_sockets = 180
 

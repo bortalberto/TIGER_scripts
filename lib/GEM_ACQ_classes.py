@@ -196,13 +196,13 @@ class reader:
         self.timeout_for_sockets = 20
         if self.data_online_monitor:
             if local_reader:
-                self.port_for_cloning = 58880 + self.GEMROC_ID
+                self.port_for_cloning = 57880 + self.GEMROC_ID
                 # self.port_for_cloning =58912 + 1 + self.GEMROC_ID
                 self.cloning_sending_port=51000 + self.GEMROC_ID
                 self.address_for_cloning_sender="127.0.0.1"
                 self.address_for_cloning_rcv="127.0.0.1"
             else:
-                self.port_for_cloning = 58880 + self.GEMROC_ID
+                self.port_for_cloning = 57880 + self.GEMROC_ID
                 self.cloning_sending_port=51000+ self.GEMROC_ID
                 self.address_for_cloning_sender="192.168.1.200"
                 self.address_for_cloning_rcv="192.168.1.150" #just an example, change it accordingly

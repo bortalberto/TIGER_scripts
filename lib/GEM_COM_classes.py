@@ -77,7 +77,6 @@ class communication:  #The directory are declared here to avoid multiple declara
             self.DEST_IP_ADDRESS = "192.168.1.%d" % (self.GEMROC_ID + 16)
             self.DEST_PORT_NO = 58912 + 1  # Port where send the configuration
 
-        self.tiger_index = 0
         self.BUFSIZE = 1024
 
         self.clientSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

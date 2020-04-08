@@ -61,6 +61,12 @@ class noise_measure():
         self.sampling_scan = False
         self.GEMROC_reading_dict = gemroc_handler
         self.error_window = Frame(self.main_window)
+        self.main_window.protocol("WM_DELETE_WINDOW", self._delete_window)
+
+    def _delete_window(self):
+        self.main_menu_istance.run_control_Button.config(state='normal')
+        self.main_menu_istance.doing_something=False
+        self.main_window.destroy()
 
     def _init_windows(self):
         Label(self.error_window, text=self.title, font=("Courier", 25)).grid(row=0, column=2, sticky=S, pady=4, columnspan=10)

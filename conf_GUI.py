@@ -10,7 +10,6 @@ import noise_GUI as noise_GUI
 import generic_scan as scan_GUI
 from lib import rate_interface as rate_interface
 from lib import acquire_rate_interface as acquire_rate_interface
-
 from multiprocessing import Process, Pipe
 import acq_GUI as acq_GUI
 from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
@@ -20,6 +19,15 @@ import time
 import pickle
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
+
+try:
+    from lib import DB_classes as DB_classes
+
+    DB = True
+except:
+    DB = False
+    print("No DB library found")
+
 
 def cmp_to_key(mycmp):
     'Convert a cmp= function into a key= function'
@@ -51,11 +59,11 @@ else:
 
 class menu():
     def __init__(self):
+
         self.GEM_to_config = np.zeros((20))
         self.configuring_gemroc = 0
         # main window
-
-
+        self.doing_something=False
         self.main_window = Tk()
         default_font = tkfont.nametofont("TkDefaultFont")
         default_font.configure(size=9)
@@ -226,7 +234,8 @@ class menu():
         Frame(basic_operation_frame,width=90).pack(side=LEFT)  # Spacer
         TROPPi_frame = LabelFrame(basic_operation_frame, padx=5, pady=5,background="#cce6ff")
         TROPPi_frame.pack(side=LEFT)
-        Button(TROPPi_frame, text="Run controller", command=self.launch_controller, activeforeground="blue").pack(side=RIGHT)
+        self.run_control_Button=Button(TROPPi_frame, text="Run controller", command=self.launch_controller, activeforeground="blue")
+        self.run_control_Button.pack(side=RIGHT)
         self.use_ecq_thr = BooleanVar(self.main_window)
         self.TP_active = BooleanVar(self.main_window)
 
@@ -333,6 +342,14 @@ class menu():
 
 
     def start_ecq_map(self):
+        self.doing_something = True
+        start=time.time()
+        if DB:
+            while self.IVT_LOG_thread.logging:
+                time.sleep(0.5)
+                if time.time() -start>10:
+                    print ("fast configuration waited for too long")
+                    break
         with open("./log_folder/thr_setting.txt", "a+") as logfile:
             logfile.write("{} - Tuning rate @ {}Hz\n".format(time.ctime(),self.desired_rate.get()))
         self.rate_window = rate_interface.menu(self.main_window, self.GEMROC_reading_dict,self)
@@ -341,6 +358,7 @@ class menu():
         self.rate_window.rate_tab.acquire_thread.procedural_scan_handler(self.GEMROC_reading_dict,des_rate=self.desired_rate.get(),number_of_cycle=self.number_of_steps.get(), scanning_map=strip_to_scan,map=True, conditional=True,tollerance=self.tollerance.get())
         self.save_current_thr()
         self.rate_window.error_window_main.destroy()
+        self.doing_something=False
         print ("Equalization done and saved")
 
     def build_scan_matrix(self):
@@ -379,6 +397,14 @@ class menu():
                             strip_scan_map[GEMROC][TIGER][channel]=1
         return strip_scan_map
     def run_prep(self):
+        self.doing_something = True
+        start=time.time()
+        if DB:
+            while self.IVT_LOG_thread.logging:
+                time.sleep(0.5)
+                if time.time() -start>10:
+                    print ("fast configuration waited for too long")
+                    break
         # print ("TD scan")
         # conf_wind = error_GUI.menu(self.main_window, self.GEMROC_reading_dict)
         # conf_wind.TD_scan(0,True)
@@ -410,7 +436,7 @@ class menu():
         self.noise_wind.noise_measure_.fast_noise_scan(log=True)
         self.noise_wind.noise_measure_.TP_rate.set(19700)
         self.noise_wind.noise_measure_.fit()
-
+        self.doing_something = False
     def start_TP(self):
         for number, GEMROC_number in self.GEMROC_reading_dict.items():
             GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['number_of_repetitions'] = int(self.NUM_TP.get())
@@ -467,10 +493,19 @@ class menu():
         Acquire IVT and version from the GEMROC and store them in the dictionary created above
         :return:
         """
+        self.doing_something = True
+        start=time.time()
+        if DB:
+            while self.IVT_LOG_thread.logging:
+                time.sleep(0.5)
+                if time.time() -start>10:
+                    print ("fast configuration waited for too long")
+                    break
         for number, GEMROC in sorted(self.GEMROC_reading_dict.items()):
             self.version_dict[number] = GEMROC.GEM_COM.read_version(GEMROC.GEM_COM.Read_GEMROC_LV_CfgReg())
             self.IVT_dict[number] = GEMROC.GEM_COM.save_IVT()
         self.generate_rows()
+        self.doing_something=False
 
     def myfunction(self, event):
         """
@@ -570,6 +605,7 @@ class menu():
         self.toolbar.draw()
 
     def launch_noise_window(self):
+        self.doing_something=True
         self.noise_wind = noise_GUI.menu(self.main_window, self.GEMROC_reading_dict,self)
 
     def launch_scan_window(self):
@@ -579,6 +615,8 @@ class menu():
         Open a window to assert the noise rate condition of the setup
         :return:
         """
+        self.doing_something=True
+
         self.rate_window = rate_interface.menu(self.main_window, self.GEMROC_reading_dict,self)
 
     def open_rate_measure(self):
@@ -589,6 +627,8 @@ class menu():
         self.ch_rate_wind = acquire_rate_interface.menu(self.main_window, self.GEMROC_reading_dict,self)
 
     def launch_controller(self):
+        self.doing_something=True
+        self.run_control_Button.config(state='disabled')
         self.acq = acq_GUI.menu(False, self.main_window, self.GEMROC_reading_dict, self)
 
     def open_communicaton_GUI(self):
@@ -596,6 +636,8 @@ class menu():
         self.conf_wind = error_GUI.menu(self.main_window, self.GEMROC_reading_dict)
 
     def runna(self):
+        self.IVT_LOG_thread = DB_classes.Thread_handler_IVT(self)
+        self.IVT_LOG_thread.start()
         mainloop()
         # while True:
         #     self.main_window.update_idletasks()
@@ -676,16 +718,35 @@ class menu():
             self.Go.grid(row=1, column=5, sticky=NW, pady=4)
 
     def power_on_FEBS(self):
+        self.doing_something = True
+        start=time.time()
+        if DB:
+            while self.IVT_LOG_thread.logging:
+                time.sleep(0.5)
+                if time.time() -start>10:
+                    print ("fast configuration waited for too long")
+                    break
         for number, GEMROC in self.GEMROC_reading_dict.items():
             GEMROC.GEM_COM.FEBPwrEnPattern_set(255)
 
         self.Launch_error_check['text'] = "FEB power ON"
+        self.doing_something = False
 
     def power_off_FEBS(self):
+        self.doing_something = True
+        start=time.time()
+        if DB:
+            while self.IVT_LOG_thread.logging:
+                time.sleep(0.5)
+                if time.time() -start>10:
+                    print ("fast configuration waited for too long")
+                    break
+
         for number, GEMROC in self.GEMROC_reading_dict.items():
             GEMROC.GEM_COM.FEBPwrEnPattern_set(0)
 
         self.Launch_error_check['text'] = "FEB power OFF"
+        self.doing_something = False
 
     def double_enable(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():
@@ -693,6 +754,14 @@ class menu():
         self.Launch_error_check['text']="Double threshold enabled"
 
     def thr_Scan(self, GEMROC_num, TIGER_num, branch=1):  # if GEMROC num=-1--> To all GEMROC, if TIGER_num=-1 --> To all TIGERs
+        self.doing_something = True
+        start=time.time()
+        if DB:
+            while self.IVT_LOG_thread.logging:
+                time.sleep(0.5)
+                if time.time() -start>10:
+                    print ("fast configuration waited for too long")
+                    break
         startT = time.time()
         self.bar_win = Toplevel(self.main_window)
         self.bar_win.focus_set()  # set focus on the ProgressWindow
@@ -754,6 +823,8 @@ class menu():
 
         stopT = time.time()
         print ("Execution time: {}".format(stopT - startT))
+        self.doing_something=False
+
         self.bar_win.destroy()
 
         # else:
@@ -915,6 +986,14 @@ class menu():
         print("GEMROC {} done".format(GEMROC_ID))
 
     def TIGER_CHANNEL_configurator(self):
+        self.doing_something = True
+        start=time.time()
+        if DB:
+            while self.IVT_LOG_thread.logging:
+                time.sleep(0.5)
+                if time.time() -start>10:
+                    print ("fast configuration waited for too long")
+                    break
         self.dict_pram_list = self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].c_inst.Channel_cfg_list[int(self.showing_TIGER.get())][int(self.Channel_IN.get())].keys()
         self.third_row_frame.destroy()
         self.third_row_frame = Frame(self.conf_frame)
@@ -988,10 +1067,22 @@ class menu():
             # Button(thr_frame, text="Load auto threshold", command=lambda: self.load_thr_Handling(thr_target, "auto")).pack(side=LEFT)
             Button(thr_frame, text="Launch THR-T scan on this TIGER", command=lambda: self.thr_Scan(self.showing_GEMROC.get(), int(self.showing_TIGER.get()))).pack(side=LEFT)
             Button(thr_frame, text="Launch THR-E scan on this TIGER", command=lambda: self.thr_Scan(self.showing_GEMROC.get(), int(self.showing_TIGER.get()),branch=2)).pack(side=LEFT)
+            self.doing_something = False
+
     def flush(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():
             GEMROC.GEM_COM.flush_rcv_socket()
     def TIGER_GLOBAL_configurator(self):
+        self.doing_something = True
+        start=time.time()
+        if DB:
+            while self.IVT_LOG_thread.logging:
+                time.sleep(0.5)
+                if time.time() -start>10:
+                    print ("fast configuration waited for too long")
+                    break
+
+
         self.third_row_frame.destroy()
         self.third_row_frame = Frame(self.conf_frame)
         self.third_row_frame.grid(row=2, column=0, sticky=NW, pady=4)
@@ -1035,6 +1126,7 @@ class menu():
         saveframe.grid(row=4, column=0, sticky=W, pady=2)
         Button(saveframe, text="Save", command=self.SAVE).pack(side=LEFT)
         Button(saveframe, text="Load", command=self.LOAD).pack(side=LEFT)
+        self.doing_something = False
 
     def SAVE(self):
         if self.configure_MODE.get() == "Global Tiger configuration":
@@ -1080,10 +1172,10 @@ class menu():
         self.samp_pol_pattern.grid(row=1, column=0, columnspan=1, sticky=S, pady=5)
         Button (clock_sampling_F, command = self.write_clock_pol,text="Write").grid(row=1, column=1, columnspan=1, sticky=S, pady=5)
         Button (clock_sampling_F, command = self.default_pol,text="Load_default (all GEMROC)").grid(row=1, column=2, columnspan=1, sticky=S, pady=5)
-        Button (clock_sampling_F, command = lambda: self.shut_down_FEB(0), text="Shut down F0").grid(row=2, column=0, columnspan=1, sticky=S, pady=5)
-        Button (clock_sampling_F, command = lambda: self.shut_down_FEB(1), text="Shut down F1").grid(row=2, column=1, columnspan=1, sticky=S, pady=5)
-        Button (clock_sampling_F, command = lambda: self.shut_down_FEB(2), text="Shut down F2").grid(row=2, column=2, columnspan=1, sticky=S, pady=5)
-        Button (clock_sampling_F, command = lambda: self.shut_down_FEB(3), text="Shut down F3").grid(row=2, column=3, columnspan=1, sticky=S, pady=5)
+        Button (clock_sampling_F, command = lambda: self.shut_down_FEB(0,self.GEMROC_reading_dict[self.showing_GEMROC.get()]), text="Shut down F0").grid(row=2, column=0, columnspan=1, sticky=S, pady=5)
+        Button (clock_sampling_F, command = lambda: self.shut_down_FEB(1,self.GEMROC_reading_dict[self.showing_GEMROC.get()]), text="Shut down F1").grid(row=2, column=1, columnspan=1, sticky=S, pady=5)
+        Button (clock_sampling_F, command = lambda: self.shut_down_FEB(2,self.GEMROC_reading_dict[self.showing_GEMROC.get()]), text="Shut down F2").grid(row=2, column=2, columnspan=1, sticky=S, pady=5)
+        Button (clock_sampling_F, command = lambda: self.shut_down_FEB(3,self.GEMROC_reading_dict[self.showing_GEMROC.get()]), text="Shut down F3").grid(row=2, column=3, columnspan=1, sticky=S, pady=5)
 
         self.field_array = []
         self.input_array = []
@@ -1097,11 +1189,11 @@ class menu():
                 self.field_array.append(Label(single_use_frame, text='-'))
                 self.field_array[i].grid(row=i + 1, column=1, sticky=W, pady=1)
                 i += 1
-    def shut_down_FEB(self,num):
-        pwr_pattern=self.GEMROC_reading_dict[self.showing_GEMROC.get()].GEM_COM.gemroc_LV_XX.FEB_PWR_EN_pattern
+    def shut_down_FEB(self,num,gemroc):
+        pwr_pattern=gemroc.GEM_COM.gemroc_LV_XX.FEB_PWR_EN_pattern
         pwr_pattern = pwr_pattern & ~(1 << num)
         print (pwr_pattern)
-        self.GEMROC_reading_dict[self.showing_GEMROC.get()].GEM_COM.FEBPwrEnPattern_set(pwr_pattern)
+        gemroc.GEM_COM.FEBPwrEnPattern_set(pwr_pattern)
 
     def DAQ_configurator(self):
         self.third_row_frame.destroy()
@@ -1366,6 +1458,7 @@ class menu():
             modebut['text'] = "Trigger matched"
 
     def write_DAQ_CR(self, to_all=0):
+        self.doing_something=True
 
         if to_all == 1:
 
@@ -1392,6 +1485,7 @@ class menu():
                 DAQ_inst.DAQ_config_dict['number_of_repetitions'] = ((int(self.TP_repeat.get()) & 0X1) << 9) + int(self.TP_num.get())
 
             self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.DAQ_set_with_dict()
+        self.doing_something=False
 
     def read_LV(self):
         command_reply = self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.Read_GEMROC_LV_CfgReg()
@@ -1455,6 +1549,15 @@ class menu():
             self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.Access_diagn_DPRAM_read_and_log(1, 0)
 
     def read_DAQ_CR(self):
+        self.doing_something = True
+        start=time.time()
+        if DB:
+            while self.IVT_LOG_thread.logging:
+                time.sleep(0.5)
+                if time.time() -start>10:
+                    print ("fast configuration waited for too long")
+                    break
+
         command_reply = self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.Read_GEMROC_DAQ_CfgReg()
         # self.GEMROC_reading_dict[self.showing_GEMROC.get()].GEM_COM.display_log_GEMROC_DAQ_CfgReg_readback(command_rep
         # self.GEMROC_reading_dict[self.showing_GEMROC.get()].GEM_COM.display_log_GEMROC_DAQ_CfgReg_readback(command_reply, 1, 1)
@@ -1510,8 +1613,17 @@ class menu():
         self.check_clock_state()
         self.check_pause_state()
         self.check_acq_state()
-
+        self.doing_something=False
     def read_TIGER_global(self):
+        self.doing_something = True
+        start=time.time()
+        if DB:
+            while self.IVT_LOG_thread.logging:
+                time.sleep(0.5)
+                if time.time() -start>10:
+                    print ("fast configuration waited for too long")
+                    break
+
         TIGER_N = int(self.showing_TIGER.get())
         try:
             command_reply = self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].g_inst, TIGER_N)
@@ -1568,8 +1680,17 @@ class menu():
                 input.config({"background": "Red"})
             else:
                 input.config({"background": "White"})
-
+        self.doing_something=False
     def read_TIGER_channel(self):
+        self.doing_something = True
+        start=time.time()
+        if DB:
+            while self.IVT_LOG_thread.logging:
+                time.sleep(0.5)
+                if time.time() -start>10:
+                    print ("fast configuration waited for too long")
+                    break
+
         TIGER_N = int(self.showing_TIGER.get())
         command_reply = self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.ReadTgtGEMROC_TIGER_ChCfgReg(self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].c_inst, TIGER_N, int(self.Channel_IN.get()))
 
@@ -1619,8 +1740,17 @@ class menu():
         #         i += 1
         #     else:
         #         input.config({"background": "White"})
-
+        self.doing_something=False
     def write_TIGER_GLOBAL(self):
+        self.doing_something = True
+        start=time.time()
+        if DB:
+            while self.IVT_LOG_thread.logging:
+                time.sleep(0.5)
+                if time.time() -start>10:
+                    print ("fast configuration waited for too long")
+                    break
+
         GEMROC = self.showing_GEMROC.get()
         TIGER = int(self.showing_TIGER.get())
         i = 0
@@ -1635,8 +1765,17 @@ class menu():
         except Exception as E:
             print (E)
             self.error_led_update()
-
+        self.doing_something=False
     def write_TIGER_GLOBAL_allGEM(self):
+        self.doing_something = True
+        start=time.time()
+        if DB:
+            while self.IVT_LOG_thread.logging:
+                time.sleep(0.5)
+                if time.time() -start>10:
+                    print ("fast configuration waited for too long")
+                    break
+
         for TIGER in range(0, 8):
             i = 0
             for key in self.label_array:
@@ -1648,8 +1787,17 @@ class menu():
                 self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.global_set_check(write, read)
             except:
                 self.error_led_update()
-
+        self.doing_something=False
     def write_TIGER_GLOBAL_allsystem(self):
+        self.doing_something = True
+        start=time.time()
+        if DB:
+            while self.IVT_LOG_thread.logging:
+                time.sleep(0.5)
+                if time.time() -start>10:
+                    print ("fast configuration waited for too long")
+                    break
+
         for number, GEMROC in self.GEMROC_reading_dict.items():
             # print number
             for TIGER in range(0, 8):
@@ -1664,8 +1812,17 @@ class menu():
                     GEMROC.GEM_COM.global_set_check(write, read)
                 except:
                     self.error_led_update()
-
+        self.doing_something=False
     def write_CHANNEL_Handling(self):
+        self.doing_something = True
+        start=time.time()
+        if DB:
+            while self.IVT_LOG_thread.logging:
+                time.sleep(0.5)
+                if time.time() -start>10:
+                    print ("fast configuration waited for too long")
+                    break
+
         if self.all_channels.get() == "All Channels":
             CHANNEL = 64
         else:
@@ -1681,7 +1838,7 @@ class menu():
             else:
                 print ("TIGER {}".format(TIGER))
                 self.write_CHANNEL(self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())], TIGER, CHANNEL)
-
+        self.doing_something=False
     def write_CHANNEL(self, GEMROC, TIGER, CHANNEL, update_fields=True,set_check=True):
         TIGER = int(TIGER)
         CHANNEL = int(CHANNEL)
@@ -1790,6 +1947,15 @@ class menu():
             GEMROC.thr = "Tuned @ {}".format(rate)
 
     def load_default_config(self,set_check=True):
+        self.doing_something = True
+        start=time.time()
+        if DB:
+            while self.IVT_LOG_thread.logging:
+                time.sleep(0.5)
+                if time.time() -start>10:
+                    print ("fast configuration waited for too long")
+                    break
+
         for number, GEMROC in self.GEMROC_reading_dict.items():
             for TIGER in range(0, 8):
                 time.sleep(1)
@@ -1804,8 +1970,16 @@ class menu():
                         print (E)
                 self.write_CHANNEL(GEMROC, TIGER, 64, False,set_check)
         self.Synch_reset()
-
+        self.doing_something=False
     def load_default_config_parallel(self,set_check=True, led=True):
+        start=time.time()
+        self.doing_something=True
+        if DB:
+            while self.IVT_LOG_thread.logging:
+                time.sleep(0.5)
+                if time.time() - start > 10:
+                    print ("configuration waited for too long")
+                    break
         proc_list=[]
         pip_list=[]
         for number,GEMROC in self.GEMROC_reading_dict.items():
@@ -1830,6 +2004,9 @@ class menu():
 
 
         self.Synch_reset()
+        time.sleep(3)
+        self.flush()
+        self.doing_something=False
 
 
     def load_config_process(self, GEMROC, pipe_out, set_check=True,):
@@ -1892,6 +2069,14 @@ class menu():
             self.ERROR_LED["image"] = self.icon_off
 
     def fast_configuration(self):
+        self.doing_something = True
+        start=time.time()
+        if DB:
+            while self.IVT_LOG_thread.logging:
+                time.sleep(0.5)
+                if time.time() -start>10:
+                    print ("fast configuration waited for too long")
+                    break
         self.double_enable()
         self.Synch_reset(1)
         self.change_acquisition_mode(True, 0)
@@ -1907,9 +2092,13 @@ class menu():
         self.Synch_reset(1)
         self.Synch_reset(1)
         self.Synch_reset(1)
+        self.shut_down_FEB(2,self.GEMROC_reading_dict["GEMROC 8"])
         self.set_pause_mode(True, 1)
         self.Launch_error_check['text']="Fast configuration done"
+
         self.calculate_FC_thr_caller()
+        self.doing_something = False
+
     def change_trigger_mode(self, value, to_all=False):
         if to_all == True:
             for number, GEMROC in self.GEMROC_reading_dict.items():
@@ -2038,3 +2227,4 @@ def get_tuning_rate(number):
 if __name__ == '__main__':
     Main_menu = menu()
     Main_menu.runna()
+

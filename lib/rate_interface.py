@@ -37,6 +37,11 @@ class menu():
 
         self.tabControl.pack(expand=1, fill="both")  # Pack to make visible
 
+    def _delete_window(self):
+        self.main_menu_istance.run_control_Button.config(state='normal')
+        self.main_menu_istance.doing_something=False
+        self.error_window_main.destroy()
+
 
 class noise_rate_measure():
     def __init__(self, main_window, gemroc_handler, tab_control, main_menu_istance):
@@ -325,6 +330,7 @@ class Acquire_rate():
                         if branch == "both":
                             GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] - 1
                             GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] - 1
+
 
     def rise_thr_below(self, limit, branch):
         """
