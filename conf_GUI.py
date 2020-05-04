@@ -19,6 +19,7 @@ import time
 import pickle
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
+import os
 
 try:
     from lib import DB_classes as DB_classes
@@ -195,6 +196,7 @@ class menu():
         Button(Tantissime_frame, text="ToT Mode", command=self.ToT, activeforeground="blue").pack(side=RIGHT)
         Button(Tantissime_frame, text="Launch TP", command=self.start_TP, activeforeground="blue").pack(side=RIGHT)
         Button(Tantissime_frame, text='Flush socket', command=self.flush).pack(side=LEFT)
+        Button(Tantissime_frame, text='Disable listed channels', command=self.disable_channels).pack(side=LEFT)
 
         self.NUM_TP = Entry(Tantissime_frame, width=4)
         self.NUM_TP.insert(0,'2')
@@ -232,13 +234,14 @@ class menu():
         Button(TROPPii_frame, text="Write configuration", command=self.load_default_config_parallel, activeforeground="blue").pack(side=LEFT)
 
         Frame(basic_operation_frame,width=90).pack(side=LEFT)  # Spacer
-        TROPPi_frame = LabelFrame(basic_operation_frame, padx=5, pady=5,background="#cce6ff")
+        TROPPi_frame = LabelFrame(basic_operation_frame, padx=8, pady=5,background="#cce6ff")
         TROPPi_frame.pack(side=LEFT)
         self.run_control_Button=Button(TROPPi_frame, text="Run controller", command=self.launch_controller, activeforeground="blue")
         self.run_control_Button.pack(side=RIGHT)
         self.use_ecq_thr = BooleanVar(self.main_window)
         self.TP_active = BooleanVar(self.main_window)
-
+        self.DB_but=Button (basic_operation_frame, padx=10, text="Disable DB", command= self.stop_DB)
+        self.DB_but.pack(side=RIGHT)
         Button(TROPPi_frame, text="Fast configuration", command=self.fast_configuration, activeforeground="blue").pack(side=RIGHT)
         Checkbutton(TROPPi_frame, text="TP", var=self.TP_active).pack(side=RIGHT)
 
@@ -276,6 +279,7 @@ class menu():
         Button(load_save_frame, text = "Save reference thr", command =self.save_reference_thr).pack(side=LEFT)
         Button(load_save_frame, text = "Load last saved thr", command =self.load_thr_from_file).pack(side=LEFT)
         Button(load_save_frame, text = "Load reference thr", command =self.load_thr_reference).pack(side=LEFT)
+        Button(load_save_frame, text = "Load thr from folder", command =self.load_thr_from_specific_file).pack(side=LEFT)
         self.desired_rate = IntVar(self.main_window)
         self.desired_rate.set(5000)
         self.number_of_steps = IntVar(self.main_window)
@@ -339,7 +343,19 @@ class menu():
             for G in range (0,11):
                 self.toggle(G)
 
+    def stop_DB(self):
+        if DB:
+            self.IVT_LOG_thread.terminator=True
+            self.IVT_LOG_thread.__del__()
+        self.DB_but["text"] = "Enable DB"
+        self.DB_but["command"] = self.start_DB
 
+    def start_DB(self):
+        if DB:
+            self.IVT_LOG_thread = DB_classes.Thread_handler_IVT(self)
+            self.IVT_LOG_thread.start()
+        self.DB_but["text"]="Disable DB"
+        self.DB_but["command"] = self.stop_DB
 
     def start_ecq_map(self):
         self.doing_something = True
@@ -754,13 +770,17 @@ class menu():
         self.Launch_error_check['text']="Double threshold enabled"
 
     def thr_Scan(self, GEMROC_num, TIGER_num, branch=1):  # if GEMROC num=-1--> To all GEMROC, if TIGER_num=-1 --> To all TIGERs
+
         self.doing_something = True
         start=time.time()
         if DB:
+            self.DB_Manager = DB_classes.Database_Manager()
+
             while self.IVT_LOG_thread.logging:
                 time.sleep(0.5)
-                if time.time() -start>10:
+                if time.time() - start > 10:
                     print ("fast configuration waited for too long")
+
                     break
         startT = time.time()
         self.bar_win = Toplevel(self.main_window)
@@ -792,7 +812,7 @@ class menu():
         for number, GEMROC_num in dict.items():
             pipe_in, pipe_out = Pipe()
             if branch == 1:
-                p = Process(target=self.THR_scan_process, args=(number, TIGER_num, pipe_out))
+                p = Process(target=self.THR_scan_process, args=(number, TIGER_num, pipe_out, 1))
             else:
                 p = Process(target=self.THR_scan_process, args=(number, TIGER_num, pipe_out, 2))
             # pipe_in.send(progress_bars[i])
@@ -823,6 +843,9 @@ class menu():
 
         stopT = time.time()
         print ("Execution time: {}".format(stopT - startT))
+        if DB:
+            self.DB_Manager.__del__()
+
         self.doing_something=False
 
         self.bar_win.destroy()
@@ -853,9 +876,9 @@ class menu():
             last = TIGER + 1
         GEMROC_ID = GEM_COM.GEMROC_ID
         if branch == 1:
-            test_r.thr_scan_matrix = test_c.thr_conf_using_GEMROC_COUNTERS_progress_bar(test_r, first, last, pipe_out, print_to_screen=False)
+            test_r.thr_scan_matrix = test_c.thr_conf_using_GEMROC_COUNTERS_progress_bar(test_r, first, last, pipe_out, print_to_screen=False, DB=DB, DB_manager=self.DB_Manager)
         else:
-            test_r.thr_scan_matrix = test_c.thr_conf_using_GEMROC_COUNTERS_progress_bar(test_r, first, last, pipe_out, print_to_screen=False, branch=2)
+            test_r.thr_scan_matrix = test_c.thr_conf_using_GEMROC_COUNTERS_progress_bar(test_r, first, last, pipe_out, print_to_screen=False, branch=2, DB=DB, DB_manager=self.DB_Manager)
 
         test_r.make_rate()
         test_r.normalize_rate(first, last)
@@ -872,15 +895,26 @@ class menu():
 
         # test_r.normalize_rate( first,int(input_array[2]))
         if branch == 1:
-            test_r.global_sfit(first, last, branch=1)
+            test_r.global_sfit(first, last, branch=1, DB=DB, DB_manager=self.DB_Manager)
         else:
-            test_r.global_sfit(first, last, branch=2)
+            test_r.global_sfit(first, last, branch=2, DB=DB, DB_manager=self.DB_Manager)
         GEMROC.GEM_COM.set_sampleandhold_mode(c_inst)
 
         print ("GEMROC {} done".format(GEMROC_ID))
         pipe_out.send(0)
 
     def auto_tune(self, GEMROC_num, TIGER_num, iter):  # if GEMROC num=-1--> To all GEMROC, if TIGER_num=-1 --> To all TIGERs
+        self.doing_something = True
+        start = time.time()
+        if DB:
+
+            while self.IVT_LOG_thread.logging:
+                time.sleep(0.5)
+                if time.time() - start > 10:
+                    print("fast configuration waited for too long")
+                    break
+            self.DB_Manager = DB_classes.Database_Manager()
+
         self.bar_win = Toplevel(self.main_window)
         self.bar_win.focus_set()  # set focus on the ProgressWindow
         self.bar_win.grab_set()
@@ -938,6 +972,10 @@ class menu():
             if process.is_alive():
                 process.join()
         self.bar_win.destroy()
+        if DB:
+            self.DB_Manager.__del__()
+
+        self.doing_something = False
 
         # else:
         #     GEMROC = self.GEMROC_reading_dict["GEMROC {}".format(GEMROC_num)]
@@ -974,7 +1012,7 @@ class menu():
                 print ("\nVth Loaded on TIGER {}".format(T))
                 auto_tune_C.fill_VTHR_matrix(3, 0, T)
 
-                auto_tune_C.thr_autotune_wth_counter_progress(T, rate, test_r, pipe_out, iter, 0.03)
+                auto_tune_C.thr_autotune_wth_counter_progress(T, rate, test_r, pipe_out, iter, 0.03, DB=True, DB_manager=self.DB_Manager )
                 # auto_tune_C.thr_autotune_wth_counter_progress(T, rate, test_r, pipe_out,2, 1)
 
                 auto_tune_C.__del__()
@@ -1911,6 +1949,8 @@ class menu():
                     if source == "scan":
                         GEMROC.thr = "3T-2E"
                         GEMROC.GEM_COM.Load_VTH_from_scan_file(GEMROC.c_inst, T, sigma_T, sigma_E, offset, send_command=False)
+
+
     def save_current_thr(self):
         """
         Save current thresholds, used mostly for the 2-d thr autotune
@@ -1934,6 +1974,19 @@ class menu():
         """
         for number, GEMROC in self.GEMROC_reading_dict.items():
             GEMROC.GEM_COM.load_vth(GEMROC.c_inst,filename=GEMROC.GEM_COM.conf_folder + sep + "thr" + sep + "GEMROC{}_reference_vth".format(GEMROC.GEM_COM.GEMROC_ID))
+
+    def load_thr_from_specific_file(self):
+        """
+        Load thr pecifing the file folder
+        :return:
+        """
+        path=  filedialog.askdirectory(initialdir="." , title="Select folder")
+        for dirpath, dirnames, filenames in os.walk(path):
+            for f in filenames:
+                if "GEMROC" in f:
+                    num = f.split("GEMROC")[1].split("_")[0]
+                    if "GEMROC {}".format(num) in self.GEMROC_reading_dict.keys():
+                        self.GEMROC_reading_dict["GEMROC {}".format(num)].GEM_COM.load_vth(self.GEMROC_reading_dict["GEMROC {}".format(num)].c_inst,filename=dirpath+sep+f)
 
 
     def load_thr_from_file(self):
@@ -2085,16 +2138,16 @@ class menu():
         if self.use_ecq_thr.get():
             self.load_thr_from_file()
         self.specific_channel_fast_setting()
+        self.disable_channels()
         self.load_default_config_parallel()
         self.Synch_reset(1)
         self.load_default_config_parallel()
         self.TCAM_reset(1)
         self.Synch_reset(1)
         self.Synch_reset(1)
-        self.Synch_reset(1)
         self.shut_down_FEB(2,self.GEMROC_reading_dict["GEMROC 8"])
         self.set_pause_mode(True, 1)
-        self.Launch_error_check['text']="Fast configuration done"
+        self.Launch_error_check['text'] = "Fast configuration done"
 
         self.calculate_FC_thr_caller()
         self.doing_something = False
@@ -2175,6 +2228,9 @@ class menu():
                     GEMROC.c_inst.Channel_cfg_list[T][ch]["Integ"] = 0
         self.Launch_error_check_op['text']="Channels registers set for TOT mode"
 
+    def disable_channels(self):
+        for GEMROC in self.GEMROC_reading_dict.values():
+            GEMROC.c_inst.load_ch_to_dis("."+sep+"conf"+sep+"ch_to_disable")
 
 def character_limit(entry_text):
     try:
@@ -2204,6 +2260,7 @@ class GEMROC_HANDLER:
             self.layer=2
         else:
             self.layer=3
+
     def __del__(self):
         self.GEM_COM.__del__()
 

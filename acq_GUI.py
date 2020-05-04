@@ -30,8 +30,8 @@ else:
     sys.exit()
 
 debug = False
-db_address = '127.0.0.1'
-# db_address = '192.168.38.191'
+#db_address = '127.0.0.1'
+db_address = '192.168.38.191'
 db_port = 8086
 
 
@@ -322,8 +322,8 @@ class menu():
         self.mail_stop_but.config(state='disabled')
         self.master_window.after(5000, lambda: self.reset_mail_but())
         if TER:
-            subprocess.call(['/bin/bash', '-i', '-c', "copy_data {}".format(self.run_folder.split("_")[1])])
-            subprocess.call(['/bin/bash', '-i', '-c', "sync_data"])
+            subprocess.call(['/bin/bash', "copy_data {}".format(self.run_folder.split("_")[1])])
+            subprocess.call(['/bin/bash', "sync_data"])
 
     def reset_mail_but(self):
         self.mail_start_but.config(state='normal')
@@ -385,8 +385,9 @@ class menu():
                 self.error_dict810["{} TIGER {}".format(number, T)].grid(row=1, column=T + 1, sticky=NW, pady=4)
             Label(a, text='{} TIGERs:   '.format(number), font=("Courier", 10)).grid(row=0, column=0, sticky=NW, pady=4)
             for T in range(0, 8):
-                self.button_dict["{} TIGER {}".format(number, T)] = Button(a, text='{}'.format(T), width=4, height=1, font=("Courier", 10), command=lambda: self.Change_Reading_Tigers(number, T))
+                self.button_dict["{} TIGER {}".format(number, T)] = Button(a, text='{}'.format(T), width=4, height=1, font=("Courier", 10), command=lambda T=T, number=number: self.Change_Reading_Tigers(number, T))
                 self.button_dict["{} TIGER {}".format(number, T)].grid(row=0, column=T + 1, sticky=NW, pady=4)
+
             Label(a, text="___________________________________________________________________________________________________________________________").grid(row=2, column=0, sticky=NW, columnspan=12)
 
         self.refresh_buttons_TIGERs()
@@ -456,17 +457,21 @@ class menu():
         self.canvas2.configure(scrollregion=self.canvas2.bbox("all"), width=1200, height=700)
 
     def Change_Reading_Tigers(self, number, T, ForceOff=False):
-
         n = (self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"] >> T) & 0x1
         if n == 1:
+            print (T)
+            print (n)
+            print (self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"])
             self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"] -= 2 ** T
+
+            print (self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"])
             with open(self.logfile, 'a') as f:
                 f.write("{} -- {} TIGER {} disabled\n".format(time.ctime(), number, T))
 
         elif ForceOff == False:
             self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"] += 2 ** T
         # print self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"]
-        self.GEMROC_reading_dict[number].GEM_COM.DAQ_set_register()
+        # self.GEMROC_reading_dict[number].GEM_COM.DAQ_set_register()
         self.refresh_buttons_TIGERs()
 
     def refresh_buttons_TIGERs(self):
@@ -528,9 +533,9 @@ class menu():
                             with open(self.logfile, 'a') as f:
                                 f.write("{} -- Stopping acquisition due to 8/10bit errors {} times in a row \n".format(time.ctime(), self.reset_810))
                             self.send_mail("{} --8/10 bit errors counter saturated {} times in a row: GEMROC {} TIGER {}\n (Note: there could be more errors).".format(time.ctime(), self.reset_810, GEMROC, TIGER))
-                            self.send_telegram("{} --8/10 bit errors counter saturated {} times in a row: GEMROC {} TIGER {}\n (Note: there could be more errors).".format(time.ctime(), self.reset_810, GEMROC, TIGER))
-                            self.restart.set(False)
-                            self.stop_acq(True)
+                            # self.send_telegram("{} --8/10 bit errors counter saturated {} times in a row: GEMROC {} TIGER {}\n (Note: there could be more errors).".format(time.ctime(), self.reset_810, GEMROC, TIGER))
+                            # self.restart.set(False)
+                            # self.stop_acq(True)
                             break
 
             for i in self.GEM:
@@ -558,7 +563,7 @@ class menu():
                     self.send_mail("{} -- Stopping acquisition due to time out errors {} times in a row (GEMROC {})\n (Note: there could be more errors).".format(time.ctime(), self.reset_timedout, i.GEMROC_ID))
                     self.send_telegram("{} -- Stopping acquisition due to time out errors {} times in a row (GEMROC {})\n (Note: there could be more errors).".format(time.ctime(), self.reset_timedout, i.GEMROC_ID))
                     self.restart.set(False)
-                    self.stop_acq(True)
+                    self.stop_acq(True, stop_log=False)
                     break
 
 
@@ -575,52 +580,59 @@ class menu():
 
     def relaunch_acq(self):
         self.stop_acq(True)
-        if self.restart.get():
-            self.messagge_field['text'] = "Restart process ongoing, please wait"
-            time.sleep(8)
-            # print ("Sending hard reset")
-            # self.father.hard_reset(1)
-            if debug:
-                print("Restarting")
-            if self.PMT:
+        try:
+            if self.restart.get():
+                self.messagge_field['text'] = "Restart process ongoing, please wait"
+                time.sleep(8)
+                # print ("Sending hard reset")
+                # self.father.hard_reset(1)
                 if debug:
-                    print("PMT down")
-                self.PMT_OFF()
-            # time.sleep(17)
-            # print ("Writing GEMROC configuration")
-            # for number, GEMROC in self.GEMROC_reading_dict.items():
-            #     GEMROC.GEM_COM.DAQ_set_with_dict()
-            #     self.father.write_default_LV_conf(GEMROC)
-            #     GEMROC.GEM_COM.reload_default_td()
-            #
-            time.sleep(10)
+                    print("Restarting")
+                if self.PMT:
+                    if debug:
+                        print("PMT down")
+                    self.PMT_OFF()
+                # time.sleep(17)
+                # print ("Writing GEMROC configuration")
+                # for number, GEMROC in self.GEMROC_reading_dict.items():
+                #     GEMROC.GEM_COM.DAQ_set_with_dict()
+                #     self.father.write_default_LV_conf(GEMROC)
+                #     GEMROC.GEM_COM.reload_default_td()
+                #
+                time.sleep(10)
 
-            # self.father.reactivate_TIGERS()
-            # self.refresh_buttons_TIGERs()
-            self.father.Synch_reset()
+                # self.father.reactivate_TIGERS()
+                # self.refresh_buttons_TIGERs()
+                self.father.Synch_reset()
 
-            # self.father.Synch_reset()
-            # print ("Writing TIGER configuration")
-            # # self.father.Synch_reset()
-            # self.father.load_default_config_parallel(set_check=False)
-            # self.father.Synch_reset()
-            self.father.load_default_config_parallel(set_check=False)
-            self.father.doing_something=False
-            print("Configuration wrote")
-            time.sleep(2)
+                # self.father.Synch_reset()
+                # print ("Writing TIGER configuration")
+                # # self.father.Synch_reset()
+                # self.father.load_default_config_parallel(set_check=False)
+                # self.father.Synch_reset()
+                self.father.load_default_config_parallel(set_check=False)
+                self.father.doing_something=False
+                print("Configuration wrote")
+                time.sleep(2)
 
-            self.father.Synch_reset()
-            self.father.TCAM_reset()
-            if debug:
-                print("Setting pause")
-            self.father.set_pause_mode(to_all=True, value=1)
-
-            if self.PMT:
+                self.father.Synch_reset()
+                self.father.TCAM_reset()
                 if debug:
-                    print("PMT ON")
-                self.PMT_on()
-            time.sleep(15)
-            self.start_acq(First_launch=False)
+                    print("Setting pause")
+                self.father.set_pause_mode(to_all=True, value=1)
+
+                if self.PMT:
+                    if debug:
+                        print("PMT ON")
+                    self.PMT_on()
+                time.sleep(15)
+                self.start_acq(First_launch=False)
+        except:
+            if not self.std_alone:
+                self.error_thread = (Thread_handler_errors(self.GEMROC_reading_dict, self.GEM, self.errors_counters_810, self))
+
+            if not self.std_alone:
+                self.error_thread.start()
 
     def ref_adv_acq(self):
         widget_list = all_children(self.adv_self.canvas)
@@ -761,6 +773,7 @@ class menu():
             self.conffile = "." + sep + "data_folder" + sep + self.run_folder + sep + "CONF_run_{}".format(self.run_folder.split("_")[1])
         if not self.std_alone:
             self.save_conf_registers()
+            self.log_disabled_channels()
         self.but7.config(state='disabled')
         self.but6.config(state='disabled')
         for i in range(0, len(self.GEM)):
@@ -803,6 +816,16 @@ class menu():
             self.error_thread.start()
         time.sleep(0.5)
         self.messagge_field['text'] = "Acquiring"
+
+    def log_disabled_channels(self):
+        with open("." + sep + "data_folder" + sep + self.run_folder + sep + "disabled_channels", 'w+') as f:
+            print("#G   T   ch")
+            for number, GEMROC in self.GEMROC_reading_dict.items():
+                    for T in range(0,8):
+                        for ch in range(0,64):
+                            if GEMROC.c_inst.Channel_cfg_list[T][ch]["TriggerMode"]==3:
+                                f.write("{}  {}  {}\n".format(GEMROC.GEMROC_ID, T, ch))
+
 
     def preliminary_checks(self):
 
@@ -897,7 +920,7 @@ class menu():
         :return:
         """
 
-    def stop_acq(self, auto=False):
+    def stop_acq(self, auto=False, stop_log=True):
         if not auto:
             self.restart.set(False)
         self.run_analysis.set(False)
@@ -908,7 +931,8 @@ class menu():
             print("Stopping")
 
         self.but6.config(state='normal')
-        if not self.std_alone:
+
+        if not self.std_alone and stop_log:
             self.error_thread.running = False
             self.error_thread.stopper_thr.running = False
             # self.error_thread.raise_exception()
@@ -1003,8 +1027,8 @@ class menu():
             if trig_tot[i] != 0:
                 print("GEMROC {}, triggers: {}".format(i, trig_tot[i]))
             if self.GEM_to_read[i]:
-                total += trig_tot[i]
-                avg = total / np.size(np.where(self.GEM_to_read == 1))
+                # total += trig_tot[i]
+                avg = np.min(trig_tot[np.where(trig_tot>0)])
         self.messagge_field['text'] = "Avg number of triggers in this run: {}".format(avg)
         return avg
 
