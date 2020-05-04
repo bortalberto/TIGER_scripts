@@ -743,6 +743,41 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
         with open("file2.txt", "w") as output:
             output.write(str(self.Channel_cfg_list))
         return 0
+
+   def load_ch_to_dis(self, filename):
+       with open(filename, 'r') as f:
+           for line in f.readlines():
+               if line[0] != "#" and line[0] != "\n":
+                   try:
+                       gemroc, tiger, channel = line.split(" ")
+                       gemroc = int(gemroc)
+                       if tiger!="ALL":
+                           tiger = int(tiger)
+                       if ":" not in channel:
+                            channel = int (channel)
+                       else:
+                           channel=65
+                           channel_f=channel.split(":")[0]
+                           channel_l=channel.split(":")[1]
+                   except Exception as E:
+                       print("Parsing Error: {} \n line: {}".format(E, line))
+                       return
+                   if gemroc == self.TARGET_GEMROC_ID:
+                           if tiger != "ALL":
+                               if channel == 65:
+                                    for ch in range (channel_f,channel_l+1):
+                                        self.Channel_cfg_list[tiger][ch]["TriggerMode"]= 3
+                               else:
+                                   self.Channel_cfg_list[tiger][channel]["TriggerMode"] = 3
+
+                           else:
+                               for T in range(0, 8):
+                                   if channel == 65:
+                                       for ch in range(channel_f, channel_l + 1):
+                                           self.Channel_cfg_list[T][ch]["TriggerMode"] = 3
+                                   else:
+                                       self.Channel_cfg_list[tiger][channel]["TriggerMode"] = 3
+
 ###CCCCCCCCCCCCCCCC###     CLASS gemroc_cmd_LV_settings BEGIN  ###CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC###
 # acr 2018-01-13 split the handling of the GEMROC LV and DAQ configuration parameters
 class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configuration Register Settings in an array format which can be sent over Ethernet or optical link

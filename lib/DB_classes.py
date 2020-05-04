@@ -15,6 +15,7 @@ class Database_Manager():
     """
     Class to manage the DB logging and be able to log also from conf_GUI
     """
+    # def __init__(self, address='192.168.38.191', port=8086):
     def __init__(self, address='192.168.38.191', port=8086):
         self.db_client=InfluxDBClient(host=address, port=port)
         self.db_client.switch_database("GUFI_DB")
@@ -99,7 +100,7 @@ class Database_Manager():
                         IVT['status']['FEB{}'.format(FEB)]
                 }]
                 if (IVT['status']['FEB{}'.format(FEB)]["TEMP[degC]"] < 117):
-                    if IVT['status']['FEB{}'.format(FEB)]["TEMP[degC]"] > 45:
+                    if IVT['status']['FEB{}'.format(FEB)]["TEMP[degC]"] > 47:
                             if GEMROC_num!="GEMROC 8" and FEB!=1:
                                 FEB_to_shut_down.append(FEB)
                     if not ((GEMROC.GEM_COM.GEMROC_ID == 8 and FEB in (1, 2)) or (GEMROC.GEM_COM.GEMROC_ID == 12 and FEB in (2, 3))):
@@ -121,6 +122,53 @@ class Database_Manager():
             pipe.send((GEMROC_num, FEB_to_shut_down))
             pipe.close()
             self.send_to_db(body)
+
+    def log_IVT_in_DB_GEM_COM(self, GEM_COM ):
+        """
+        Call of the IVT LOG with GEM_COM like argoument
+        :param GEM_COM:
+        :return:
+        """
+        FEB_to_shut_down=[]
+        if DB:
+            IVT =GEM_COM.save_IVT()
+
+            for FEB in range(0, 4):
+                body = [{
+                    "measurement": "Offline",
+                    "tags": {
+                        "type": "IVT_LOG_FEB",
+                        "gemroc": GEM_COM.GEMROC_ID,
+                        "FEB": FEB
+                    },
+                    "time": str(datetime.datetime.utcnow()),
+                    "fields":
+                        IVT['status']['FEB{}'.format(FEB)]
+                }]
+                if (IVT['status']['FEB{}'.format(FEB)]["TEMP[degC]"] < 117):
+                    if IVT['status']['FEB{}'.format(FEB)]["TEMP[degC]"] > 47:
+                            if GEM_COM.GEMROC_ID !=8 and FEB!=1:
+                                FEB_to_shut_down.append(FEB)
+                    if not ((GEM_COM.GEMROC_ID == 8 and FEB in (1, 2)) or (GEM_COM.GEMROC_ID == 12 and FEB in (2, 3))):
+                        self.send_to_db(body)
+                else:
+                    print("Rejected IVT value")
+
+            body = [{
+                "measurement": "Offline",
+                "tags": {
+                    "type": "IVT_LOG_GEMROC",
+                    "gemroc": GEM_COM.GEMROC_ID,
+                },
+                "time": str(datetime.datetime.utcnow()),
+                "fields":
+                    IVT['status']['ROC']
+
+            }]
+            self.send_to_db(body)
+        if GEM_COM.GEMROC_ID == 3 or GEM_COM.GEMROC_ID == 7:
+            self.log_PC_stats()
+
 
     def log_ivt_caller(self, dict):
         """Process caller for LOG_IVT"""
@@ -195,21 +243,28 @@ class Database_Manager():
         print("SHUT DOWN FEB {}, GEMROC{}".format(num,gemcom.GEMROC_ID))
         gemcom.FEBPwrEnPattern_set(pwr_pattern)
 
+    def __del__(self):
+        self.db_client.close()
+        return 0
+
+
 class Thread_handler_IVT(Thread):  # In order to scan during configuration is mandatory to use multithreading
 
 
-    def __init__(self, menu_caller, address='127.0.0.1', port=8086):
+    def __init__(self, menu_caller):
         Thread.__init__(self)
         self.menu_caller=menu_caller
-        self.Database_Manager=Database_Manager(address, port)
+        self.Database_Manager=Database_Manager()
         print ("thread created")
         self.logging=False
+        self.terminator=False
 
     def run(self):
         last_time=0
         while True:
+            if self.terminator:
+                return 0
             if (not self.menu_caller.doing_something) and (time.time()-last_time > 7):
-
                 self.logging = True
                 last_time=time.time()
                 process_list_2 = []
@@ -233,9 +288,10 @@ class Thread_handler_IVT(Thread):  # In order to scan during configuration is ma
                     except Exception as e:
                         print("IVT logger controller timeout: {}".format(e))
                 self.logging = False
-
-
             if self.menu_caller.doing_something:
                 last_time=time.time()
             time.sleep(1)
 
+    def __del__(self):
+        self.Database_Manager.__del__()
+        return 0

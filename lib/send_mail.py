@@ -1,3 +1,42 @@
+# import smtplib, ssl, sys
+# import base64
+#
+# OS = sys.platform
+# if OS == 'win32':
+#     sep = '\\'
+# elif OS == 'linux':
+#     sep = '/'
+# else:
+#     print("ERROR: OS {} non compatible".format(OS))
+#     sys.exit()
+# def impacchetta_recievers(rcv_list):
+#     rcv_string=""
+#     for elem in rcv_list:
+#         rcv_string=rcv_string+elem+"; "
+#     return rcv_string
+# smtp_server = "localhost"
+# port = 25
+# sender_email = "alberto@CGEM-IT-CR.cn.org"
+# password = "prova123"
+# receiver_email=[]
+# with open ("conf"+sep+"mailining_list") as f:
+#     for line in f.readlines():
+#         if line[0]!="#":
+#             receiver_email.append(line.strip())
+#
+# message="""From: {}
+# To: {}
+# Subject:{}\n
+# {}
+# """.format(sender_email,impacchetta_recievers(receiver_email),sys.argv[1],sys.argv[2])
+#
+# print (message)
+#
+# with smtplib.SMTP(smtp_server, port) as server:
+#     # server.login(sender_email, password)
+#     esito=server.sendmail(sender_email, to_addrs=receiver_email, msg=message)
+# print (esito)
+#
 import smtplib, ssl, sys
 import base64
 

@@ -207,7 +207,7 @@ class analisys_conf: #Analysis class used for configurations10
                 self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 3)
 
         return thr_scan_matrix
-    def thr_autotune_wth_counter_progress(self, T, desired_rate, test_r, pipe_out,max_iter=16, tempo=0.2,print_to_screen=True):
+    def thr_autotune_wth_counter_progress(self, T, desired_rate, test_r, pipe_out,max_iter=16, tempo=0.2,print_to_screen=True, DB=False, DB_manager=None ):
         self.GEM_COM.SynchReset_to_TgtFEB(0, 1)
         doing_tuning_matrix = np.ones((64))
 
@@ -232,6 +232,8 @@ class analisys_conf: #Analysis class used for configurations10
             autotune_scan_matrix = autotune_scan_matrix*(1/tempo)
 
             for channel in range(0, 64):
+                if DB:
+                    DB_manager.log_IVT_in_DB_GEM_COM(self.GEM_COM)
                 # if autotune_scan_matrix[T,channel]<(desired_rate-desired_rate/5) or autotune_scan_matrix[T,channel]>(desired_rate+desired_rate/5):
                 #     if autotune_scan_matrix[T,channel]<(desired_rate/1000):
                 #         self.vthr_matrix[T,channel]=self.vthr_matrix[T,channel]+2
@@ -273,7 +275,8 @@ class analisys_conf: #Analysis class used for configurations10
         np.savetxt(name, np.c_[self.vthr_matrix[T, :]])
 
         X = "Autotune done"
-    def thr_conf_using_GEMROC_COUNTERS_progress_bar(self, test_r, first_TIGER_to_SCAN, last_TIGER_to_SCAN, pipe_out, print_to_screen=True, branch=1):
+
+    def thr_conf_using_GEMROC_COUNTERS_progress_bar(self, test_r, first_TIGER_to_SCAN, last_TIGER_to_SCAN, pipe_out, print_to_screen=True, branch=1, DB=False, DB_manager=None):
         thr_scan_matrix=np.zeros((8,64,64))
         # self.GEM_COM.sfo
         if branch == 1:
@@ -293,6 +296,8 @@ class analisys_conf: #Analysis class used for configurations10
 
             for j in range (0,64):  #Channel cycle
                 self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, j, 1, 0)
+                if DB:
+                    DB_manager.log_IVT_in_DB_GEM_COM(self.GEM_COM)
                 for i in range(0,64):#VTH Cycle, i)
                         # with open(self.log_path, 'a') as log_file:
                         if branch==1:
@@ -1260,8 +1265,10 @@ class analisys_read:
     #
     #     self.close()
 
-    def global_sfit(self,first_TIGER_to_SCAN, last_TIGER_to_scan, retry=False,branch=1):
+    def global_sfit(self,first_TIGER_to_SCAN, last_TIGER_to_scan, retry=False,branch=1, DB=False, DB_manager=None):
         for T in range(first_TIGER_to_SCAN, last_TIGER_to_scan):
+            if DB:
+                DB_manager.log_IVT_in_DB_GEM_COM(self.GEM_COM)
             if branch==1:
                 thr_file_path = self.GEM_COM.conf_folder + sep +"thr"+sep+"GEMROC{}_Chip{}_T.thr".format(self.GEMROC_ID, T)
             else:
@@ -1586,4 +1593,3 @@ class Thread_handler(Thread):
             # print ("Channel={}".format(self.configurer.currentCH))
             # print ("VTH={}".format(self.configurer.currentVTH))
             self.reader.data_save_thr_scan(self.configurer.currentCH, self.configurer.currentVTH, self.configurer.currentTIGER, False, True)
-
