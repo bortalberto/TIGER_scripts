@@ -21,13 +21,29 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 import os
 
+OS = sys.platform
+if OS == 'win32':
+    sep = '\\'
+elif OS == 'linux2' or 'linux':
+    sep = '/'
+
+else:
+    print("ERROR: OS {} not compatible".format(OS))
+    sys.exit()
+
+import configparser
+config=configparser.ConfigParser()
+config.read("conf"+sep+"GUFI.ini")
+
 try:
     from lib import DB_classes as DB_classes
 
-    DB = True
+    DB = config["DB"].getboolean("active")
+
 except:
     DB = False
     print("No DB library found")
+
 
 
 def cmp_to_key(mycmp):
@@ -49,14 +65,6 @@ def cmp_to_key(mycmp):
             return mycmp(self.obj, other.obj) != 0
     return K
 
-OS = sys.platform
-if OS == 'win32':
-    sep = '\\'
-elif OS == 'linux2' or 'linux':
-    sep = '/'
-else:
-    print("ERROR: OS {} not compatible".format(OS))
-    sys.exit()
 
 class menu():
     def __init__(self):
@@ -212,7 +220,7 @@ class menu():
 
         Label(cornice, text="Rate").pack(side=LEFT)
         Entry(cornice, textvar=self.rate, width=5).pack(side=LEFT)
-        Button(cornice, text="Set threshold aiming to a certain rate", command=lambda: self.auto_tune(-1, -1, 15), activeforeground="#f77f00").pack(side=LEFT)
+        # Button(cornice, text="Set threshold aiming to a certain rate", command=lambda: self.auto_tune(-1, -1, 15), activeforeground="#f77f00").pack(side=LEFT)
         Button(cornice, text="Load thresholds to all", command=lambda: self.load_thr(True, source="scan"), activeforeground="#f77f00").pack(side=LEFT)
         # Button(cornice, text="Load auto-thr to all", command=lambda: self.load_thr(True, source="auto"), activeforeground="#f77f00").pack(side=LEFT)
         self.error_frame2 = Frame(Tante_frame)
@@ -280,6 +288,7 @@ class menu():
         Button(load_save_frame, text = "Load last saved thr", command =self.load_thr_from_file).pack(side=LEFT)
         Button(load_save_frame, text = "Load reference thr", command =self.load_thr_reference).pack(side=LEFT)
         Button(load_save_frame, text = "Load thr from folder", command =self.load_thr_from_specific_file).pack(side=LEFT)
+        Button(load_save_frame, text = "Fix thr out of reference", command =self.fix_bad_thr).pack(side=LEFT)
         self.desired_rate = IntVar(self.main_window)
         self.desired_rate.set(5000)
         self.number_of_steps = IntVar(self.main_window)
@@ -340,6 +349,7 @@ class menu():
     #     self.rate_window.error_window_main.destroy()
     #     print ("Equalization done and saved")
         if COM_class.local_test == True:
+
             for G in range (0,11):
                 self.toggle(G)
 
@@ -358,6 +368,10 @@ class menu():
         self.DB_but["command"] = self.stop_DB
 
     def start_ecq_map(self):
+        """
+        NEW
+        :return:
+        """
         self.doing_something = True
         start=time.time()
         if DB:
@@ -366,15 +380,22 @@ class menu():
                 if time.time() -start>10:
                     print ("fast configuration waited for too long")
                     break
+            self.DB_Manager = DB_classes.Database_Manager()
+        else:
+            self.DB_Manager = None
+
         with open("./log_folder/thr_setting.txt", "a+") as logfile:
             logfile.write("{} - Tuning rate @ {}Hz\n".format(time.ctime(),self.desired_rate.get()))
         self.rate_window = rate_interface.menu(self.main_window, self.GEMROC_reading_dict,self)
         self.rate_window.rate_tab.rework_window()
         strip_to_scan = self.build_scan_matrix()
-        self.rate_window.rate_tab.acquire_thread.procedural_scan_handler(self.GEMROC_reading_dict,des_rate=self.desired_rate.get(),number_of_cycle=self.number_of_steps.get(), scanning_map=strip_to_scan,map=True, conditional=True,tollerance=self.tollerance.get())
+        self.rate_window.rate_tab.acquire_thread.procedural_scan_handler(self.GEMROC_reading_dict,des_rate=self.desired_rate.get(),number_of_cycle=self.number_of_steps.get(), scanning_map=strip_to_scan,map=True, conditional=True,tollerance=self.tollerance.get(), DB=self.DB_Manager)
         self.save_current_thr()
         self.rate_window.error_window_main.destroy()
-        self.doing_something=False
+        if DB:
+            self.DB_Manager.__del__()
+
+        self.doing_something = False
         print ("Equalization done and saved")
 
     def build_scan_matrix(self):
@@ -652,8 +673,9 @@ class menu():
         self.conf_wind = error_GUI.menu(self.main_window, self.GEMROC_reading_dict)
 
     def runna(self):
-        self.IVT_LOG_thread = DB_classes.Thread_handler_IVT(self)
-        self.IVT_LOG_thread.start()
+        if DB:
+            self.IVT_LOG_thread = DB_classes.Thread_handler_IVT(self)
+            self.IVT_LOG_thread.start()
         mainloop()
         # while True:
         #     self.main_window.update_idletasks()
@@ -904,6 +926,13 @@ class menu():
         pipe_out.send(0)
 
     def auto_tune(self, GEMROC_num, TIGER_num, iter):  # if GEMROC num=-1--> To all GEMROC, if TIGER_num=-1 --> To all TIGERs
+        """
+        OLD
+        :param GEMROC_num:
+        :param TIGER_num:
+        :param iter:
+        :return:
+        """
         self.doing_something = True
         start = time.time()
         if DB:
@@ -914,6 +943,8 @@ class menu():
                     print("fast configuration waited for too long")
                     break
             self.DB_Manager = DB_classes.Database_Manager()
+        else:
+            self.DB_Manager = None
 
         self.bar_win = Toplevel(self.main_window)
         self.bar_win.focus_set()  # set focus on the ProgressWindow
@@ -944,7 +975,7 @@ class menu():
         i = 0
         for number, GEMROC_num in dict.items():
             pipe_in, pipe_out = Pipe()
-            p = Process(target=self.auto_tune_process, args=(number, TIGER_num, pipe_out, iter))
+            p = Process(target=self.auto_tune_process, args=(number, TIGER_num, pipe_out, iter,self.DB_Manager))
             # pipe_in.send(progress_bars[i])
             process_list.append(p)
             pipe_list.append(pipe_in)
@@ -984,7 +1015,7 @@ class menu():
         #     g_inst = GEMROC.g_inst
         #     test_r = (AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst))
 
-    def auto_tune_process(self, number, TIGER, pipe_out, iter):
+    def auto_tune_process(self, number, TIGER, pipe_out, iter,DB_manager=None):
         GEMROC = self.GEMROC_reading_dict[number]
         GEM_COM = GEMROC.GEM_COM
         c_inst = GEMROC.c_inst
@@ -1999,6 +2030,53 @@ class menu():
             GEMROC.GEM_COM.load_vth(GEMROC.c_inst)
             GEMROC.thr = "Tuned @ {}".format(rate)
 
+    def build_DCT_matrix(self):
+        """
+        Don't care matrix, TIGER that will not stop the acquisition if they do too many errors
+        :return:
+        """
+        self.DCT_matrix = np.zeros((22, 8))
+        with open("conf" + sep + "DCT", 'r') as f:
+            for line in f.readlines():
+                if line[0] != "#":
+                    try:
+                        gemroc, tiger = line.split(" ")
+                        gemroc = int(gemroc)
+                        if tiger != "ALL":
+                            tiger = int(tiger)
+                    except Exception as E:
+                        print("Parsing Error: {}".format(E))
+                        return
+
+                    if tiger != "ALL":
+                        self.DCT_matrix[gemroc][tiger] = 1
+                    else:
+                        for T in range(0, 8):
+                            self.DCT_matrix[gemroc][T] = 1
+
+    def fix_bad_thr(self):
+
+        """
+        Checks if the thresholds are not too far from the refenrece values and fixes them
+
+        :return:
+        """
+        self.build_DCT_matrix()
+        th_tollerance = (10,10)
+        for number, GEMROC in self.GEMROC_reading_dict.items():
+            filename = GEMROC.GEM_COM.conf_folder + sep + "thr" + sep + "GEMROC{}_reference_vth".format(GEMROC.GEM_COM.GEMROC_ID)
+            if os.path.exists(filename):
+                with open(filename, 'r') as f:
+                    for line in f.readlines():
+                        splitted = line.replace(" ", ":").split(":")
+                        if self.DCT_matrix[GEMROC.GEMROC_ID][int(splitted[1])]!=1:
+                            diff_T = int(splitted[5]) - GEMROC.c_inst.Channel_cfg_list[int(splitted[1])][int(splitted[3])]['Vth_T1']
+                            diff_E = int(splitted[7]) - GEMROC.c_inst.Channel_cfg_list[int(splitted[1])][int(splitted[3])]['Vth_T2']
+                            if diff_T > th_tollerance[0] or diff_E>th_tollerance[1]:
+                                GEMROC.GEM_COM.Load_VTH_from_scan_file_on_channel(GEMROC.c_inst, int(splitted[1]), 2, 2, 1 ,int(splitted[3]))
+            else:
+                print ("Can't find reference for {}".format(number))
+
     def load_default_config(self,set_check=True):
         self.doing_something = True
         start=time.time()
@@ -2091,6 +2169,7 @@ class menu():
             Errors="ok"
         pipe_out.send(Errors)
     def Synch_reset(self, to_all=1):
+        self.doing_something=True
         if to_all == 1:
             print ("Synch reset to all\n")
             for number, GEMROC in self.GEMROC_reading_dict.items():
@@ -2178,7 +2257,6 @@ class menu():
                                 GEMROC.c_inst.Channel_cfg_list[T][62]["TriggerMode"] = 3
                                 GEMROC.c_inst.Channel_cfg_list[T][63]["TriggerMode"] = 3
         #Noisy channel to disable here:
-        self.GEMROC_reading_dict["GEMROC 5"].c_inst.Channel_cfg_list[6][26]["TriggerMode"] = 3
 
     def reactivate_TIGERS(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():

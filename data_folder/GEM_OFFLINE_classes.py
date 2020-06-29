@@ -104,7 +104,9 @@ class reader:
                                 int_x & 0x3FF)
                     self.thr_scan_matrix[(int_x >> 56) & 0x7, int(int_x >> 48) & 0x3F] = self.thr_scan_matrix[(int_x >> 56) & 0x7, int(int_x >> 48) & 0x3F] + 1
                 with open(outfile, 'a') as ff:
-                    ff.write("{} {}     {}".format(raw_raw,raw,s))
+                    # ff.write("{}{} {}".format(raw_raw,raw,s))
+                    ff.write("{}".format(s))
+
     def write_txt_TM(self, path,outfile="out.txt", binary=0):
 
         LOCAL_L1_TIMESTAMP = 0

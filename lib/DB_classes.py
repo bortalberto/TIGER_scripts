@@ -3,6 +3,8 @@ import time
 import datetime
 from threading import Thread
 from multiprocessing import Process, Pipe
+import configparser
+import sys
 try:
     from influxdb import InfluxDBClient
 
@@ -11,12 +13,22 @@ except:
     print("Can't find DB library")
     DB = False
 
+OS = sys.platform
+if OS == 'win32':
+    sep = '\\'
+elif OS == 'linux2' or 'linux':
+    sep = '/'
+config=configparser.ConfigParser()
+config.read("conf"+sep+"GUFI.ini")
+
+DB = config["DB"].getboolean("active")
+
 class Database_Manager():
     """
     Class to manage the DB logging and be able to log also from conf_GUI
     """
-    # def __init__(self, address='192.168.38.191', port=8086):
-    def __init__(self, address='192.168.38.191', port=8086):
+    def __init__(self, address='config["DB"].["address"]', port=8086):
+    # def __init__(self, address='127.0.0.1', port=8086):
         self.db_client=InfluxDBClient(host=address, port=port)
         self.db_client.switch_database("GUFI_DB")
         self.last_net_time = 0
@@ -248,7 +260,7 @@ class Database_Manager():
         return 0
 
 
-class Thread_handler_IVT(Thread):  # In order to scan during configuration is mandatory to use multithreading
+class Thread_handler_IVT(Thread):
 
 
     def __init__(self, menu_caller):
@@ -270,12 +282,12 @@ class Thread_handler_IVT(Thread):  # In order to scan during configuration is ma
                 process_list_2 = []
                 pipe_list_2 = []
                 for number, GEMROC in self.menu_caller.GEMROC_reading_dict.items():
-                    pipe_in, pipe_out = Pipe()
-                    p = Process(target=self.Database_Manager.log_IVT_in_DB, args=(number, self.menu_caller.GEMROC_reading_dict, pipe_in))
-                    pipe_list_2.append(pipe_out)
-                    process_list_2.append(p)
-                    p.start()
-                    time.sleep(0.05)
+                        pipe_in, pipe_out = Pipe()
+                        p = Process(target=self.Database_Manager.log_IVT_in_DB, args=(number, self.menu_caller.GEMROC_reading_dict, pipe_in))
+                        pipe_list_2.append(pipe_out)
+                        process_list_2.append(p)
+                        p.start()
+                        time.sleep(0.05)
                 self.Database_Manager.log_PC_stats()
                 for process, pipe_out in zip(process_list_2, pipe_list_2):
                     try:

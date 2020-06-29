@@ -29,8 +29,8 @@ else:
 class menu():
     def __init__(self):
         self.main_win = Tk()
-        self.client = InfluxDBClient(host='localhost', port=8086)
-        # self.client = InfluxDBClient(host='192.168.38.191', port=8086)
+        # self.client = InfluxDBClient(host='localhost', port=8086)
+        self.client = InfluxDBClient(host='192.168.38.191', port=8086)
 
         self.client.switch_database('GUFI_DB')
         if OS == 'linux2' or OS =='linux':
@@ -551,10 +551,12 @@ class GEMROC_decoder(Thread):
                                 print ("GEMROC {} is running the data decode".format(self.GEMROC_id))
                                 subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh", "-V", str(self.RUN.split("_")[1]), str(self.subRun)],timeout=120)
                                 subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh", "-A", str(self.RUN.split("_")[1]), str(self.subRun)],timeout=120)
-                                # subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh", "-E", str(self.RUN.split("_")[1]), str(self.subRun)])
+                                subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh", "-E", str(self.RUN.split("_")[1]), str(self.subRun)],timeout=120)
                                 # subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh", "-C", str(self.RUN.split("_")[1]), str(self.subRun)])
                                 # print(subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh", "-Q", str(self.RUN.split("_")[1]), str(self.subRun)]))
                                 subprocess.call(["root", "-b", "-l", "-q","/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/data/raw_root/data_status.cpp({})".format(int(self.RUN.split("_")[1]))],timeout=120)
+                                subprocess.call(["root", "-b", "-l", "-q","/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/data/raw_root/data_status_last_subs.cpp({}, {})".format(int(self.RUN.split("_")[1]), int (self.subRun))],timeout=120)
+
             self.caller2.update_buffers(self.GEMROC_id, len(self.data_buffer))
             time.sleep(0.01)
             # def run(self):

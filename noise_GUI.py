@@ -317,7 +317,7 @@ class noise_measure():
             with open(logfile, 'a+') as fi:
                 fi.write("{} Scanning branch E with TP\n".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")))
             self.load__fast_TP_settings(branch="E")
-            self.noise_scan(True)
+            self.noise_scan(True) 
             self.unload_TP_settings()
             File_name = "periodic_noise_scan" + sep + "E_branch_with_TP_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
 
@@ -611,7 +611,7 @@ class noise_measure():
         last = self.TIGER_num_last.get()
         # print (f'First: {first}')
         # print (f'Last:{last}')
-        for T in range(last, first,-1):  # TIGER
+        for T in range(first, last):  # TIGER
             print ("TIGER: {}".format(T))
             for J in range(firstch, lastch):  # Channel
                 if DB:
@@ -886,6 +886,13 @@ class noise_measure():
                         # print ("{} - {} - {}".format(GEMROC, TIG, channel))
                         # print np.size(np.where(matrix[TIG][channel] > 200))
                         if np.size(np.where(matrix[TIG][channel] > 200))<3:
+                            print ("{} - {} - {}".format(GEMROC,TIG,channel))
+        print ("Check those channels, they may be dying:")
+        for GEMROC, matrix in self.scan_matrixs.items():
+            for TIG in range(0, 8):
+                if np.any(matrix[TIG])!=0:
+                    for channel in range(0, 64):
+                        if matrix[TIG][channel][0]>10 and matrix[TIG][channel][1]>10:
                             print ("{} - {} - {}".format(GEMROC,TIG,channel))
         print ("time")
         print(time.time() - start)

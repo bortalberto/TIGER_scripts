@@ -16,7 +16,7 @@ import sys
 import time
 import select
 import numpy as np
-
+import configparser
 from lib import GEM_CONF_classes as GEM_CONF_classes  # acr 2018-02-19 import GEMcnf_classes_2018
 from lib import classes_test_functions
 
@@ -28,8 +28,9 @@ elif OS == 'linux2' or 'linux':
 else:
     print("ERROR: OS {} non compatible".format(OS))
     sys.exit()
-
-local_test = True
+config=configparser.ConfigParser()
+config.read("conf"+sep+"GUFI.ini")
+local_test = config["GLOBAL"].getboolean("local_test")
 
 class communication:  #The directory are declared here to avoid multiple declaration
 
@@ -55,7 +56,6 @@ class communication:  #The directory are declared here to avoid multiple declara
         self.success_counter = 0
         self.fail_counter = 0
         self.local_test = local_test
-
         if self.local_test:
             # HOST_DYNAMIC_IP_ADDRESS = "192.168.1.%d" %(GEMROC_ID)
             self.HOST_IP = "127.0.0.1"  # uncomment for test only
@@ -2126,6 +2126,56 @@ class communication:  #The directory are declared here to avoid multiple declara
                 self.Set_param_dict_channel(ChCFGReg_setting_inst, "TriggerMode", TIGER_ID_param, i, 3, send_command=False)
                 print ("Ch {} disabled, too noisy \n".format(i))
             self.Set_param_dict_channel(ChCFGReg_setting_inst, "Vth_T2", TIGER_ID_param, i, int(thr_E[i]), send_command=send_command)
+
+        if save_on_LOG:
+            name = "." + sep + "log_folder" + sep + "THR_LOG{}_TIGER_{}.txt".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"), TIGER_ID_param)
+            np.savetxt(name, np.c_[thr_T])
+
+        return 0
+
+    def Load_VTH_from_scan_file_on_channel(self, ChCFGReg_setting_inst, TIGER_ID_param, number_sigma_T, number_sigma_E, offset,channel,save_on_LOG=False, send_command=True):
+        file_T = self.conf_folder + sep + "thr" + sep + "GEMROC{}_Chip{}_T.thr".format(self.GEMROC_ID, TIGER_ID_param)
+        file_E = self.conf_folder + sep + "thr" + sep + "GEMROC{}_Chip{}_E.thr".format(self.GEMROC_ID, TIGER_ID_param)
+        ch=channel
+        c=channel
+        if self.keep_cfg_log:
+            self.log_file.write("Setting VTH on both VTH from file in GEMROC {}, TIGER {}, ch {}, {}(T) and {}(E) sigmas\n".format(self.GEMROC_ID, TIGER_ID_param,channel, number_sigma_T, number_sigma_E))
+        print ("Setting VTH on both VTH from file in GEMROC {}, TIGER {}, ch {},  {}(T) and {}(E) sigmas\n".format(self.GEMROC_ID, TIGER_ID_param,channel, number_sigma_T, number_sigma_E))
+
+        thr0_T = np.loadtxt(file_T )
+        thr_T = np.zeros(64)
+        med, sigma = (thr0_T[ch, 0],thr0_T[ch, 1])
+        if (sigma * number_sigma_T) < 1:
+            print ("Sigma on ch {} (T branch) to low, setting threshold at 0.6 instead".format(ch))
+            shift = 1
+        else:
+            shift = sigma * number_sigma_T
+        thr_T[ch] = np.rint(med - shift) + offset
+
+        thr0_E = np.loadtxt(file_E )
+        thr_E = np.zeros(64)
+        med, sigma = (thr0_E[ch, 0],thr0_E[ch, 1])
+        if (sigma * number_sigma_E) < 1:
+            shift = 1
+        else:
+            shift = sigma * number_sigma_E
+        thr_E[ch] = np.rint(med - shift) + offset
+
+        if thr_T[c] <= 0:
+            thr_T[c] = 0
+        if thr_T[c] > 63:
+            thr_T[c] = 63
+        if thr_E[c] <= 0:
+            thr_E[c] = 0
+        if thr_E[c] > 63:
+            thr_E[c] = 63
+
+
+        self.Set_param_dict_channel(ChCFGReg_setting_inst, "Vth_T1", TIGER_ID_param, ch, int(thr_T[ch]), send_command=False)
+        if int(thr_T[ch]) == 0:
+            self.Set_param_dict_channel(ChCFGReg_setting_inst, "TriggerMode", TIGER_ID_param, ch, 3, send_command=False)
+            print ("Ch {} disabled, too noisy \n".format(ch))
+        self.Set_param_dict_channel(ChCFGReg_setting_inst, "Vth_T2", TIGER_ID_param, ch, int(thr_E[ch]), send_command=send_command)
 
         if save_on_LOG:
             name = "." + sep + "log_folder" + sep + "THR_LOG{}_TIGER_{}.txt".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"), TIGER_ID_param)

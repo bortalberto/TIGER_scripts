@@ -202,6 +202,10 @@ class menu():
 
         self.mail_stop_but = Button(frame_mails, text="Send acq stop mail", command=self.send_acq_stop)
         self.mail_stop_but.pack(side=LEFT)
+
+        self.launch_GRAAL_bt = Button(frame_mails, text="Launch GRAAL analysis", command=self.run_GRAAL)
+        self.launch_GRAAL_bt.pack(side=LEFT)
+
         spacer = Frame(frame_mails)
         spacer.pack(side=LEFT, padx=50)
 
@@ -288,6 +292,7 @@ class menu():
         #
         # button = Button(self.master_window, text="Destroy", command=self.master_window.destroy)
         # button.pack()
+
     def build_DCT_matrix(self):
         """
         Don't care matrix, TIGER that will not stop the acquisition if they do too many errors
@@ -324,11 +329,18 @@ class menu():
         if TER:
             subprocess.call(['/bin/bash', "copy_data {}".format(self.run_folder.split("_")[1])])
             subprocess.call(['/bin/bash', "sync_data"])
+    def run_GRAAL(self):
+        self.launch_GRAAL_bt.config(state='disabled')
+
+        # subprocess.call(["/home/cgemlab2/GRATE/GRATE.sh", "-E", str(self.run_folder.split("_")[1])])
+        subprocess.call(["/home/cgemlab2/GRAAL/GRAAL.sh", "-a", str(self.run_folder.split("_")[1])])
+
+        self.master_window.after(5000, lambda: self.reset_mail_but())
 
     def reset_mail_but(self):
         self.mail_start_but.config(state='normal')
         self.mail_stop_but.config(state='normal')
-
+        self.launch_GRAAL_bt.config(state='normal')
     def set_last_folder(self):
         """
         Funzione per andare all'ultima cartella
@@ -853,13 +865,12 @@ class menu():
                                     diff_E = int(splitted[7]) - GEMROC.c_inst.Channel_cfg_list[int(splitted[1])][int(splitted[3])]['Vth_T2']
                                     if diff_T > th_tollerance[0]:
                                         buff = buff + "{} TIGER {}, CHANNEL {}, thr T at {} from reference\n".format(number, int(splitted[1]), int(splitted[3]), diff_T)
-                                        print("{} TIGER {}, CHANNEL {}, thr T at {} from reference, using instead the reference value\n".format(number, int(splitted[1]), int(splitted[3]), diff_T))
-                                        ## TODO: change it
+                                        print("{} TIGER {}, CHANNEL {}, thr T at {} from reference\n".format(number, int(splitted[1]), int(splitted[3]), diff_T))
                                         #GEMROC.c_inst.Channel_cfg_list[int(splitted[1])][int(splitted[3])]['Vth_T1'] = int(splitted[5])
                                         thr_out_of_position += 1
                                     if diff_E > th_tollerance[1]:
                                         buff = buff + "{} TIGER {}, CHANNEL {}, thr E at {} from reference\n".format(number, int(splitted[1]), int(splitted[3]), diff_E)
-                                        print("{} TIGER {}, CHANNEL {}, thr E at {} from reference, using instead  the reference value\n".format(number, int(splitted[1]), int(splitted[3]), diff_E))
+                                        print("{} TIGER {}, CHANNEL {}, thr E at {} from reference".format(number, int(splitted[1]), int(splitted[3]), diff_E))
                                         #GEMROC.c_inst.Channel_cfg_list[int(splitted[1])][int(splitted[3])]['Vth_T2'] = int(splitted[7])
                                         thr_out_of_position += 1
                     else:
@@ -937,18 +948,18 @@ class menu():
             self.error_thread.stopper_thr.running = False
             # self.error_thread.raise_exception()
             # self.refresh_8_10_counters_and_TimeOut()
-        for i in range(0, len(self.GEM)):
-            self.thread[i].running = False
+        for thr in self.thread:
+            thr.running = False
         print([thr.isAlive() for thr in self.thread])
 
         while True in [thr.isAlive() for thr in self.thread]:
             print([thr.isAlive() for thr in self.thread])
             print ("At least one alive thread")
-            for i in range(0, len(self.GEM)):
-                if self.thread[i].isAlive():
-                    print ("Thread {} is alive, joining".format(i))
-                    self.thread[i].join(timeout=15)
-                if self.thread[i].isAlive():
+            for thr in self.thread:
+                if thr.isAlive():
+                    print ("Thread {} is alive, joining".format(thr.reader.GEMROC_ID))
+                    thr.join(timeout=15)
+                if thr.isAlive():
                     print ("Can't join one of the threads (this time)")
                 time.sleep (0.1)
             print([thr.isAlive() for thr in self.thread])
@@ -1121,7 +1132,7 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
                 process_list_2 = []
                 pipe_list_2 = []
 
-                if check_counter % 2 == 0 and self.caller.online_monitor_data.get():
+                if check_counter % 2 == 0 and self.caller.online_monitor.get():
                     self.check_buffer()
                     for number, GEMROC in self.GEMROC_reading_dict.items():
                         pipe_in, pipe_out = Pipe()
