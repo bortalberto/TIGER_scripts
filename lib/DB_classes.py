@@ -27,7 +27,7 @@ class Database_Manager():
     """
     Class to manage the DB logging and be able to log also from conf_GUI
     """
-    def __init__(self, address='config["DB"].["address"]', port=8086):
+    def __init__(self, address=config["DB"]["address"], port=8086):
     # def __init__(self, address='127.0.0.1', port=8086):
         self.db_client=InfluxDBClient(host=address, port=port)
         self.db_client.switch_database("GUFI_DB")

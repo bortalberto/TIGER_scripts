@@ -2256,7 +2256,6 @@ class menu():
                                 GEMROC.c_inst.Channel_cfg_list[T][61]["TriggerMode"] = 3
                                 GEMROC.c_inst.Channel_cfg_list[T][62]["TriggerMode"] = 3
                                 GEMROC.c_inst.Channel_cfg_list[T][63]["TriggerMode"] = 3
-        #Noisy channel to disable here:
 
     def reactivate_TIGERS(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():

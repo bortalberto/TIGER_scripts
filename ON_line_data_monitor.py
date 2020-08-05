@@ -558,7 +558,7 @@ class GEMROC_decoder(Thread):
                                 subprocess.call(["root", "-b", "-l", "-q","/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/data/raw_root/data_status_last_subs.cpp({}, {})".format(int(self.RUN.split("_")[1]), int (self.subRun))],timeout=120)
 
             self.caller2.update_buffers(self.GEMROC_id, len(self.data_buffer))
-            time.sleep(0.01)
+            time.sleep(0.001)
             # def run(self):
         # with open("./data_folder/prova.dat", "w+") as test_file:
         #     while self.running:
@@ -852,7 +852,7 @@ class Plotter(Thread):
         while running:
             for elem in self.caller.runner.decoder_list:
                 running = False
-                time.sleep(0.05)
+                time.sleep(0.005)
                 if not elem.event_get_done:
                     running = True
                     break
