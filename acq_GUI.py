@@ -1096,10 +1096,11 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
                 if self.caller.run_analysis.get():
                     self.update_err_and_plot_onrun()
                     time.sleep(1)
-                process_list = []
-                pipe_list = []
+
                 TIGER_LIST = [0, 1, 2, 3, 4, 5, 6, 7]
                 for T in TIGER_LIST:
+                    process_list = []
+                    pipe_list = []
                     for number, GEMROC in self.GEMROC_reading_dict.items():
                         if int(number.split()[1]) in self.number_list:
                             GEMROC.GEM_COM.set_counter(int(T), 1, 0)
@@ -1110,24 +1111,24 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
                             p.start()
                             time.sleep(0.01)
 
-                for process, pipe_out in zip(process_list, pipe_list):
+                    for process, pipe_out in zip(process_list, pipe_list):
 
-                    # if process.is_alive():
-                    if self.running:
-                        try:
-                            process.join(timeout=2)
-                            key, value = pipe_out.recv()
+                        # if process.is_alive():
+                        if self.running:
+                            try:
+                                process.join(timeout=2)
+                                key, value = pipe_out.recv()
 
-                            if key not in self.TIGER_error_counters.keys():
-                                self.TIGER_error_counters[key] = 0
-                            if value != 0 and int(self.TIGER_error_counters[key]) != 16777215:
-                                with open(self.caller.logfile, 'a') as f:
-                                    f.write("{} -- {} : {} 8/10 bit errors since last reset\n".format(time.ctime(), key, value))
-                                    print("{} -- {} : {} 8/10 bit errors since last reset\n".format(time.ctime(), key, value))
-                            self.TIGER_error_counters[key] = value
-                        except Exception as e:
-                            print("Error controller timeout: {}".format(e))
-                    process.terminate()
+                                if key not in self.TIGER_error_counters.keys():
+                                    self.TIGER_error_counters[key] = 0
+                                if value != 0 and int(self.TIGER_error_counters[key]) != 16777215:
+                                    with open(self.caller.logfile, 'a') as f:
+                                        f.write("{} -- {} : {} 8/10 bit errors since last reset\n".format(time.ctime(), key, value))
+                                        print("{} -- {} : {} 8/10 bit errors since last reset\n".format(time.ctime(), key, value))
+                                self.TIGER_error_counters[key] = value
+                            except Exception as e:
+                                print("Error controller timeout: {}".format(e))
+                        process.terminate()
 
                 process_list_2 = []
                 pipe_list_2 = []
@@ -1153,9 +1154,7 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
                             except Exception as e:
                                 print("IVT logger controller timeout: {}".format(e))
 
-                del process_list[:]
                 del process_list_2[:]
-                del pipe_list[:]
 
                 if self.running:
                     self.check_buffer()

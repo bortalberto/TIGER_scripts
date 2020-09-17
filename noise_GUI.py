@@ -22,6 +22,9 @@ elif OS == 'linux2' or 'linux':
 else:
     print("ERROR: OS {} non compatible".format(OS))
     sys.exit()
+import configparser
+config=configparser.ConfigParser()
+config.read("conf"+sep+"GUFI.ini")
 
 
 class menu():
@@ -46,7 +49,8 @@ class noise_measure():
         try:
             from influxdb import InfluxDBClient
             from lib import DB_classes
-            self.DB = True
+            self.DB = config["DB"].getboolean("active")
+
         except:
             print("Can't find DB library")
             self.DB = False
@@ -499,6 +503,9 @@ class noise_measure():
             except:
                 print("Can't connect to BD")
                 self.DB = False
+                self.db_sender = None
+        else:
+            self.db_sender=None
 
         self.bar_win = Toplevel(self.error_window)
         # self.bar_win.focus_set()  # set focus on the ProgressWindow
@@ -561,7 +568,8 @@ class noise_measure():
                 self.scan_matrixs[number] = pickle.load(f)
         self.plotta()
         self.bar_win.destroy()
-        self.db_sender.__del__()
+        if self.DB:
+            self.db_sender.__del__()
         self.main_menu_istance.doing_something = False
 
     def sampling_time_scan(self):
@@ -607,8 +615,8 @@ class noise_measure():
         lastch = self.CHANNEL_num_last.get() + 1
         GEMROC_ID = GEM_COM.GEMROC_ID
 
-        first = self.TIGER_num_first.get()-1
-        last = self.TIGER_num_last.get()
+        first = self.TIGER_num_first.get()
+        last = self.TIGER_num_last.get() + 1
         # print (f'First: {first}')
         # print (f'Last:{last}')
         for T in range(first, last):  # TIGER
