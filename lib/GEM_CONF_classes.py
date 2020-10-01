@@ -5,9 +5,19 @@
 # list of main modifications / additions:
 # acr 2018-01-25 removing unused parameter self.CompactDataFormat 
 # acr 2018-01-13 split the handling of the GEMROC LV and DAQ configuration parameters
+import sys
 import copy
 import pickle
-
+import configparser
+OS = sys.platform
+if OS == 'win32':
+    sep = '\\'
+elif OS == 'linux2' or 'linux':
+    sep = '/'
+else:
+    print("ERROR: OS {} non compatible".format(OS))
+config=configparser.ConfigParser()
+config.read("conf"+sep+"GEMROC_conf.ini")
 command_code_shift = 11 # acr 2017-08-29
 target_TIGER_ID_shift = 8 # acr 2017-08-29
 GEMROC_CMD_LV_Num_of_params = 32 # acr 2018-01-15
@@ -781,23 +791,9 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
 ###CCCCCCCCCCCCCCCC###     CLASS gemroc_cmd_LV_settings BEGIN  ###CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC###
 # acr 2018-01-13 split the handling of the GEMROC LV and DAQ configuration parameters
 class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configuration Register Settings in an array format which can be sent over Ethernet or optical link
-   def __init__(self,
-                TARGET_GEMROC_ID_param = 0, # acr 2017-09-22
-                command_string_param = 'NONE',
-                #acr 2018-01-22 TCAM_ID_param = 1,
-                number_of_repetitions_param = 1,
-                #acr 2018-01-22 to_ALL_TCAM_enable_param = 0
-                cfg_filename_param = 'GEMROC_X_def_cfg_LV_2018.txt',# acr 2018-02-19
-                delay_save="time_delay_save"):
+   def __init__(self, TARGET_GEMROC_ID_param=0, command_string_param='NONE', number_of_repetitions_param=1, delay_save="time_delay_save"):
       self.TARGET_GEMROC_ID = TARGET_GEMROC_ID_param # acr 2017-09-22
       # acr 2017-09-22 self.cfg_filename = 'GEMROC_%d_def_cfg_LV_2018.txt'% self.TARGET_GEMROC_ID
-      self.cfg_filename = cfg_filename_param # acr 2017-09-22
-      #self.parameter_array = [0 for i in range(34)] # acr 2017-12-07 range extended from 30 to 34
-      self.parameter_array = [0 for i in range(GEMROC_CMD_LV_Num_of_params-1)] # acr 2018-01-15
-      with open(self.cfg_filename, "r") as f:
-         self.parameter_array = [int(x) for x in f.readlines()]
-
-      # acr 2018-01-15 NOTE: position of parameters in parameter file and index in parameter array redefined on the basis of GEMROC_CMD_LV_Num_of_params
       # setting of delay of timing signals to TIGER FEB0 in xns units (relative to TIGER_CLK_LVDS)
       try:
           with open(delay_save, "r") as f:
@@ -812,38 +808,35 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
           self.TIMING_DLY_FEB3 = int(timing_array[3])
       except:
             raise Exception ('Problems with the time delay settings file')
-      self.FEB_PWR_EN_pattern = self.parameter_array [GEMROC_CMD_LV_Num_of_params-5]
-      self.FEB_OVC_EN_pattern = self.parameter_array [GEMROC_CMD_LV_Num_of_params-6]
-      self.FEB_OVV_EN_pattern = self.parameter_array [GEMROC_CMD_LV_Num_of_params-7]
-      self.FEB_OVT_EN_pattern = self.parameter_array [GEMROC_CMD_LV_Num_of_params-8]
-      self.ROC_OVT_EN  = self.parameter_array [GEMROC_CMD_LV_Num_of_params-9] # 1 bit
-      self.XCVR_LPBCK_TST_EN  = self.parameter_array [GEMROC_CMD_LV_Num_of_params-10] #
-      self.ROC_OVT_LIMIT = self.parameter_array [GEMROC_CMD_LV_Num_of_params-11] # Overtemperature limit for GEMROC module; range 0..63: resolution 1 bin = 1degree C
-      self.A_OVC_LIMIT_FEB0 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-12] # Overcurrent limit for V_analog of FEBx connected to the target GEMROC module; range 0..511
-      self.A_OVV_LIMIT_FEB0 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-13] # Overvoltage limit for V_analog of FEBx connected to the target GEMROC module; range 0..511
-      self.A_OVC_LIMIT_FEB1 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-14]
-      self.A_OVV_LIMIT_FEB1 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-15]
-      self.A_OVC_LIMIT_FEB2 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-16]
-      self.A_OVV_LIMIT_FEB2 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-17]
-      self.A_OVC_LIMIT_FEB3 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-18]
-      self.A_OVV_LIMIT_FEB3 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-19]
-      self.D_OVC_LIMIT_FEB0 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-20] # Overcurrent limit for V_digital of FEBx connected to the target GEMROC module; range 0..511
-      self.D_OVV_LIMIT_FEB0 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-21] # Overvoltage limit for V_digital of FEBx connected to the target GEMROC module; range 0..511
-      self.OVT_LIMIT_FEB0 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-22] # OverTemperature limit for FEBx connected to the target GEMROC module; range 0..255
-      self.D_OVC_LIMIT_FEB1 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-23]
-      self.D_OVV_LIMIT_FEB1 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-24]
-      self.OVT_LIMIT_FEB1 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-25]
-      self.D_OVC_LIMIT_FEB2 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-26]
-      self.D_OVV_LIMIT_FEB2 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-27]
-      self.OVT_LIMIT_FEB2 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-28]
-      self.D_OVC_LIMIT_FEB3 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-29]
-      self.D_OVV_LIMIT_FEB3 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-30]
-      self.OVT_LIMIT_FEB3 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-31]
-      try: ##Giusto per non piantarci se da qualche parte rimane un file di configurazione vecchio (ricordarsi di togliere il try except)
-          self.FnR_8bit_pattern = self.parameter_array[GEMROC_CMD_LV_Num_of_params - 32] # acr 2019-07-25 added FnR_8bit_pattern
-      except:
-          self.FnR_8bit_pattern = 0
 
+      self.FEB_PWR_EN_pattern = config["LV"].getint("FEB_PWR_EN_pattern")
+      self.FEB_OVC_EN_pattern = config["LV"].getint("FEB_OVC_EN_pattern")
+      self.FEB_OVV_EN_pattern = config["LV"].getint("FEB_OVV_EN_pattern")
+      self.FEB_OVT_EN_pattern = config["LV"].getint("FEB_OVT_EN_pattern")
+      self.ROC_OVT_EN  = config["LV"].getint("ROC_OVT_EN") # 1 bit
+      self.XCVR_LPBCK_TST_EN  = config["LV"].getint("XCVR_LPBCK_TST_EN") #
+      self.ROC_OVT_LIMIT = config["LV"].getint("ROC_OVT_LIMIT") # Overtemperature limit for GEMROC module; range 0..63: resolution 1 bin = 1degree C
+      self.A_OVC_LIMIT_FEB0 = config["LV"].getint("A_OVC_LIMIT_FEB0") # Overcurrent limit for V_analog of FEBx connected to the target GEMROC module; range 0..511
+      self.A_OVV_LIMIT_FEB0 = config["LV"].getint("A_OVV_LIMIT_FEB0") # Overvoltage limit for V_analog of FEBx connected to the target GEMROC module; range 0..511
+      self.A_OVC_LIMIT_FEB1 = config["LV"].getint("A_OVC_LIMIT_FEB1")
+      self.A_OVV_LIMIT_FEB1 = config["LV"].getint("A_OVV_LIMIT_FEB1")
+      self.A_OVC_LIMIT_FEB2 = config["LV"].getint("A_OVC_LIMIT_FEB2")
+      self.A_OVV_LIMIT_FEB2 = config["LV"].getint("A_OVV_LIMIT_FEB2")
+      self.A_OVC_LIMIT_FEB3 = config["LV"].getint("A_OVC_LIMIT_FEB3")
+      self.A_OVV_LIMIT_FEB3 = config["LV"].getint("A_OVV_LIMIT_FEB3")
+      self.D_OVC_LIMIT_FEB0 = config["LV"].getint("D_OVC_LIMIT_FEB0") # Overcurrent limit for V_digital of FEBx connected to the target GEMROC module; range 0..511
+      self.D_OVV_LIMIT_FEB0 = config["LV"].getint("D_OVV_LIMIT_FEB0") # Overvoltage limit for V_digital of FEBx connected to the target GEMROC module; range 0..511
+      self.OVT_LIMIT_FEB0 = config["LV"].getint("OVT_LIMIT_FEB0") # OverTemperature limit for FEBx connected to the target GEMROC module; range 0..255
+      self.D_OVC_LIMIT_FEB1 = config["LV"].getint("D_OVC_LIMIT_FEB1")
+      self.D_OVV_LIMIT_FEB1 = config["LV"].getint("D_OVV_LIMIT_FEB1")
+      self.OVT_LIMIT_FEB1 = config["LV"].getint("OVT_LIMIT_FEB1")
+      self.D_OVC_LIMIT_FEB2 = config["LV"].getint("D_OVC_LIMIT_FEB2")
+      self.D_OVV_LIMIT_FEB2 = config["LV"].getint("D_OVV_LIMIT_FEB2")
+      self.OVT_LIMIT_FEB2 = config["LV"].getint("OVT_LIMIT_FEB2")
+      self.D_OVC_LIMIT_FEB3 = config["LV"].getint("D_OVC_LIMIT_FEB3")
+      self.D_OVV_LIMIT_FEB3 = config["LV"].getint("D_OVV_LIMIT_FEB3")
+      self.OVT_LIMIT_FEB3 = config["LV"].getint("OVT_LIMIT_FEB3")
+      self.FnR_8bit_pattern = config["LV"].getint("FnR_8bit_pattern") # acr 2019-07-25 added FnR_8bit_pattern
       self.TIGER_for_counter = 0 #TIGER on which we count error or hits
       self.HIT_counter_disable = 0 # 1= counting errors, 0= counting hits
       self.CHANNEL_for_counter =64 #0-63 for single channel hits, 64 for chip total

@@ -331,8 +331,6 @@ class menu():
             subprocess.call(['/bin/bash', "sync_data"])
     def run_GRAAL(self):
         self.launch_GRAAL_bt.config(state='disabled')
-
-        # subprocess.call(["/home/cgemlab2/GRATE/GRATE.sh", "-E", str(self.run_folder.split("_")[1])])
         subprocess.call(["/home/cgemlab2/GRAAL/GRAAL.sh", "-a", str(self.run_folder.split("_")[1])])
 
         self.master_window.after(5000, lambda: self.reset_mail_but())
@@ -973,7 +971,8 @@ class menu():
             for number, GEMROC in self.GEMROC_reading_dict.items():
                 GEMROC.GEM_COM.flush_rcv_socket()
         if self.simple_analysis.get() or self.run_analysis.get():
-            self.build_errors()
+            # self.build_errors()
+            pass
         if self.error_GEMROC.get():
             self.save_GEMROC_errors()
         self.but7.config(state='normal')
@@ -1203,7 +1202,7 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
         print("Exception raised")
 
     def update_err_and_plot_onrun(self):
-        self.caller.build_errors()
+        # self.caller.build_errors()
         # self.caller.refresh_error_status()
         self.caller.refresh_plot()
 

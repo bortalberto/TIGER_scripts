@@ -187,7 +187,7 @@ class menu():
 
         first_row_coperations= Frame (Tante_frame)
         first_row_coperations.grid(row=2, column=5, sticky=N, pady=10,columnspan=20)
-        Button(first_row_coperations, text="Sync Reset to all", command=self.Synch_reset, activeforeground="#f77f00").pack(side=LEFT)
+        Button(first_row_coperations, text="Sync Reset to all", command=lambda : self.Synch_reset(direct_call=True), activeforeground="#f77f00").pack(side=LEFT)
         Button(first_row_coperations, text="Set ext clock to all", command=lambda: self.change_clock_mode(1, 1), activeforeground="#f77f00").pack(side=LEFT)
         Button(first_row_coperations, text="Set int clock to all", command=lambda: self.change_clock_mode(1, 0), activeforeground="#f77f00").pack(side=LEFT)
         Button(first_row_coperations, text="Set pause mode to all", command=lambda: self.set_pause_mode(True, 1), activeforeground="#f77f00").pack(side=LEFT)
@@ -238,7 +238,7 @@ class menu():
         Frame(basic_operation_frame,width=160).pack(side=LEFT)  # Spacer
         TROPPii_frame = LabelFrame(basic_operation_frame, padx=5, pady=5,background="#cce6ff")
         TROPPii_frame.pack(side=LEFT)
-        Button(TROPPii_frame, text="Sync Reset to all", command=self.Synch_reset, activeforeground="blue").pack(side=LEFT)
+        Button(TROPPii_frame, text="Sync Reset to all", command=lambda : self.Synch_reset(direct_call=True), activeforeground="blue").pack(side=LEFT)
         Button(TROPPii_frame, text="Write configuration", command=self.load_default_config_parallel, activeforeground="blue").pack(side=LEFT)
 
         Frame(basic_operation_frame,width=90).pack(side=LEFT)  # Spacer
@@ -349,7 +349,6 @@ class menu():
     #     self.rate_window.error_window_main.destroy()
     #     print ("Equalization done and saved")
         if COM_class.local_test == True:
-
             for G in range (0,11):
                 self.toggle(G)
 
@@ -1299,7 +1298,7 @@ class menu():
         I_love_frames = Frame(self.third_row_frame)
         I_love_frames.grid(row=2, column=1, sticky=W, pady=2)
 
-        Button(I_love_frames, text="Sync Reset this GEMROC", command=lambda: self.Synch_reset(0)).pack(side=LEFT)
+        Button(I_love_frames, text="Sync Reset this GEMROC", command=lambda: self.Synch_reset(0, direct_call=True)).pack(side=LEFT)
         self.Pause_state = Button(I_love_frames, text="GEMROC_paused", command=self.set_pause_mode)
         self.Clock_state = Button(I_love_frames, text="Internal clock", command=self.change_clock_mode)
         self.Acq_state = Button(I_love_frames, text="Trigger matched", command=self.change_acquisition_mode)
@@ -1596,7 +1595,7 @@ class menu():
             "TIMING_DLY_FEB0": ((L_array[10] >> 0) & 0x3F)
         }
         print (read_dict)
-
+        PIPPO = (self.GEMROC_reading_dict['{}'.format(self.showing_GEMROC.get())].GEM_COM.gemroc_LV_XX)
         for i in range(0, len(self.label_array)):
             label = self.label_array[i]
             field = self.field_array[i]
@@ -2168,8 +2167,16 @@ class menu():
         if len(Errors)<2:
             Errors="ok"
         pipe_out.send(Errors)
-    def Synch_reset(self, to_all=1):
-        self.doing_something=True
+    def Synch_reset(self, to_all=1,direct_call=False):
+        if direct_call:
+            self.doing_something=True
+            start=time.time()
+            if DB:
+                while self.IVT_LOG_thread.logging:
+                    time.sleep(0.2)
+                    if time.time() - start>10:
+                        print ("fast configuration waited for too long")
+                        break
         if to_all == 1:
             print ("Synch reset to all\n")
             for number, GEMROC in self.GEMROC_reading_dict.items():
@@ -2182,6 +2189,9 @@ class menu():
             print ("{} reset".format(self.showing_GEMROC.get()))
         self.Launch_error_check_op['text']="Synch reset sent"
         self.Launch_error_check['text']="Synch reset sent"
+
+        if direct_call:
+            self.doing_something=False
 
     def TCAM_reset(self, to_all=1):
         if to_all == 1:
@@ -2323,7 +2333,7 @@ def character_limit(entry_text):
 class GEMROC_HANDLER:
     def __init__(self, GEMROC_ID):
         self.GEMROC_ID = GEMROC_ID
-        self.GEM_COM = COM_class.communication(GEMROC_ID, 15)  # Create communication class
+        self.GEM_COM = COM_class.communication(GEMROC_ID)  # Create communication class
         self.GEM_COM.change_acq_mode(0)
         default_g_inst_settigs_filename = self.GEM_COM.conf_folder + sep + "TIGER_def_g_cfg_2018.txt"
         self.g_inst = GEM_CONF.g_reg_settings(GEMROC_ID, default_g_inst_settigs_filename)

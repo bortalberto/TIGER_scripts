@@ -38,7 +38,7 @@ else:
 
 GEMROC_ID = TARGET_GEMROC_ID_param
 FEB_PWR_EN_pattern = TARGET_FEB_PWR_PATTERN_param
-GEM_COM1=COM_class.communication(GEMROC_ID, FEB_PWR_EN_pattern) #Create communication class
+GEM_COM1= COM_class.communication(GEMROC_ID)  #Create communication class
 
 ## creating an instance of the TIGER global configuration settings object
 ##    parameter list:

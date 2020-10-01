@@ -642,7 +642,7 @@ class reader:
         frame_missing =np.zeros((8))
         print ("size={}\n".format(statinfo.st_size))
         with open(path, 'r') as f:
-            for i in range(0, statinfo.st_size / 8):
+            for i in range(0, int(statinfo.st_size / 8)):
                 data = f.read(8)
                 hexdata = binascii.hexlify(data)
 

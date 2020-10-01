@@ -34,7 +34,7 @@ local_test = config["GLOBAL"].getboolean("local_test")
 
 class communication:  #The directory are declared here to avoid multiple declaration
 
-    def __init__(self, gemroc_ID, feb_pwr_pattern, keep_cfg_log=False, keep_IVT_log=False):
+    def __init__(self, gemroc_ID, keep_cfg_log=False, keep_IVT_log=False):
         self.conf_folder = "conf"
         self.lib_folder = "lib"
         self.Tscan_folder = "thr_scan"
@@ -42,7 +42,6 @@ class communication:  #The directory are declared here to avoid multiple declara
         self.Noise_folder = "noise_scan"
 
         self.GEMROC_ID = gemroc_ID
-        self.FEB_PWR_EN_pattern = feb_pwr_pattern
 
         self.keep_cfg_log = keep_cfg_log
         self.keep_IVT_log = keep_IVT_log
@@ -99,16 +98,11 @@ class communication:  #The directory are declared here to avoid multiple declara
         ##  number_of_repetitions_param = 1,
         # cfg_filename =self.conf_folder+sep+ 'GEMROC_ALL_def_cfg_LV_2018_v2.txt' % self.GEMROC_ID
 
-        cfg_filename = self.conf_folder + sep + 'GEMROC_ALL_def_cfg_LV_2018_v2.txt'
         self.time_delay_path = self.conf_folder + sep + 'time_delay_save'
-        self.polarity_path = self.conf_folder + sep + 'clock_pol_save'
-
-        self.gemroc_LV_XX = GEM_CONF_classes.gemroc_cmd_LV_settings(self.GEMROC_ID, 'NONE', 1, cfg_filename, self.time_delay_path)
+        self.gemroc_LV_XX = GEM_CONF_classes.gemroc_cmd_LV_settings(self.GEMROC_ID, 'NONE', 1, self.time_delay_path)
 
         cfg_filename = self.conf_folder + sep + 'GEMROC_ALL_def_cfg_DAQ_2018_v6.txt'
         self.gemroc_DAQ_XX = GEM_CONF_classes.gemroc_cmd_DAQ_settings(self.GEMROC_ID, 'NONE', 0, 1, 0, cfg_filename)
-
-        self.gemroc_LV_XX.set_FEB_PWR_EN_pattern(self.FEB_PWR_EN_pattern)
 
         self.gemroc_LV_XX.update_command_words()
         # keep gemroc_LV_XX.print_command_words()
@@ -383,7 +377,7 @@ class communication:  #The directory are declared here to avoid multiple declara
         FEB_T[2] = T_ref_PT1000 + ((FEB2_T_U+calibration_offset_digits) * shifted_T_ADC_res_mV_1LSB + calibration_offset_mV_FEB2 - V_ADC_at_25C) * deltaT_over_deltaV_ratio
         FEB_T[1] = T_ref_PT1000 + ((FEB1_T_U+calibration_offset_digits) * shifted_T_ADC_res_mV_1LSB + calibration_offset_mV_FEB1 - V_ADC_at_25C) * deltaT_over_deltaV_ratio
         FEB_T[0] = T_ref_PT1000 + ((FEB0_T_U+calibration_offset_digits) * shifted_T_ADC_res_mV_1LSB + calibration_offset_mV_FEB0 - V_ADC_at_25C) * deltaT_over_deltaV_ratio
-
+        print(FEB0_T_U)
         Vout_atten_factor = 0.5
         shifted_V_ADC_res_mV_1LSB = 0.305 * (2 ** V_ADC_data_shift)
 
