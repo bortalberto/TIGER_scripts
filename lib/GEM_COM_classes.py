@@ -377,7 +377,6 @@ class communication:  #The directory are declared here to avoid multiple declara
         FEB_T[2] = T_ref_PT1000 + ((FEB2_T_U+calibration_offset_digits) * shifted_T_ADC_res_mV_1LSB + calibration_offset_mV_FEB2 - V_ADC_at_25C) * deltaT_over_deltaV_ratio
         FEB_T[1] = T_ref_PT1000 + ((FEB1_T_U+calibration_offset_digits) * shifted_T_ADC_res_mV_1LSB + calibration_offset_mV_FEB1 - V_ADC_at_25C) * deltaT_over_deltaV_ratio
         FEB_T[0] = T_ref_PT1000 + ((FEB0_T_U+calibration_offset_digits) * shifted_T_ADC_res_mV_1LSB + calibration_offset_mV_FEB0 - V_ADC_at_25C) * deltaT_over_deltaV_ratio
-        print(FEB0_T_U)
         Vout_atten_factor = 0.5
         shifted_V_ADC_res_mV_1LSB = 0.305 * (2 ** V_ADC_data_shift)
 

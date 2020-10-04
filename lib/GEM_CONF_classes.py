@@ -18,6 +18,8 @@ else:
     print("ERROR: OS {} non compatible".format(OS))
 config=configparser.ConfigParser()
 config.read("conf"+sep+"GEMROC_conf.ini")
+config.read("conf"+sep+"GUFI.ini")
+
 command_code_shift = 11 # acr 2017-08-29
 target_TIGER_ID_shift = 8 # acr 2017-08-29
 GEMROC_CMD_LV_Num_of_params = 32 # acr 2018-01-15
@@ -1014,23 +1016,23 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
       self.parameter_array = [0 for i in range(GEMROC_CMD_DAQ_Num_of_params-1)] # acr 2018-01-15
       with open(self.cfg_filename, "r") as f:
          self.parameter_array = [int(x) for x in f.readlines()]
-      self.Dbg_functions_ctrl_bits_LoNibble = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-16] # acr 2018-04-24 last parameter written (at the top!) in default configuration file v4
-      self.Dbg_functions_ctrl_bits_HiNibble = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-15] # Enable simulated L1 (periodic) Trigger Generation for TCAM[3..0]
-      self.UDP_DATA_DESTINATION_IPADDR = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-14] # latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
-      self.UDP_DATA_DESTINATION_IPPORT = int(TARGET_GEMROC_ID_param) # latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
-      self.L1_TM_xtrct_start_latency = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-12] # acr 2018-07-11 IT IS OBSOLETE!!! latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
-      self.L1_period = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-11] # period (in units of BES-III clk cycles) of periodic simulated L1 triggers; range: 0..1023
-      self.TP_width = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-10] # acr 2017-09-28 width (in units of BES-III clk cycles) of periodic Test Pulses; range: 0..15
-      self.L1_win_upper_edge_offset = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-9] # offset, w.r.t. to current write pointer, at which to stop reading data from the TIGER data ring buffers; range: 16 bits
-      self.L1_win_lower_edge_offset = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-8] # offset, w.r.t. to current write pointer, at which to start reading data from the TIGER data ring buffers; range: 16 bits
-      self.TP_period = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-7] # period (in units of BES-III clk cycles) of periodic Test Pulses; range: 0..1023
-      self.Periodic_TP_EN_pattern = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-6] # Enable Periodic Test Pulse Generation for TCAM[3..0]
-      self.TL_nTM_ACQ = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-5] # 1 bit selector between TL and nTM data acquisition
-      self.AUTO_L1_EN_bit = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-4] # REDUCED TO 1 bit Enable simulated L1 Trigger Generation for TCAM[3..0]
-      self.AUTO_TP_EN_bit = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-3] # REDUCED TO 1 bit Enable Test Pulse Generation for TCAM[3..0]
-      self.TP_Pos_nNeg = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-2] # select polarity of test pulse output to TIGER
+      self.Dbg_functions_ctrl_bits_LoNibble = config["DAQ"].getint("Dbg_functions_ctrl_bits_LoNibble") # acr 2018-04-24 last parameter written (at the top!) in default configuration file v4
+      self.Dbg_functions_ctrl_bits_HiNibble = config["DAQ"].getint("Dbg_functions_ctrl_bits_HiNibble")  # Enable simulated L1 (periodic) Trigger Generation for TCAM[3..0]
+      self.UDP_DATA_DESTINATION_IPADDR = config["DAQ"].getint("UDP_DATA_DESTINATION_IPADDR") # latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
+      self.UDP_DATA_DESTINATION_IPPORT = config["DAQ"].getint("UDP_DATA_DESTINATION_IPPORT")  # latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
+      self.L1_TM_xtrct_start_latency = config["DAQ"].getint("L1_TM_xtrct_start_latency")  # acr 2018-07-11 IT IS OBSOLETE!!! latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
+      self.L1_period = config["DAQ"].getint("L1_period")  # period (in units of BES-III clk cycles) of periodic simulated L1 triggers; range: 0..1023
+      self.TP_width = config["DAQ"].getint("TP_width")  # acr 2017-09-28 width (in units of BES-III clk cycles) of periodic Test Pulses; range: 0..15
+      self.L1_win_upper_edge_offset = config["DAQ"].getint("L1_win_upper_edge_offset")  # offset, w.r.t. to current write pointer, at which to stop reading data from the TIGER data ring buffers; range: 16 bits
+      self.L1_win_lower_edge_offset = config["DAQ"].getint("L1_win_lower_edge_offset")  # offset, w.r.t. to current write pointer, at which to start reading data from the TIGER data ring buffers; range: 16 bits
+      self.TP_period = config["DAQ"].getint("TP_period")  # period (in units of BES-III clk cycles) of periodic Test Pulses; range: 0..1023
+      self.Periodic_TP_EN_pattern = config["DAQ"].getint("Periodic_TP_EN_pattern")  # Enable Periodic Test Pulse Generation for TCAM[3..0]
+      self.TL_nTM_ACQ = config["DAQ"].getint("TL_nTM_ACQ")  # 1 bit selector between TL and nTM data acquisition
+      self.AUTO_L1_EN_bit = config["DAQ"].getint("AUTO_L1_EN_bit")  # REDUCED TO 1 bit Enable simulated L1 Trigger Generation for TCAM[3..0]
+      self.AUTO_TP_EN_bit = config["DAQ"].getint("AUTO_TP_EN_bit")  # REDUCED TO 1 bit Enable Test Pulse Generation for TCAM[3..0]
+      self.TP_Pos_nNeg = config["DAQ"].getint("TP_Pos_nNeg")  # select polarity of test pulse output to TIGER
       #Note: TCAM = Tiger Configuration/ Acquisition Module
-      self.EN_TM_TCAM_pattern = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-1] # acr 2018-01-15 last parameter written in default configuration file # 8 bit field; EN_TM_TCAM[7..0] Enable the target TCAM to generate Trigger Matched data packets
+      self.EN_TM_TCAM_pattern = config["DAQ"].getint("EN_TM_TCAM_pattern")  # acr 2018-01-15 last parameter written in default configuration file # 8 bit field; EN_TM_TCAM[7..0] Enable the target TCAM to generate Trigger Matched data packets
       self.command_string = command_string_param
       self.target_TCAM_ID = TCAM_ID_param
       self.to_ALL_TCAM_enable = to_ALL_TCAM_enable_param
@@ -1068,7 +1070,7 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
         "Enable_DAQPause_Until_First_Trigger":      ((self.Dbg_functions_ctrl_bits_LoNibble &0x8)>>3),
         "DAQPause_Set":                             ((self.Dbg_functions_ctrl_bits_LoNibble &0x4)>>2),
         "Tpulse_generation_w_ext_trigger_enable":   ((self.Dbg_functions_ctrl_bits_LoNibble &0x2)>>1),
-        "EXT_nINT_B3clk":                           ((self.Dbg_functions_ctrl_bits_LoNibble &0x1)>>0),
+        "EXT_nINT_B3clk":                           config["GLOBAL"].getboolean("internal_clock"),
         "TL_nTM_ACQ":                               self.TL_nTM_ACQ,
         "AUTO_L1_EN":                               self.AUTO_L1_EN_bit,
         "AUTO_TP_EN":                               self.AUTO_TP_EN_bit,

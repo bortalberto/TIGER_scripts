@@ -1,5 +1,5 @@
 from influxdb import InfluxDBClient
-from os import path, listdir
+from os import path, listdir,stat
 from configparser import ConfigParser
 from datetime import datetime
 from influxdb import SeriesHelper
@@ -48,12 +48,15 @@ def create_list_file(layer):
 def get_last_file(f_list):
     f_list.sort()
     last_f=f_list[-1]
-    return last_f
+    return data_folder+last_f
 
 def get_number_of_lines(file):
-    with open(file) as f:
-        for i, l in enumerate(f):
-            pass
+    with open(file,'r') as f:
+        if stat(file).st_size>0:
+            for i, l in enumerate(f):
+                pass
+        else:
+            return 0
     return i+1
 
 def update_data_layer(layer, old_fname,old_number_lines):
@@ -68,15 +71,16 @@ def update_data_layer(layer, old_fname,old_number_lines):
     else:
         parse_and_send(f_name,n_lines-old_number_lines,layer)
         return (f_name,n_lines,n_lines-old_number_lines)
+
 def parse_and_send(fname, n_lines,layer):
-    with open(fname) as f:
+    with open(fname, 'r') as f:
         line_list=f.readlines()
         line_list=line_list[len(line_list)-n_lines:]
     dict_list=[]
     for thisline in [line for line in line_list if any (key in line for key in key_list)]:
         thisline=thisline.replace(":","")
         elem=thisline.split("\t")
-        time=datetime.fromtimestamp(float(elem[1])-2082844800,)
+        time=datetime.fromtimestamp(float(elem[1])-2082844800-28800)
         dict_list.append((
             elem[0],
             datetime.isoformat(time),
@@ -111,29 +115,30 @@ def parse_and_send(fname, n_lines,layer):
                 }
                 HVSeriesHelper(Electrode=key,Layer=layer,time=elem[1], **kwargs)
     HVSeriesHelper.commit()
-    return( fname, get_number_of_lines(fname))
+    return( fname)
 
 def send_to_db(json):
     try:
         db_client.write_points(json,time_precision='s')
     except Exception as e:
         print("Unable to log in infludb: {}\n json: {}".format(e, json))
+if __name__ == "__main__":
 
-old_filename_lst=["init","init","init"]
-old_line_num_lst=[0,0,0]
-layer_list=[1,2,3]
-while True:
-    for num, layer in enumerate(layer_list):
-        try:
-            old_filename_lst[num],old_line_num_lst[num],logged_lines = update_data_layer(layer,old_filename_lst[num],old_line_num_lst[num],)
-        except Exception as E:
-            print ("Layer {} exception: {}".format(layer,E))
-            layer_list.pop(num)
-            old_line_num_lst.pop(num)
-            old_filename_lst.pop(num)
-            print ("L{} dropped".format(layer))
+    old_filename_lst=["init","init","init"]
+    old_line_num_lst=[0,0,0]
+    layer_list=[1,2,3]
+    while len (layer_list) !=0:
+        for num, layer in enumerate(layer_list):
+            try:
+                old_filename_lst[num],old_line_num_lst[num],logged_lines = update_data_layer(layer,old_filename_lst[num],old_line_num_lst[num])
+            except Exception as E:
+                print ("Layer {} exception: {}".format(layer,E))
+                layer_list.pop(num)
+                old_line_num_lst.pop(num)
+                old_filename_lst.pop(num)
+                print ("L{} dropped".format(layer))
 
-        else:
-            print ("Layer {} : logged {} lines".format(layer, logged_lines))
+            else:
+                print ("Layer {} : logged {} lines from file {}".format(layer, logged_lines, old_filename_lst[num]))
 
-    sleep(1)
+        sleep(10)
