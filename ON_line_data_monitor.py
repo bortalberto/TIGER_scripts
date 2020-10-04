@@ -384,7 +384,7 @@ class online_reader(GEM_ACQ.reader):
     def __init__(self, GEMROC_ID, logfile="ACQ_log"):
         GEM_ACQ.reader.__init__(self, GEMROC_ID)
         self.HOST_IP = "127.0.0.1"
-        self.HOST_PORT = 58880 + self.GEMROC_ID  # 58880 + 1 # original +2
+        self.HOST_PORT = 57880 + self.GEMROC_ID  # 57880 + 1 # original +2
         self.TIMED_out = False
         self.timeout_for_sockets = 180
 
@@ -551,12 +551,14 @@ class GEMROC_decoder(Thread):
                                 print ("GEMROC {} is running the data decode".format(self.GEMROC_id))
                                 subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh", "-V", str(self.RUN.split("_")[1]), str(self.subRun)],timeout=120)
                                 subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh", "-A", str(self.RUN.split("_")[1]), str(self.subRun)],timeout=120)
-                                # subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh", "-E", str(self.RUN.split("_")[1]), str(self.subRun)])
+                                subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh", "-E", str(self.RUN.split("_")[1]), str(self.subRun)],timeout=120)
                                 # subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh", "-C", str(self.RUN.split("_")[1]), str(self.subRun)])
                                 # print(subprocess.call(["/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/TER.sh", "-Q", str(self.RUN.split("_")[1]), str(self.subRun)]))
                                 subprocess.call(["root", "-b", "-l", "-q","/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/data/raw_root/data_status.cpp({})".format(int(self.RUN.split("_")[1]))],timeout=120)
+                                subprocess.call(["root", "-b", "-l", "-q","/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/data/raw_root/data_status_last_subs.cpp({}, {})".format(int(self.RUN.split("_")[1]), int (self.subRun))],timeout=120)
+
             self.caller2.update_buffers(self.GEMROC_id, len(self.data_buffer))
-            time.sleep(0.01)
+            time.sleep(0.001)
             # def run(self):
         # with open("./data_folder/prova.dat", "w+") as test_file:
         #     while self.running:
@@ -850,7 +852,7 @@ class Plotter(Thread):
         while running:
             for elem in self.caller.runner.decoder_list:
                 running = False
-                time.sleep(0.05)
+                time.sleep(0.005)
                 if not elem.event_get_done:
                     running = True
                     break

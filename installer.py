@@ -22,6 +22,7 @@ def create_folder(dirName):
 create_folder("log_folder")
 create_folder("thr_scan")
 create_folder("thr_scan_vth2")
+create_folder("conf"+sep+"thr")
 
 for GEMROC in range (0,22):
     create_folder("thr_scan"+ sep +"GEMROC{}".format(GEMROC))

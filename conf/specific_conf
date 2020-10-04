@@ -1,0 +1,5 @@
+#Possible commands are ADD and SET
+#Comments line begin with "#"
+#Command GEMROC TIGER FIELD value
+SET 3 5 Vref_Integ 5
+SET 2 1 Vref_Integ 5

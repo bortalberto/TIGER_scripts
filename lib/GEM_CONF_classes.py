@@ -5,8 +5,20 @@
 # list of main modifications / additions:
 # acr 2018-01-25 removing unused parameter self.CompactDataFormat 
 # acr 2018-01-13 split the handling of the GEMROC LV and DAQ configuration parameters
+import sys
 import copy
 import pickle
+import configparser
+OS = sys.platform
+if OS == 'win32':
+    sep = '\\'
+elif OS == 'linux2' or 'linux':
+    sep = '/'
+else:
+    print("ERROR: OS {} non compatible".format(OS))
+config=configparser.ConfigParser()
+config.read("conf"+sep+"GEMROC_conf.ini")
+config.read("conf"+sep+"GUFI.ini")
 
 command_code_shift = 11 # acr 2017-08-29
 target_TIGER_ID_shift = 8 # acr 2017-08-29
@@ -743,26 +755,47 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
         with open("file2.txt", "w") as output:
             output.write(str(self.Channel_cfg_list))
         return 0
+
+   def load_ch_to_dis(self, filename):
+       with open(filename, 'r') as f:
+           for line in f.readlines():
+               if line[0] != "#" and line[0] != "\n":
+                   try:
+                       gemroc, tiger, channel = line.split(" ")
+                       gemroc = int(gemroc)
+                       if tiger!="ALL":
+                           tiger = int(tiger)
+                       if ":" not in channel:
+                            channel = int (channel)
+                       else:
+                           channel=65
+                           channel_f=channel.split(":")[0]
+                           channel_l=channel.split(":")[1]
+                   except Exception as E:
+                       print("Parsing Error: {} \n line: {}".format(E, line))
+                       return
+                   if gemroc == self.TARGET_GEMROC_ID:
+                           if tiger != "ALL":
+                               if channel == 65:
+                                    for ch in range (channel_f,channel_l+1):
+                                        self.Channel_cfg_list[tiger][ch]["TriggerMode"]= 3
+                               else:
+                                   self.Channel_cfg_list[tiger][channel]["TriggerMode"] = 3
+
+                           else:
+                               for T in range(0, 8):
+                                   if channel == 65:
+                                       for ch in range(channel_f, channel_l + 1):
+                                           self.Channel_cfg_list[T][ch]["TriggerMode"] = 3
+                                   else:
+                                       self.Channel_cfg_list[tiger][channel]["TriggerMode"] = 3
+
 ###CCCCCCCCCCCCCCCC###     CLASS gemroc_cmd_LV_settings BEGIN  ###CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC######CCCCCCCCCCCCCCCC###
 # acr 2018-01-13 split the handling of the GEMROC LV and DAQ configuration parameters
 class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configuration Register Settings in an array format which can be sent over Ethernet or optical link
-   def __init__(self,
-                TARGET_GEMROC_ID_param = 0, # acr 2017-09-22
-                command_string_param = 'NONE',
-                #acr 2018-01-22 TCAM_ID_param = 1,
-                number_of_repetitions_param = 1,
-                #acr 2018-01-22 to_ALL_TCAM_enable_param = 0
-                cfg_filename_param = 'GEMROC_X_def_cfg_LV_2018.txt',# acr 2018-02-19
-                delay_save="time_delay_save"):
+   def __init__(self, TARGET_GEMROC_ID_param=0, command_string_param='NONE', number_of_repetitions_param=1, delay_save="time_delay_save"):
       self.TARGET_GEMROC_ID = TARGET_GEMROC_ID_param # acr 2017-09-22
       # acr 2017-09-22 self.cfg_filename = 'GEMROC_%d_def_cfg_LV_2018.txt'% self.TARGET_GEMROC_ID
-      self.cfg_filename = cfg_filename_param # acr 2017-09-22
-      #self.parameter_array = [0 for i in range(34)] # acr 2017-12-07 range extended from 30 to 34
-      self.parameter_array = [0 for i in range(GEMROC_CMD_LV_Num_of_params-1)] # acr 2018-01-15
-      with open(self.cfg_filename, "r") as f:
-         self.parameter_array = [int(x) for x in f.readlines()]
-
-      # acr 2018-01-15 NOTE: position of parameters in parameter file and index in parameter array redefined on the basis of GEMROC_CMD_LV_Num_of_params
       # setting of delay of timing signals to TIGER FEB0 in xns units (relative to TIGER_CLK_LVDS)
       try:
           with open(delay_save, "r") as f:
@@ -777,38 +810,35 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
           self.TIMING_DLY_FEB3 = int(timing_array[3])
       except:
             raise Exception ('Problems with the time delay settings file')
-      self.FEB_PWR_EN_pattern = self.parameter_array [GEMROC_CMD_LV_Num_of_params-5]
-      self.FEB_OVC_EN_pattern = self.parameter_array [GEMROC_CMD_LV_Num_of_params-6]
-      self.FEB_OVV_EN_pattern = self.parameter_array [GEMROC_CMD_LV_Num_of_params-7]
-      self.FEB_OVT_EN_pattern = self.parameter_array [GEMROC_CMD_LV_Num_of_params-8]
-      self.ROC_OVT_EN  = self.parameter_array [GEMROC_CMD_LV_Num_of_params-9] # 1 bit
-      self.XCVR_LPBCK_TST_EN  = self.parameter_array [GEMROC_CMD_LV_Num_of_params-10] #
-      self.ROC_OVT_LIMIT = self.parameter_array [GEMROC_CMD_LV_Num_of_params-11] # Overtemperature limit for GEMROC module; range 0..63: resolution 1 bin = 1degree C
-      self.A_OVC_LIMIT_FEB0 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-12] # Overcurrent limit for V_analog of FEBx connected to the target GEMROC module; range 0..511
-      self.A_OVV_LIMIT_FEB0 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-13] # Overvoltage limit for V_analog of FEBx connected to the target GEMROC module; range 0..511
-      self.A_OVC_LIMIT_FEB1 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-14]
-      self.A_OVV_LIMIT_FEB1 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-15]
-      self.A_OVC_LIMIT_FEB2 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-16]
-      self.A_OVV_LIMIT_FEB2 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-17]
-      self.A_OVC_LIMIT_FEB3 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-18]
-      self.A_OVV_LIMIT_FEB3 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-19]
-      self.D_OVC_LIMIT_FEB0 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-20] # Overcurrent limit for V_digital of FEBx connected to the target GEMROC module; range 0..511
-      self.D_OVV_LIMIT_FEB0 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-21] # Overvoltage limit for V_digital of FEBx connected to the target GEMROC module; range 0..511
-      self.OVT_LIMIT_FEB0 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-22] # OverTemperature limit for FEBx connected to the target GEMROC module; range 0..255
-      self.D_OVC_LIMIT_FEB1 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-23]
-      self.D_OVV_LIMIT_FEB1 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-24]
-      self.OVT_LIMIT_FEB1 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-25]
-      self.D_OVC_LIMIT_FEB2 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-26]
-      self.D_OVV_LIMIT_FEB2 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-27]
-      self.OVT_LIMIT_FEB2 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-28]
-      self.D_OVC_LIMIT_FEB3 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-29]
-      self.D_OVV_LIMIT_FEB3 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-30]
-      self.OVT_LIMIT_FEB3 = self.parameter_array [GEMROC_CMD_LV_Num_of_params-31]
-      try: ##Giusto per non piantarci se da qualche parte rimane un file di configurazione vecchio (ricordarsi di togliere il try except)
-          self.FnR_8bit_pattern = self.parameter_array[GEMROC_CMD_LV_Num_of_params - 32] # acr 2019-07-25 added FnR_8bit_pattern
-      except:
-          self.FnR_8bit_pattern = 0
 
+      self.FEB_PWR_EN_pattern = config["LV"].getint("FEB_PWR_EN_pattern")
+      self.FEB_OVC_EN_pattern = config["LV"].getint("FEB_OVC_EN_pattern")
+      self.FEB_OVV_EN_pattern = config["LV"].getint("FEB_OVV_EN_pattern")
+      self.FEB_OVT_EN_pattern = config["LV"].getint("FEB_OVT_EN_pattern")
+      self.ROC_OVT_EN  = config["LV"].getint("ROC_OVT_EN") # 1 bit
+      self.XCVR_LPBCK_TST_EN  = config["LV"].getint("XCVR_LPBCK_TST_EN") #
+      self.ROC_OVT_LIMIT = config["LV"].getint("ROC_OVT_LIMIT") # Overtemperature limit for GEMROC module; range 0..63: resolution 1 bin = 1degree C
+      self.A_OVC_LIMIT_FEB0 = config["LV"].getint("A_OVC_LIMIT_FEB0") # Overcurrent limit for V_analog of FEBx connected to the target GEMROC module; range 0..511
+      self.A_OVV_LIMIT_FEB0 = config["LV"].getint("A_OVV_LIMIT_FEB0") # Overvoltage limit for V_analog of FEBx connected to the target GEMROC module; range 0..511
+      self.A_OVC_LIMIT_FEB1 = config["LV"].getint("A_OVC_LIMIT_FEB1")
+      self.A_OVV_LIMIT_FEB1 = config["LV"].getint("A_OVV_LIMIT_FEB1")
+      self.A_OVC_LIMIT_FEB2 = config["LV"].getint("A_OVC_LIMIT_FEB2")
+      self.A_OVV_LIMIT_FEB2 = config["LV"].getint("A_OVV_LIMIT_FEB2")
+      self.A_OVC_LIMIT_FEB3 = config["LV"].getint("A_OVC_LIMIT_FEB3")
+      self.A_OVV_LIMIT_FEB3 = config["LV"].getint("A_OVV_LIMIT_FEB3")
+      self.D_OVC_LIMIT_FEB0 = config["LV"].getint("D_OVC_LIMIT_FEB0") # Overcurrent limit for V_digital of FEBx connected to the target GEMROC module; range 0..511
+      self.D_OVV_LIMIT_FEB0 = config["LV"].getint("D_OVV_LIMIT_FEB0") # Overvoltage limit for V_digital of FEBx connected to the target GEMROC module; range 0..511
+      self.OVT_LIMIT_FEB0 = config["LV"].getint("OVT_LIMIT_FEB0") # OverTemperature limit for FEBx connected to the target GEMROC module; range 0..255
+      self.D_OVC_LIMIT_FEB1 = config["LV"].getint("D_OVC_LIMIT_FEB1")
+      self.D_OVV_LIMIT_FEB1 = config["LV"].getint("D_OVV_LIMIT_FEB1")
+      self.OVT_LIMIT_FEB1 = config["LV"].getint("OVT_LIMIT_FEB1")
+      self.D_OVC_LIMIT_FEB2 = config["LV"].getint("D_OVC_LIMIT_FEB2")
+      self.D_OVV_LIMIT_FEB2 = config["LV"].getint("D_OVV_LIMIT_FEB2")
+      self.OVT_LIMIT_FEB2 = config["LV"].getint("OVT_LIMIT_FEB2")
+      self.D_OVC_LIMIT_FEB3 = config["LV"].getint("D_OVC_LIMIT_FEB3")
+      self.D_OVV_LIMIT_FEB3 = config["LV"].getint("D_OVV_LIMIT_FEB3")
+      self.OVT_LIMIT_FEB3 = config["LV"].getint("OVT_LIMIT_FEB3")
+      self.FnR_8bit_pattern = config["LV"].getint("FnR_8bit_pattern") # acr 2019-07-25 added FnR_8bit_pattern
       self.TIGER_for_counter = 0 #TIGER on which we count error or hits
       self.HIT_counter_disable = 0 # 1= counting errors, 0= counting hits
       self.CHANNEL_for_counter =64 #0-63 for single channel hits, 64 for chip total
@@ -986,23 +1016,23 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
       self.parameter_array = [0 for i in range(GEMROC_CMD_DAQ_Num_of_params-1)] # acr 2018-01-15
       with open(self.cfg_filename, "r") as f:
          self.parameter_array = [int(x) for x in f.readlines()]
-      self.Dbg_functions_ctrl_bits_LoNibble = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-16] # acr 2018-04-24 last parameter written (at the top!) in default configuration file v4
-      self.Dbg_functions_ctrl_bits_HiNibble = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-15] # Enable simulated L1 (periodic) Trigger Generation for TCAM[3..0]
-      self.UDP_DATA_DESTINATION_IPADDR = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-14] # latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
-      self.UDP_DATA_DESTINATION_IPPORT = int(TARGET_GEMROC_ID_param) # latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
-      self.L1_TM_xtrct_start_latency = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-12] # acr 2018-07-11 IT IS OBSOLETE!!! latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
-      self.L1_period = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-11] # period (in units of BES-III clk cycles) of periodic simulated L1 triggers; range: 0..1023
-      self.TP_width = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-10] # acr 2017-09-28 width (in units of BES-III clk cycles) of periodic Test Pulses; range: 0..15
-      self.L1_win_upper_edge_offset = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-9] # offset, w.r.t. to current write pointer, at which to stop reading data from the TIGER data ring buffers; range: 16 bits
-      self.L1_win_lower_edge_offset = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-8] # offset, w.r.t. to current write pointer, at which to start reading data from the TIGER data ring buffers; range: 16 bits
-      self.TP_period = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-7] # period (in units of BES-III clk cycles) of periodic Test Pulses; range: 0..1023
-      self.Periodic_TP_EN_pattern = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-6] # Enable Periodic Test Pulse Generation for TCAM[3..0]
-      self.TL_nTM_ACQ = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-5] # 1 bit selector between TL and nTM data acquisition
-      self.AUTO_L1_EN_bit = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-4] # REDUCED TO 1 bit Enable simulated L1 Trigger Generation for TCAM[3..0]
-      self.AUTO_TP_EN_bit = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-3] # REDUCED TO 1 bit Enable Test Pulse Generation for TCAM[3..0]
-      self.TP_Pos_nNeg = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-2] # select polarity of test pulse output to TIGER
+      self.Dbg_functions_ctrl_bits_LoNibble = config["DAQ"].getint("Dbg_functions_ctrl_bits_LoNibble") # acr 2018-04-24 last parameter written (at the top!) in default configuration file v4
+      self.Dbg_functions_ctrl_bits_HiNibble = config["DAQ"].getint("Dbg_functions_ctrl_bits_HiNibble")  # Enable simulated L1 (periodic) Trigger Generation for TCAM[3..0]
+      self.UDP_DATA_DESTINATION_IPADDR = config["DAQ"].getint("UDP_DATA_DESTINATION_IPADDR") # latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
+      self.UDP_DATA_DESTINATION_IPPORT = config["DAQ"].getint("UDP_DATA_DESTINATION_IPPORT")  # latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
+      self.L1_TM_xtrct_start_latency = config["DAQ"].getint("L1_TM_xtrct_start_latency")  # acr 2018-07-11 IT IS OBSOLETE!!! latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
+      self.L1_period = config["DAQ"].getint("L1_period")  # period (in units of BES-III clk cycles) of periodic simulated L1 triggers; range: 0..1023
+      self.TP_width = config["DAQ"].getint("TP_width")  # acr 2017-09-28 width (in units of BES-III clk cycles) of periodic Test Pulses; range: 0..15
+      self.L1_win_upper_edge_offset = config["DAQ"].getint("L1_win_upper_edge_offset")  # offset, w.r.t. to current write pointer, at which to stop reading data from the TIGER data ring buffers; range: 16 bits
+      self.L1_win_lower_edge_offset = config["DAQ"].getint("L1_win_lower_edge_offset")  # offset, w.r.t. to current write pointer, at which to start reading data from the TIGER data ring buffers; range: 16 bits
+      self.TP_period = config["DAQ"].getint("TP_period")  # period (in units of BES-III clk cycles) of periodic Test Pulses; range: 0..1023
+      self.Periodic_TP_EN_pattern = config["DAQ"].getint("Periodic_TP_EN_pattern")  # Enable Periodic Test Pulse Generation for TCAM[3..0]
+      self.TL_nTM_ACQ = config["DAQ"].getint("TL_nTM_ACQ")  # 1 bit selector between TL and nTM data acquisition
+      self.AUTO_L1_EN_bit = config["DAQ"].getint("AUTO_L1_EN_bit")  # REDUCED TO 1 bit Enable simulated L1 Trigger Generation for TCAM[3..0]
+      self.AUTO_TP_EN_bit = config["DAQ"].getint("AUTO_TP_EN_bit")  # REDUCED TO 1 bit Enable Test Pulse Generation for TCAM[3..0]
+      self.TP_Pos_nNeg = config["DAQ"].getint("TP_Pos_nNeg")  # select polarity of test pulse output to TIGER
       #Note: TCAM = Tiger Configuration/ Acquisition Module
-      self.EN_TM_TCAM_pattern = self.parameter_array [GEMROC_CMD_DAQ_Num_of_params-1] # acr 2018-01-15 last parameter written in default configuration file # 8 bit field; EN_TM_TCAM[7..0] Enable the target TCAM to generate Trigger Matched data packets
+      self.EN_TM_TCAM_pattern = config["DAQ"].getint("EN_TM_TCAM_pattern")  # acr 2018-01-15 last parameter written in default configuration file # 8 bit field; EN_TM_TCAM[7..0] Enable the target TCAM to generate Trigger Matched data packets
       self.command_string = command_string_param
       self.target_TCAM_ID = TCAM_ID_param
       self.to_ALL_TCAM_enable = to_ALL_TCAM_enable_param
@@ -1040,7 +1070,7 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
         "Enable_DAQPause_Until_First_Trigger":      ((self.Dbg_functions_ctrl_bits_LoNibble &0x8)>>3),
         "DAQPause_Set":                             ((self.Dbg_functions_ctrl_bits_LoNibble &0x4)>>2),
         "Tpulse_generation_w_ext_trigger_enable":   ((self.Dbg_functions_ctrl_bits_LoNibble &0x2)>>1),
-        "EXT_nINT_B3clk":                           ((self.Dbg_functions_ctrl_bits_LoNibble &0x1)>>0),
+        "EXT_nINT_B3clk":                           config["GLOBAL"].getboolean("internal_clock"),
         "TL_nTM_ACQ":                               self.TL_nTM_ACQ,
         "AUTO_L1_EN":                               self.AUTO_L1_EN_bit,
         "AUTO_TP_EN":                               self.AUTO_TP_EN_bit,

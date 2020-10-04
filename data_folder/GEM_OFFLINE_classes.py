@@ -104,7 +104,9 @@ class reader:
                                 int_x & 0x3FF)
                     self.thr_scan_matrix[(int_x >> 56) & 0x7, int(int_x >> 48) & 0x3F] = self.thr_scan_matrix[(int_x >> 56) & 0x7, int(int_x >> 48) & 0x3F] + 1
                 with open(outfile, 'a') as ff:
-                    ff.write("{} {}     {}".format(raw_raw,raw,s))
+                    # ff.write("{}{} {}".format(raw_raw,raw,s))
+                    ff.write("{}".format(s))
+
     def write_txt_TM(self, path,outfile="out.txt", binary=0):
 
         LOCAL_L1_TIMESTAMP = 0
@@ -155,7 +157,7 @@ class reader:
                                 (int_x >> 48) & 0x3) + 'Tcoarse: %04X ' % ((int_x >> 32) & 0xFFFF) + 'Ecoarse: %03X ' % ((int_x >> 20) & 0x3FF) + 'Tfine: %03X ' % ((int_x >> 10) & 0x3FF) + 'Efine: {} \n' .format(int_x & 0x3FF)
                 if (((int_x & 0xF000000000000000) >> 60) == 0x4):
                     s = 'UDP_SEQNO: ' + 'GEMROC_ID: %02X ' % ((int_x >> 52) & 0x1F) + 'UDP_SEQNO_U48: %012X' % (((int_x >> 32) & 0xFFFFF) + ((int_x >> 0) & 0xFFFFFFF)) + "  " \
-                                                                                                                                                                          "STATUS BIT[5:3]:{}\n\n".format((int_x>>57)&0x7)
+                                                                                                                                                                          "STATUS BIT[5:3]:{}\n".format((int_x>>57)&0x7)
                 if binary==1:
                     out_file.write(raw)
                 out_file.write(s)

@@ -11,7 +11,8 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 import matplotlib
 import matplotlib.pyplot as plt
-from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
+from lib import GEM_ANALYSIS_classes as AN_CLASS
+from lib import DB_classes as DB_classes
 
 OS = sys.platform
 if OS == 'win32':
@@ -36,6 +37,11 @@ class menu():
         self.error_window_main.protocol("WM_DELETE_WINDOW", self.rate_tab.close_stopping)
 
         self.tabControl.pack(expand=1, fill="both")  # Pack to make visible
+
+    def _delete_window(self):
+        self.main_menu_istance.run_control_Button.config(state='normal')
+        self.main_menu_istance.doing_something=False
+        self.error_window_main.destroy()
 
 
 class noise_rate_measure():
@@ -326,6 +332,7 @@ class Acquire_rate():
                             GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T1'] - 1
                             GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] - 1
 
+
     def rise_thr_below(self, limit, branch):
         """
         Rise the thr below the given limit
@@ -375,16 +382,16 @@ class Acquire_rate():
                         GEMROC.c_inst.Channel_cfg_list[T][ch]['Vth_T2'] = vt2
                         GEMROC.GEM_COM.WriteTgtGEMROC_TIGER_ChCfgReg(c_inst, T, ch)
 
-    def procedural_scan_handler(self, GEMROC_DICT, des_rate=5000, number_of_cycle=1, square_size=5, acq_time=0.1, scanning_map=np.ones((22, 8, 64)), conditional=False, tollerance=0.5, map=False):
+    def procedural_scan_handler(self, GEMROC_DICT, des_rate=5000, number_of_cycle=1, square_size=5, acq_time=0.1, scanning_map=np.ones((22, 8, 64)), conditional=False, tollerance=0.5, map=False, DB=None):
         process_list = []
         pipe_list = []
         for key, GEMROC in GEMROC_DICT.items():
             pipe_in, pipe_out = Pipe()
             if map:
                 where_to_scan = np.where(scanning_map == 1)
-                p = Process(target=self.procedural_scan_process_map, args=(GEMROC, pipe_out, des_rate, number_of_cycle, square_size, acq_time, where_to_scan, conditional, tollerance))
+                p = Process(target=self.procedural_scan_process_map, args=(GEMROC, pipe_out, des_rate, number_of_cycle, square_size, acq_time, where_to_scan, conditional, tollerance,DB))
             else:
-                p = Process(target=self.procedural_scan_process, args=(GEMROC, pipe_out, des_rate, number_of_cycle, square_size, acq_time, conditional, tollerance))
+                p = Process(target=self.procedural_scan_process, args=(GEMROC, pipe_out, des_rate, number_of_cycle, square_size, acq_time, conditional, tollerance,DB))
 
             process_list.append(p)
             pipe_list.append(pipe_in)
@@ -407,7 +414,7 @@ class Acquire_rate():
                     process_list.remove(process)
                     pipe_list.remove(pipe)
 
-    def procedural_scan_process_map(self, GEMROC, pipeout, des_rate=3500, number_of_cycle=2, square_size=5, acq_time=0.1, scanning_map=np.ones((22, 8, 64)), conditional=False, tollerance=0.5):
+    def procedural_scan_process_map(self, GEMROC, pipeout, des_rate=3500, number_of_cycle=2, square_size=5, acq_time=0.1, scanning_map=np.ones((22, 8, 64)), conditional=False, tollerance=0.5, DB = None):
         """
         Procedural scan with multiprocess
         :param GEMROC:
@@ -429,6 +436,10 @@ class Acquire_rate():
             # maximum_matrix = GEM_COM.load_thr_max_from_file()
             for G, T, ch in zip(scanning_map[0], scanning_map[1], scanning_map[2]):
                 if G == GEM_COM.GEMROC_ID:
+                    if DB:
+                        DB.log_IVT_in_DB_GEM_COM(GEM_COM)
+                        if G==4:
+                            DB.log_PC_stats()
                     if debug:
                         print("Cycle: {}/{} -- G{}, T{}, CH{}".format(cycle + 1, number_of_cycle, G, T, ch))
                         with open("./log_folder/auto_thr_setting_log_GEMROC{}.txt".format(GEM_COM.GEMROC_ID), "a+") as logfile:

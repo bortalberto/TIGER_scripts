@@ -8,7 +8,7 @@ import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
-
+from lib import DB_classes
 
 from tkinter import *
 from tkinter import filedialog
@@ -22,6 +22,9 @@ elif OS == 'linux2' or 'linux':
 else:
     print("ERROR: OS {} non compatible".format(OS))
     sys.exit()
+import configparser
+config=configparser.ConfigParser()
+config.read("conf"+sep+"GUFI.ini")
 
 
 class menu():
@@ -43,6 +46,15 @@ class menu():
 
 class noise_measure():
     def __init__(self, main_window, gemroc_handler, tab_control, main_menu_istance):
+        try:
+            from influxdb import InfluxDBClient
+            from lib import DB_classes
+            self.DB = config["DB"].getboolean("active")
+
+        except:
+            print("Can't find DB library")
+            self.DB = False
+
         self.title = "Noise_measure"
         self.tabControl = tab_control
         self.main_window = main_window
@@ -61,6 +73,12 @@ class noise_measure():
         self.sampling_scan = False
         self.GEMROC_reading_dict = gemroc_handler
         self.error_window = Frame(self.main_window)
+        self.main_window.protocol("WM_DELETE_WINDOW", self._delete_window)
+
+    def _delete_window(self):
+        self.main_menu_istance.run_control_Button.config(state='normal')
+        self.main_menu_istance.doing_something=False
+        self.main_window.destroy()
 
     def _init_windows(self):
         Label(self.error_window, text=self.title, font=("Courier", 25)).grid(row=0, column=2, sticky=S, pady=4, columnspan=10)
@@ -303,7 +321,7 @@ class noise_measure():
             with open(logfile, 'a+') as fi:
                 fi.write("{} Scanning branch E with TP\n".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")))
             self.load__fast_TP_settings(branch="E")
-            self.noise_scan(True)
+            self.noise_scan(True) 
             self.unload_TP_settings()
             File_name = "periodic_noise_scan" + sep + "E_branch_with_TP_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
 
@@ -471,6 +489,24 @@ class noise_measure():
             test_c.both_vth_scan(first, firstch)
 
     def noise_scan(self, vth2=False):  # if GEMROC num=-1--> To all GEMROC, if TIGER_num=-1 --> To all TIGERs
+        self.main_menu_istance.doing_something = True
+        start=time.time()
+        if self.DB:
+            while self.main_menu_istance.IVT_LOG_thread.logging:
+                time.sleep(0.5)
+                if time.time() -start>10:
+                    print ("waited for too long")
+                    break
+        if self.DB:
+            try:
+                self.db_sender = DB_classes.Database_Manager()
+            except:
+                print("Can't connect to BD")
+                self.DB = False
+                self.db_sender = None
+        else:
+            self.db_sender=None
+
         self.bar_win = Toplevel(self.error_window)
         # self.bar_win.focus_set()  # set focus on the ProgressWindow
         # self.bar_win.grab_set()
@@ -498,7 +534,7 @@ class noise_measure():
         i = 0
         for number, GEMROC_num in dictio.items():
             pipe_in, pipe_out = Pipe()
-            p = Process(target=self.noise_scan_process, args=(number, pipe_out, vth2))
+            p = Process(target=self.noise_scan_process, args=(number, pipe_out, vth2, self.DB, self.db_sender))
             # pipe_in.send(progress_bars[i])
             process_list.append(p)
             pipe_list.append(pipe_in)
@@ -532,13 +568,9 @@ class noise_measure():
                 self.scan_matrixs[number] = pickle.load(f)
         self.plotta()
         self.bar_win.destroy()
-
-        # else:
-        #     GEMROC = self.GEMROC_reading_dict["GEMROC {}".format(GEMROC_num)]
-        #     GEM_COM = GEMROC.GEM_COM
-        #     c_inst = GEMROC.c_inst
-        #     g_inst = GEMROC.g_inst
-        #     test_r = (AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst))
+        if self.DB:
+            self.db_sender.__del__()
+        self.main_menu_istance.doing_something = False
 
     def sampling_time_scan(self):
         self.sampling_scan = True
@@ -548,6 +580,7 @@ class noise_measure():
         test_r = AN_CLASS.analisys_read(GEM_COM, c_inst)
         first = self.TIGER_num_first.get()
         last = self.TIGER_num_last.get() + 1
+
         firstch = self.CHANNEL_num_first.get()
         lastch = self.CHANNEL_num_last.get() + 1
         GEMROC_ID = GEM_COM.GEMROC_ID
@@ -568,7 +601,7 @@ class noise_measure():
                     self.efine_stdv["GEMROC {}".format(GEMROC_ID)]["TIG{}".format(T)]["CH{}".format(J)].append(stdv)
                 # GEM_COM.Set_param_dict_channel(c_inst, "TP_disable_FE", T, J, 1)
 
-    def noise_scan_process(self, number, pipe_out, vth2):
+    def noise_scan_process(self, number, pipe_out, vth2,DB=False, sender=None):
         self.sampling_scan = False
         scan_matrix = np.zeros((8, 64, 64))
         GEMROC = self.GEMROC_reading_dict[number]
@@ -577,14 +610,20 @@ class noise_measure():
         g_inst = GEMROC.g_inst
         test_c = AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst)
         test_r = AN_CLASS.analisys_read(GEM_COM, c_inst)
-        first = self.TIGER_num_first.get()
-        last = self.TIGER_num_last.get() + 1
+
         firstch = self.CHANNEL_num_first.get()
         lastch = self.CHANNEL_num_last.get() + 1
         GEMROC_ID = GEM_COM.GEMROC_ID
 
+        first = self.TIGER_num_first.get()
+        last = self.TIGER_num_last.get() + 1
+        # print (f'First: {first}')
+        # print (f'Last:{last}')
         for T in range(first, last):  # TIGER
+            print ("TIGER: {}".format(T))
             for J in range(firstch, lastch):  # Channel
+                if DB:
+                    sender.log_IVT_in_DB_GEM_COM(GEM_COM)
                 GEMROC.GEM_COM.Set_param_dict_global(g_inst, "CounterEnable", T, 0)
                 for i in range(0, 64):  # THR
                     scan_matrix[T, J, i] = test_c.noise_scan_using_GEMROC_COUNTERS_progress_bar(T, J, i, False, vth2)
@@ -855,6 +894,13 @@ class noise_measure():
                         # print ("{} - {} - {}".format(GEMROC, TIG, channel))
                         # print np.size(np.where(matrix[TIG][channel] > 200))
                         if np.size(np.where(matrix[TIG][channel] > 200))<3:
+                            print ("{} - {} - {}".format(GEMROC,TIG,channel))
+        print ("Check those channels, they may be dying:")
+        for GEMROC, matrix in self.scan_matrixs.items():
+            for TIG in range(0, 8):
+                if np.any(matrix[TIG])!=0:
+                    for channel in range(0, 64):
+                        if matrix[TIG][channel][0]>10 and matrix[TIG][channel][1]>10:
                             print ("{} - {} - {}".format(GEMROC,TIG,channel))
         print ("time")
         print(time.time() - start)

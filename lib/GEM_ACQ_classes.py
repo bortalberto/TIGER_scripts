@@ -174,7 +174,6 @@ class reader:
     def __init__(self, GEMROC_ID,logfile="ACQ_log",online_monitor=False):
         local_reader= True
         self.local_test=local_test
-
         self.GEMROC_ID = GEMROC_ID
         # self.log_path = "Acq_log_{}.txt".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         self.HOST_IP = "192.168.1.200"
@@ -193,16 +192,16 @@ class reader:
         self.datalist = []
         self.log_path=logfile
         self.data_online_monitor = online_monitor
-        self.timeout_for_sockets = 20
+        self.timeout_for_sockets = 18
         if self.data_online_monitor:
             if local_reader:
-                self.port_for_cloning = 58880 + self.GEMROC_ID
+                self.port_for_cloning = 57880 + self.GEMROC_ID
                 # self.port_for_cloning =58912 + 1 + self.GEMROC_ID
                 self.cloning_sending_port=51000 + self.GEMROC_ID
                 self.address_for_cloning_sender="127.0.0.1"
                 self.address_for_cloning_rcv="127.0.0.1"
             else:
-                self.port_for_cloning = 58880 + self.GEMROC_ID
+                self.port_for_cloning = 57880 + self.GEMROC_ID
                 self.cloning_sending_port=51000+ self.GEMROC_ID
                 self.address_for_cloning_sender="192.168.1.200"
                 self.address_for_cloning_rcv="192.168.1.150" #just an example, change it accordingly
@@ -210,6 +209,7 @@ class reader:
 
     def create_cloning_socket(self):
         self.cloning_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.cloning_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.cloning_sock.bind((self.address_for_cloning_sender, self.cloning_sending_port))
 
     def start_socket(self):
@@ -218,6 +218,7 @@ class reader:
         try:
             self.dataSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.dataSock.settimeout(self.timeout_for_sockets)
+            self.dataSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.dataSock.bind((self.HOST_IP, self.HOST_PORT))
         except Exception as e:
 
@@ -232,6 +233,8 @@ class reader:
         # print self.dataSock.getsockopt(socket.SOL_SOCKET,socket.SO_RCVBUF)
 
     def __del__(self):
+        if self.data_online_monitor:
+            self.cloning_sock.close()
         return 0
 
     def acquire_rate(self, max_time):
@@ -422,15 +425,6 @@ class reader:
         print (statinfo.st_size)
         with open(path, 'r') as f:
             for i in range(0, statinfo.st_size / 8):
-
-                # while True:
-                #     data=f.read(8)
-                #     if not data or len(data)<8:
-                #         # end of file
-                #         print"End of file\n"
-                #         break
-                #     hexdata = binascii.hexlify(data)
-
                 data = f.read(8)
                 hexdata = binascii.hexlify(data)
 
@@ -446,19 +440,11 @@ class reader:
                                                                   16)  # acr 2017-11-17 this should fix the problem
                     int_x = (int_x + hex_to_int)
                     if (((int_x & 0xFF00000000000000) >> 59) == 0x04):
-                        # s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'HB: ' + 'Framecount: %08X ' % (
-                        #         (int_x >> 15) & 0xFFFF) + 'SEUcount: %08X\n' % (int_x & 0x7FFF)
+
                         self.thr_scan_frames[(int_x >> 56) & 0x7] = self.thr_scan_frames[(int_x >> 56) & 0x7] + 1
 
-                    # if (((int_x & 0xFF00000000000000) >> 59) == 0x08):
-                    # s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'CW: ' + 'ChID: %02X ' % (
-                    #         (int_x >> 24) & 0x3F) + ' CounterWord: %016X\n' % (int_x & 0x00FFFFFF)
                     if (((int_x & 0xFF00000000000000) >> 59) == 0x00):
-                        # s = 'TIGER ' + '%01X: ' % ((int_x >> 56) & 0x7) + 'EW: ' + 'ChID: %02X ' % (
-                        #         (int_x >> 48) & 0x3F) + 'tacID: %01X ' % ((int_x >> 46) & 0x3) + 'Tcoarse: %04X ' % (
-                        #             (int_x >> 30) & 0xFFFF) + 'Ecoarse: %03X ' % (
-                        #             (int_x >> 20) & 0x3FF) + 'Tfine: %03X ' % ((int_x >> 10) & 0x3FF) + 'Efine: %03X \n' % (
-                        #             int_x & 0x3FF)
+
                         self.thr_scan_matrix[(int_x >> 56) & 0x7, int(int_x >> 48) & 0x3F] = self.thr_scan_matrix[(
                                                                                                                           int_x >> 56) & 0x7, int(
                             int_x >> 48) & 0x3F] + 1
@@ -656,7 +642,7 @@ class reader:
         frame_missing =np.zeros((8))
         print ("size={}\n".format(statinfo.st_size))
         with open(path, 'r') as f:
-            for i in range(0, statinfo.st_size / 8):
+            for i in range(0, int(statinfo.st_size / 8)):
                 data = f.read(8)
                 hexdata = binascii.hexlify(data)
 

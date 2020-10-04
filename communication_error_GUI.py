@@ -100,12 +100,15 @@ class menu():
             timing_array.append(Entry(manual_td,width=3))
             timing_array[FEB].pack(side=LEFT)
         Button(manual_td,text="Set values",command=lambda : self.set_TD(GEMROC_number,timing_array)).pack()
+
     def set_TD(self,num,timing_array):
         GEMROC=self.GEMROC_reading_dict["GEMROC {}".format(num)]
         GEMROC.GEM_COM.set_FEB_timing_delays( int(timing_array[3].get()), int(timing_array[2].get()), int(timing_array[1].get()), int(timing_array[0].get()))
+
     def load_TD_from_file(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():
             GEMROC.GEM_COM.reload_default_td()
+
     def TD_scan(self, GEMROC_num, to_all=False):
         if to_all:
             process_list = []
@@ -136,6 +139,7 @@ class menu():
             safe_delays = test_r.TIGER_delay_tuning()
             self.TD_scan_result["GEMROC {}".format(GEMROC_num)] = safe_delays
         self.save_values(GEMROC_num)
+
     def save_values(self,GEMROC_num):
         save_winz=Toplevel(self.error_window)
         ws = save_winz.winfo_screenwidth()

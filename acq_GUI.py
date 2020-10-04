@@ -15,16 +15,9 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 import ctypes
 import psutil
-
 TER = True
 
-try:
-    from influxdb import InfluxDBClient
 
-    DB = True
-except:
-    print("Can't find DB library")
-    DB = False
 from lib import GEM_ACQ_classes as GEM_ACQ
 
 OS = sys.platform
@@ -37,18 +30,21 @@ else:
     sys.exit()
 
 debug = False
-if DB:
-    try:
-        # client = InfluxDBClient(host='localhost', port=8086)
-        client = InfluxDBClient(host='192.168.38.191', port=8086)
-        client.switch_database('GUFI_DB')
-    except:
-        print("Can't connect to BD")
-        DB = False
+#db_address = '127.0.0.1'
+db_address = '192.168.38.191'
+db_port = 8086
+
 
 
 class menu():
     def __init__(self, std_alone=True, main_winz=None, GEMROC_reading_dict=None, father=None):
+        try:
+            from influxdb import InfluxDBClient
+            from lib import DB_classes
+            self.DB = True
+        except:
+            print("Can't find DB library")
+            self.DB = False
 
         self.father = father
         self.PMT = True
@@ -58,6 +54,12 @@ class menu():
         self.errors_counters_810 = {}
         self.logfile = "." + sep + "log_folder" + sep + "ACQ_log_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         self.conffile = "." + sep + "log_folder" + sep + "CONF_log_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
+        if self.DB:
+            try:
+                self.db_sender = DB_classes.Database_Manager()
+            except:
+                print("Can't connect to BD")
+                self.DB = False
 
         self.sub_run_number = 0
         self.mode = 'TL'
@@ -93,7 +95,7 @@ class menu():
         self.online_monitor = BooleanVar(self.master_window)
         self.online_monitor.set(False)
         self.online_monitor_data = BooleanVar(self.master_window)
-        self.online_monitor_data.set(True)
+        self.online_monitor_data.set(False)
 
         self.save_conf_every_run = BooleanVar(self.master_window)
         self.simple_analysis = IntVar(self.master_window)
@@ -200,6 +202,10 @@ class menu():
 
         self.mail_stop_but = Button(frame_mails, text="Send acq stop mail", command=self.send_acq_stop)
         self.mail_stop_but.pack(side=LEFT)
+
+        self.launch_GRAAL_bt = Button(frame_mails, text="Launch GRAAL analysis", command=self.run_GRAAL)
+        self.launch_GRAAL_bt.pack(side=LEFT)
+
         spacer = Frame(frame_mails)
         spacer.pack(side=LEFT, padx=50)
 
@@ -219,7 +225,7 @@ class menu():
             self.open_adv_acq()
             self.open_on_run_tab()
             self.online_monitor.set(True)
-            self.online_monitor_data.set(False)
+            self.online_monitor_data.set(True)
             Checkbutton(self.start_frame, text="Online monitor", variable=self.online_monitor).grid(row=0, column=6, sticky=NW, pady=4)
             Checkbutton(self.start_frame, text="Online data monitor", variable=self.online_monitor_data).grid(row=0, column=7, sticky=NW, pady=4)
 
@@ -281,8 +287,11 @@ class menu():
         self.map_frame.pack(side=RIGHT)
         Label(self.map_frame, image=self.mappa).pack()
         ##Variables for network stats logging
-        self.last_net_time = 0
-        self.last_net_values = {}
+        self.master_window.protocol("WM_DELETE_WINDOW", self._delete_window)
+        # self.master_window.bind("<Destroy>", self._destroy)
+        #
+        # button = Button(self.master_window, text="Destroy", command=self.master_window.destroy)
+        # button.pack()
 
     def build_DCT_matrix(self):
         """
@@ -318,13 +327,18 @@ class menu():
         self.mail_stop_but.config(state='disabled')
         self.master_window.after(5000, lambda: self.reset_mail_but())
         if TER:
-            subprocess.call(['/bin/bash', '-i', '-c', "copy_data {}".format(self.run_folder.split("_")[1])])
-            subprocess.call(['/bin/bash', '-i', '-c', "sync_data"])
+            subprocess.call(['/bin/bash', "copy_data {}".format(self.run_folder.split("_")[1])])
+            subprocess.call(['/bin/bash', "sync_data"])
+    def run_GRAAL(self):
+        self.launch_GRAAL_bt.config(state='disabled')
+        subprocess.call(["/home/cgemlab2/GRAAL/GRAAL.sh", "-a", str(self.run_folder.split("_")[1])])
+
+        self.master_window.after(5000, lambda: self.reset_mail_but())
 
     def reset_mail_but(self):
         self.mail_start_but.config(state='normal')
         self.mail_stop_but.config(state='normal')
-
+        self.launch_GRAAL_bt.config(state='normal')
     def set_last_folder(self):
         """
         Funzione per andare all'ultima cartella
@@ -381,8 +395,9 @@ class menu():
                 self.error_dict810["{} TIGER {}".format(number, T)].grid(row=1, column=T + 1, sticky=NW, pady=4)
             Label(a, text='{} TIGERs:   '.format(number), font=("Courier", 10)).grid(row=0, column=0, sticky=NW, pady=4)
             for T in range(0, 8):
-                self.button_dict["{} TIGER {}".format(number, T)] = Button(a, text='{}'.format(T), width=4, height=1, font=("Courier", 10), command=lambda: self.Change_Reading_Tigers(number, T))
+                self.button_dict["{} TIGER {}".format(number, T)] = Button(a, text='{}'.format(T), width=4, height=1, font=("Courier", 10), command=lambda T=T, number=number: self.Change_Reading_Tigers(number, T))
                 self.button_dict["{} TIGER {}".format(number, T)].grid(row=0, column=T + 1, sticky=NW, pady=4)
+
             Label(a, text="___________________________________________________________________________________________________________________________").grid(row=2, column=0, sticky=NW, columnspan=12)
 
         self.refresh_buttons_TIGERs()
@@ -423,9 +438,9 @@ class menu():
         self.check_thr = BooleanVar(self.master_window)
         self.check_thr.set(True)
         self.vth_t_toll = IntVar(self.master_window)
-        self.vth_t_toll.set(4)
+        self.vth_t_toll.set(7)
         self.vth_e_toll = IntVar(self.master_window)
-        self.vth_e_toll.set(4)
+        self.vth_e_toll.set(7)
         self.numb_of_viol = IntVar(self.master_window)
         self.numb_of_viol.set(40)
         Checkbutton(second_row, var=self.check_thr, text="Check on thr before start").pack(side=LEFT)
@@ -452,17 +467,21 @@ class menu():
         self.canvas2.configure(scrollregion=self.canvas2.bbox("all"), width=1200, height=700)
 
     def Change_Reading_Tigers(self, number, T, ForceOff=False):
-
         n = (self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"] >> T) & 0x1
         if n == 1:
+            print (T)
+            print (n)
+            print (self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"])
             self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"] -= 2 ** T
+
+            print (self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"])
             with open(self.logfile, 'a') as f:
                 f.write("{} -- {} TIGER {} disabled\n".format(time.ctime(), number, T))
 
         elif ForceOff == False:
             self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"] += 2 ** T
         # print self.GEMROC_reading_dict[number].GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["EN_TM_TCAM_pattern"]
-        self.GEMROC_reading_dict[number].GEM_COM.DAQ_set_register()
+        # self.GEMROC_reading_dict[number].GEM_COM.DAQ_set_register()
         self.refresh_buttons_TIGERs()
 
     def refresh_buttons_TIGERs(self):
@@ -479,9 +498,9 @@ class menu():
 
     def refresh_8_10_counters_and_TimeOut(self):
 
-        if DB and self.online_monitor_data.get() and time.time() - self.last_810_log > 10:
-            self.send_810b_error_to_DB()
-            self.send_PC_stats()
+        if self.DB and self.online_monitor_data.get() and time.time() - self.last_810_log > 10:
+            self.db_sender.send_810b_error_to_DB(self.GEMROC_reading_dict, self.error_dict810)
+            self.db_sender.log_PC_stats()
             self.last_810_log = time.time()
 
         for key, label in self.error_dict810.items():
@@ -524,9 +543,9 @@ class menu():
                             with open(self.logfile, 'a') as f:
                                 f.write("{} -- Stopping acquisition due to 8/10bit errors {} times in a row \n".format(time.ctime(), self.reset_810))
                             self.send_mail("{} --8/10 bit errors counter saturated {} times in a row: GEMROC {} TIGER {}\n (Note: there could be more errors).".format(time.ctime(), self.reset_810, GEMROC, TIGER))
-                            self.send_telegram("{} --8/10 bit errors counter saturated {} times in a row: GEMROC {} TIGER {}\n (Note: there could be more errors).".format(time.ctime(), self.reset_810, GEMROC, TIGER))
-                            self.restart.set(False)
-                            self.stop_acq(True)
+                            # self.send_telegram("{} --8/10 bit errors counter saturated {} times in a row: GEMROC {} TIGER {}\n (Note: there could be more errors).".format(time.ctime(), self.reset_810, GEMROC, TIGER))
+                            # self.restart.set(False)
+                            # self.stop_acq(True)
                             break
 
             for i in self.GEM:
@@ -554,86 +573,12 @@ class menu():
                     self.send_mail("{} -- Stopping acquisition due to time out errors {} times in a row (GEMROC {})\n (Note: there could be more errors).".format(time.ctime(), self.reset_timedout, i.GEMROC_ID))
                     self.send_telegram("{} -- Stopping acquisition due to time out errors {} times in a row (GEMROC {})\n (Note: there could be more errors).".format(time.ctime(), self.reset_timedout, i.GEMROC_ID))
                     self.restart.set(False)
-                    self.stop_acq(True)
+                    self.stop_acq(True, stop_log=False)
                     break
 
-    def send_810b_error_to_DB(self):
-        """
-        Log the error GEMROC status in DB
-        :return:
-        """
-        for GEMROC in self.GEMROC_reading_dict.keys():
-            body = [{
-                "measurement": "Offline",
-                "tags": {
-                    "type": "8_10_b_errors",
-                    "gemroc": GEMROC.split(" ")[1],
-                    "tiger": -1
-                },
-                "time": str(datetime.datetime.utcnow()),
-                "fields": {
-                }
-            }]
-            for T in range(0, 8):
-                body[0]["tags"]["tiger"] = T
-                if self.error_dict810["{} TIGER {}".format(GEMROC, T)]["text"] != "-----":
-                    body[0]["fields"]["8_10_errors"] = int(self.error_dict810["{} TIGER {}".format(GEMROC, T)]["text"])
-                else:
-                    body[0]["fields"]["8_10_errors"] = 0
-                send_to_db(body)
-                time.sleep(0.01)
 
-    def send_PC_stats(self):
-        """
-        Log the PC status
-        :return:
-        """
-        perf_field = {
-            "CPU_usage": psutil.cpu_percent(),
-            "Memory usage": psutil.virtual_memory().percent
-        }
-        raw_dict = psutil.net_io_counters(True, True)
-        key_list = [key for key in raw_dict]
-        net_field = {}
-        this_net_time = time.time()
 
-        for key in key_list:
-            if self.last_net_time != 0:
-                speed_rcv_byte = (raw_dict[key].bytes_recv - self.last_net_values[key + "_bytes_recv"]) / (this_net_time - self.last_net_time)
-                speed_snd_byte = (raw_dict[key].bytes_sent - self.last_net_values[key + "_bytes_sent"]) / (this_net_time - self.last_net_time)
-                speed_rcv_pkts = (raw_dict[key].packets_recv - self.last_net_values[key + "_packets_recv"]) / (this_net_time - self.last_net_time)
-                speed_snd_pkts = (raw_dict[key].packets_sent - self.last_net_values[key + "_packets_sent"]) / (this_net_time - self.last_net_time)
-                net_field.update({
-                                 key + "_speed_bytes_recv": speed_rcv_byte,
-                                 key + "_speed_bytes_sent": speed_snd_byte,
-                                 key + "_speed_packets_recv": speed_rcv_pkts,
-                                 key + "_speed_packets_sent": speed_snd_pkts,
-                                 key + "_err_in": raw_dict[key].errin,
-                                 key + "_err_out": raw_dict[key].errout,
-                                 key + "_drop_in": raw_dict[key].dropin,
-                                 key + "_drop_out": raw_dict[key].dropout,
-                                 })
 
-            self.last_net_values.update({
-                                        key + "_bytes_recv": raw_dict[key].bytes_recv,
-                                        key + "_bytes_sent": raw_dict[key].bytes_sent,
-                                        key + "_packets_recv": raw_dict[key].packets_recv,
-                                        key + "_packets_sent": raw_dict[key].packets_sent
-                                        })
-
-        self.last_net_time = this_net_time
-        perf_field.update(net_field)
-        body = [{
-            "measurement": "Online",
-            "tags": {
-                "type": "PC_status",
-            },
-            "time": str(datetime.datetime.utcnow()),
-            "fields": perf_field,
-            "retention_policy": "online_data"
-        }]
-
-        send_to_db(body)
 
     def PMT_on(self):
         os.system("./HVWrappdemo_0 ttyUSB0 VSet 2000")
@@ -645,51 +590,59 @@ class menu():
 
     def relaunch_acq(self):
         self.stop_acq(True)
-        if self.restart.get():
-            self.messagge_field['text'] = "Restart process ongoing, please wait"
-            time.sleep(8)
-            # print ("Sending hard reset")
-            # self.father.hard_reset(1)
-            if debug:
-                print("Restarting")
-            if self.PMT:
+        try:
+            if self.restart.get():
+                self.messagge_field['text'] = "Restart process ongoing, please wait"
+                time.sleep(8)
+                # print ("Sending hard reset")
+                # self.father.hard_reset(1)
                 if debug:
-                    print("PMT down")
-                self.PMT_OFF()
-            # time.sleep(17)
-            # print ("Writing GEMROC configuration")
-            # for number, GEMROC in self.GEMROC_reading_dict.items():
-            #     GEMROC.GEM_COM.DAQ_set_with_dict()
-            #     self.father.write_default_LV_conf(GEMROC)
-            #     GEMROC.GEM_COM.reload_default_td()
-            #
-            time.sleep(10)
+                    print("Restarting")
+                if self.PMT:
+                    if debug:
+                        print("PMT down")
+                    self.PMT_OFF()
+                # time.sleep(17)
+                # print ("Writing GEMROC configuration")
+                # for number, GEMROC in self.GEMROC_reading_dict.items():
+                #     GEMROC.GEM_COM.DAQ_set_with_dict()
+                #     self.father.write_default_LV_conf(GEMROC)
+                #     GEMROC.GEM_COM.reload_default_td()
+                #
+                time.sleep(10)
 
-            # self.father.reactivate_TIGERS()
-            # self.refresh_buttons_TIGERs()
-            self.father.Synch_reset()
+                # self.father.reactivate_TIGERS()
+                # self.refresh_buttons_TIGERs()
+                self.father.Synch_reset()
 
-            # self.father.Synch_reset()
-            # print ("Writing TIGER configuration")
-            # # self.father.Synch_reset()
-            # self.father.load_default_config_parallel(set_check=False)
-            # self.father.Synch_reset()
-            self.father.load_default_config_parallel(set_check=False)
-            print("Configuration wrote")
-            time.sleep(2)
+                # self.father.Synch_reset()
+                # print ("Writing TIGER configuration")
+                # # self.father.Synch_reset()
+                # self.father.load_default_config_parallel(set_check=False)
+                # self.father.Synch_reset()
+                self.father.load_default_config_parallel(set_check=False)
+                self.father.doing_something=False
+                print("Configuration wrote")
+                time.sleep(2)
 
-            self.father.Synch_reset()
-            self.father.TCAM_reset()
-            if debug:
-                print("Setting pause")
-            self.father.set_pause_mode(to_all=True, value=1)
-
-            if self.PMT:
+                self.father.Synch_reset()
+                self.father.TCAM_reset()
                 if debug:
-                    print("PMT ON")
-                self.PMT_on()
-            time.sleep(15)
-            self.start_acq(First_launch=False)
+                    print("Setting pause")
+                self.father.set_pause_mode(to_all=True, value=1)
+
+                if self.PMT:
+                    if debug:
+                        print("PMT ON")
+                    self.PMT_on()
+                time.sleep(15)
+                self.start_acq(First_launch=False)
+        except:
+            if not self.std_alone:
+                self.error_thread = (Thread_handler_errors(self.GEMROC_reading_dict, self.GEM, self.errors_counters_810, self))
+
+            if not self.std_alone:
+                self.error_thread.start()
 
     def ref_adv_acq(self):
         widget_list = all_children(self.adv_self.canvas)
@@ -830,6 +783,7 @@ class menu():
             self.conffile = "." + sep + "data_folder" + sep + self.run_folder + sep + "CONF_run_{}".format(self.run_folder.split("_")[1])
         if not self.std_alone:
             self.save_conf_registers()
+            self.log_disabled_channels()
         self.but7.config(state='disabled')
         self.but6.config(state='disabled')
         for i in range(0, len(self.GEM)):
@@ -873,6 +827,16 @@ class menu():
         time.sleep(0.5)
         self.messagge_field['text'] = "Acquiring"
 
+    def log_disabled_channels(self):
+        with open("." + sep + "data_folder" + sep + self.run_folder + sep + "disabled_channels", 'w+') as f:
+            print("#G   T   ch")
+            for number, GEMROC in self.GEMROC_reading_dict.items():
+                    for T in range(0,8):
+                        for ch in range(0,64):
+                            if GEMROC.c_inst.Channel_cfg_list[T][ch]["TriggerMode"]==3:
+                                f.write("{}  {}  {}\n".format(GEMROC.GEMROC_ID, T, ch))
+
+
     def preliminary_checks(self):
 
         """
@@ -899,13 +863,12 @@ class menu():
                                     diff_E = int(splitted[7]) - GEMROC.c_inst.Channel_cfg_list[int(splitted[1])][int(splitted[3])]['Vth_T2']
                                     if diff_T > th_tollerance[0]:
                                         buff = buff + "{} TIGER {}, CHANNEL {}, thr T at {} from reference\n".format(number, int(splitted[1]), int(splitted[3]), diff_T)
-                                        print("{} TIGER {}, CHANNEL {}, thr T at {} from reference, using instead the reference value\n".format(number, int(splitted[1]), int(splitted[3]), diff_T))
-                                        ## TODO: change it
+                                        print("{} TIGER {}, CHANNEL {}, thr T at {} from reference\n".format(number, int(splitted[1]), int(splitted[3]), diff_T))
                                         #GEMROC.c_inst.Channel_cfg_list[int(splitted[1])][int(splitted[3])]['Vth_T1'] = int(splitted[5])
                                         thr_out_of_position += 1
                                     if diff_E > th_tollerance[1]:
                                         buff = buff + "{} TIGER {}, CHANNEL {}, thr E at {} from reference\n".format(number, int(splitted[1]), int(splitted[3]), diff_E)
-                                        print("{} TIGER {}, CHANNEL {}, thr E at {} from reference, using instead  the reference value\n".format(number, int(splitted[1]), int(splitted[3]), diff_E))
+                                        print("{} TIGER {}, CHANNEL {}, thr E at {} from reference".format(number, int(splitted[1]), int(splitted[3]), diff_E))
                                         #GEMROC.c_inst.Channel_cfg_list[int(splitted[1])][int(splitted[3])]['Vth_T2'] = int(splitted[7])
                                         thr_out_of_position += 1
                     else:
@@ -966,7 +929,7 @@ class menu():
         :return:
         """
 
-    def stop_acq(self, auto=False):
+    def stop_acq(self, auto=False, stop_log=True):
         if not auto:
             self.restart.set(False)
         self.run_analysis.set(False)
@@ -977,17 +940,28 @@ class menu():
             print("Stopping")
 
         self.but6.config(state='normal')
-        if not self.std_alone:
+
+        if not self.std_alone and stop_log:
             self.error_thread.running = False
             self.error_thread.stopper_thr.running = False
             # self.error_thread.raise_exception()
             # self.refresh_8_10_counters_and_TimeOut()
-        for i in range(0, len(self.GEM)):
-            self.thread[i].running = False
+        for thr in self.thread:
+            thr.running = False
+        print([thr.isAlive() for thr in self.thread])
 
-        for i in range(0, len(self.GEM)):
-            if self.thread[i].isAlive():
-                self.thread[i].join(timeout=26)
+        while True in [thr.isAlive() for thr in self.thread]:
+            print([thr.isAlive() for thr in self.thread])
+            print ("At least one alive thread")
+            for thr in self.thread:
+                if thr.isAlive():
+                    print ("Thread {} is alive, joining".format(thr.reader.GEMROC_ID))
+                    thr.join(timeout=15)
+                if thr.isAlive():
+                    print ("Can't join one of the threads (this time)")
+                time.sleep (0.1)
+            print([thr.isAlive() for thr in self.thread])
+
         for i in self.GEM:
             if i.TIMED_out == True:
                 self.LED[int(i.GEMROC_ID)]['image'] = self.icon_bad
@@ -997,7 +971,8 @@ class menu():
             for number, GEMROC in self.GEMROC_reading_dict.items():
                 GEMROC.GEM_COM.flush_rcv_socket()
         if self.simple_analysis.get() or self.run_analysis.get():
-            self.build_errors()
+            # self.build_errors()
+            pass
         if self.error_GEMROC.get():
             self.save_GEMROC_errors()
         self.but7.config(state='normal')
@@ -1062,10 +1037,22 @@ class menu():
             if trig_tot[i] != 0:
                 print("GEMROC {}, triggers: {}".format(i, trig_tot[i]))
             if self.GEM_to_read[i]:
-                total += trig_tot[i]
-                avg = total / np.size(np.where(self.GEM_to_read == 1))
+                # total += trig_tot[i]
+                avg = np.min(trig_tot[np.where(trig_tot>0)])
         self.messagge_field['text'] = "Avg number of triggers in this run: {}".format(avg)
         return avg
+
+    def _delete_window(self):
+        if not self.std_alone:
+            self.father.run_control_Button.config(state='normal')
+            self.father.doing_something=False
+        self.master_window.destroy()
+   #
+    # def _destroy(self, event):
+    #     print( "destroy")
+
+
+
 
 
 if __name__ == '__main__':
@@ -1091,7 +1078,7 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
         if self.caller.mode == 'TM':
             print("Acquiring for {:.2f} seconds".format(float(self.caller.time) * 60))
         self.start_time = time.time()
-        check_time = 5
+        check_time = 7
         check_counter = 0
         self.stopper_thr = stopper(self.caller, self.start_time, )
         self.stopper_thr.daemon = True
@@ -1107,11 +1094,12 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
                     print ("DEBUG: reading counters @{}".format(time.time()))
                 if self.caller.run_analysis.get():
                     self.update_err_and_plot_onrun()
-                    time.sleep(10)
-                process_list = []
-                pipe_list = []
+                    time.sleep(1)
+
                 TIGER_LIST = [0, 1, 2, 3, 4, 5, 6, 7]
                 for T in TIGER_LIST:
+                    process_list = []
+                    pipe_list = []
                     for number, GEMROC in self.GEMROC_reading_dict.items():
                         if int(number.split()[1]) in self.number_list:
                             GEMROC.GEM_COM.set_counter(int(T), 1, 0)
@@ -1122,43 +1110,50 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
                             p.start()
                             time.sleep(0.01)
 
-                for process, pipe_out in zip(process_list, pipe_list):
+                    for process, pipe_out in zip(process_list, pipe_list):
 
-                    # if process.is_alive():
-                    if self.running:
-                        try:
-                            process.join(timeout=2)
-                            key, value = pipe_out.recv()
+                        # if process.is_alive():
+                        if self.running:
+                            try:
+                                process.join(timeout=2)
+                                key, value = pipe_out.recv()
 
-                            if key not in self.TIGER_error_counters.keys():
-                                self.TIGER_error_counters[key] = 0
-                            if value != 0 and int(self.TIGER_error_counters[key]) != 16777215:
-                                with open(self.caller.logfile, 'a') as f:
-                                    f.write("{} -- {} : {} 8/10 bit errors since last reset\n".format(time.ctime(), key, value))
-                                    print("{} -- {} : {} 8/10 bit errors since last reset\n".format(time.ctime(), key, value))
-                            self.TIGER_error_counters[key] = value
-                        except Exception as e:
-                            print("Error controller timeout: {}".format(e))
-                    process.terminate()
+                                if key not in self.TIGER_error_counters.keys():
+                                    self.TIGER_error_counters[key] = 0
+                                if value != 0 and int(self.TIGER_error_counters[key]) != 16777215:
+                                    with open(self.caller.logfile, 'a') as f:
+                                        f.write("{} -- {} : {} 8/10 bit errors since last reset\n".format(time.ctime(), key, value))
+                                        print("{} -- {} : {} 8/10 bit errors since last reset\n".format(time.ctime(), key, value))
+                                self.TIGER_error_counters[key] = value
+                            except Exception as e:
+                                print("Error controller timeout: {}".format(e))
+                        process.terminate()
 
                 process_list_2 = []
-                if check_counter % 2 == 0 and self.caller.online_monitor_data.get():
+                pipe_list_2 = []
+
+                if check_counter % 2 == 0 and self.caller.online_monitor.get():
+                    self.check_buffer()
                     for number, GEMROC in self.GEMROC_reading_dict.items():
-                        p = Process(target=self.log_IVT_in_DB, args=(number,))
+                        pipe_in, pipe_out = Pipe()
+                        p = Process(target=self.caller.db_sender.log_IVT_in_DB, args=(number,self.GEMROC_reading_dict, pipe_in))
+                        pipe_list_2.append(pipe_out)
                         process_list_2.append(p)
                         p.start()
                         time.sleep(0.05)
 
-                    for process in process_list_2:
+                    for process, pipe_out in zip(process_list_2, pipe_list_2):
                         if self.running:
                             try:
                                 process.join(timeout=2)
+                                gem_number, FEBs_to_off = pipe_out.recv()
+                                if len(FEBs_to_off)>0:
+                                    for FEB in FEBs_to_off:
+                                        self.shut_down_FEB(self.GEMROC_reading_dict[gem_number].GEM_COM, FEB)
                             except Exception as e:
                                 print("IVT logger controller timeout: {}".format(e))
 
-                del process_list[:]
                 del process_list_2[:]
-                del pipe_list[:]
 
                 if self.running:
                     self.check_buffer()
@@ -1207,7 +1202,7 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
         print("Exception raised")
 
     def update_err_and_plot_onrun(self):
-        self.caller.build_errors()
+        # self.caller.build_errors()
         # self.caller.refresh_error_status()
         self.caller.refresh_plot()
 
@@ -1225,46 +1220,6 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
         pipe_in.send((tiger_string, counter_value))
         pipe_in.close()
 
-    def log_IVT_in_DB(self, GEMROC_num):
-
-        if DB:
-            GEMROC = self.GEMROC_reading_dict[GEMROC_num]
-            IVT = GEMROC.GEM_COM.save_IVT()
-
-            for FEB in range(0, 4):
-                body = [{
-                    "measurement": "Offline",
-                    "tags": {
-                        "type": "IVT_LOG_FEB",
-                        "gemroc": GEMROC.GEM_COM.GEMROC_ID,
-                        "FEB": FEB
-                    },
-                    "time": str(datetime.datetime.utcnow()),
-                    "fields":
-                        IVT['status']['FEB{}'.format(FEB)]
-
-                }]
-                if (IVT['status']['FEB{}'.format(FEB)]["TEMP[degC]"] < 117):
-                    if not ( (GEMROC.GEM_COM.GEMROC_ID==8 and FEB in (1,2)) or (GEMROC.GEM_COM.GEMROC_ID==12 and FEB in (2,3)) ):
-                        if IVT['status']['FEB{}'.format(FEB)]["TEMP[degC]"] > 42 :
-                            self.shut_down_FEB(GEMROC.GEM_COM, FEB)
-                        send_to_db(body)
-                else:
-                    print ("Rejected IVT value")
-
-            body = [{
-                "measurement": "Offline",
-                "tags": {
-                    "type": "IVT_LOG_GEMROC",
-                    "gemroc": GEMROC.GEM_COM.GEMROC_ID,
-                },
-                "time": str(datetime.datetime.utcnow()),
-                "fields":
-                    IVT['status']['ROC']
-
-            }]
-            send_to_db(body)
-
     def shut_down_FEB(self, gemcom, num):
         pwr_pattern=gemcom.gemroc_LV_XX.FEB_PWR_EN_pattern
         pwr_pattern = pwr_pattern & ~(1 << num)
@@ -1272,6 +1227,9 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
         print("SHUT DOWN FEB {}, GEMROC{}".format(num,gemcom.GEMROC_ID))
         self.caller.write_in_log("SHUT DOWN FEB {}, GEMROC{}".format(num,gemcom.GEMROC_ID))
         gemcom.FEBPwrEnPattern_set(pwr_pattern)
+
+
+
 
 class stopper(Thread):  #
     def __init__(self, caller, start_time):
@@ -1333,9 +1291,3 @@ def find_number(stringa):
 
     return number
 
-
-def send_to_db(json):
-    try:
-        client.write_points(json)
-    except Exception as e:
-        print("Unable to log in infludb: {}\n json: {}".format(e, json))
