@@ -567,7 +567,7 @@ class communication:  #The directory are declared here to avoid multiple declara
             'ROC': {}
         }
         for key in (0, 1, 2, 3):
-            status_dict['status']['FEB{}'.format(key)]["TEMP[degC]"] = FEB_T[key]
+            status_dict['status']['FEB{}'.format(key)]["TEMP[degC]"] = float("{0:.2f}".format(FEB_T[key]))
             status_dict['status']['FEB{}'.format(key)]["VD[mV]"] = FEB_VD[key]
             status_dict['status']['FEB{}'.format(key)]["ID[mA]"] = FEB_ID[key]
             status_dict['status']['FEB{}'.format(key)]["VA[mV]"] = FEB_VA[key]
@@ -1027,7 +1027,7 @@ class communication:  #The directory are declared here to avoid multiple declara
         array_to_send = self.gemroc_LV_XX.command_words
         command_echo_ivt = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
                                                         self.DEST_PORT_NO)
-        return self.save_IVT_converter(command_echo_ivt)
+        return self.save_IVT_converter_new_calib(command_echo_ivt)
 
 
     def GEMROC_counter_get(self):
@@ -1159,7 +1159,7 @@ class communication:  #The directory are declared here to avoid multiple declara
     def send_GEMROC_DAQ_CMD_num_rep(self, COMMAND_STRING_PARAM, num_of_repetitions_param):
         self.gemroc_DAQ_XX.set_gemroc_cmd_code(COMMAND_STRING_PARAM, num_of_repetitions_param)
         self.gemroc_DAQ_XX.set_target_TCAM_ID(0, 0)
-        self.gemroc_DAQ_XX.update_command_words()
+        self.gemroc_DAQ_XX.update_command_words_dict()
         # print '\n gemroc_DAQ_inst_param.number_of_repetitions = %03X' % gemroc_DAQ_inst_param.number_of_repetitions
         array_to_send = self.gemroc_DAQ_XX.command_words
         print (array_to_send)

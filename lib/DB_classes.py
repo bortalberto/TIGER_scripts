@@ -295,7 +295,6 @@ class Thread_handler_IVT(Thread):
                         gem_number, FEBs_to_off = pipe_out.recv()
                         if len(FEBs_to_off) > 0:
                             for FEB in FEBs_to_off:
-                                pass
                                 self.Database_Manager.shut_down_FEB(self.menu_caller.GEMROC_reading_dict[gem_number].GEM_COM, FEB)
                     except Exception as e:
                         print("IVT logger controller timeout: {}".format(e))

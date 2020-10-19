@@ -1019,7 +1019,7 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
       self.Dbg_functions_ctrl_bits_LoNibble = config["DAQ"].getint("Dbg_functions_ctrl_bits_LoNibble") # acr 2018-04-24 last parameter written (at the top!) in default configuration file v4
       self.Dbg_functions_ctrl_bits_HiNibble = config["DAQ"].getint("Dbg_functions_ctrl_bits_HiNibble")  # Enable simulated L1 (periodic) Trigger Generation for TCAM[3..0]
       self.UDP_DATA_DESTINATION_IPADDR = config["DAQ"].getint("UDP_DATA_DESTINATION_IPADDR") # latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
-      self.UDP_DATA_DESTINATION_IPPORT = config["DAQ"].getint("UDP_DATA_DESTINATION_IPPORT")  # latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
+      self.UDP_DATA_DESTINATION_IPPORT = int(TARGET_GEMROC_ID_param) # latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
       self.L1_TM_xtrct_start_latency = config["DAQ"].getint("L1_TM_xtrct_start_latency")  # acr 2018-07-11 IT IS OBSOLETE!!! latency with respect to the event of BES-III L1 trigger (in units of BES-III clk cycles); range: 0..1023
       self.L1_period = config["DAQ"].getint("L1_period")  # period (in units of BES-III clk cycles) of periodic simulated L1 triggers; range: 0..1023
       self.TP_width = config["DAQ"].getint("TP_width")  # acr 2017-09-28 width (in units of BES-III clk cycles) of periodic Test Pulses; range: 0..15
@@ -1055,6 +1055,7 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
       # else:
       #     B3Clk_sim_en_param=0
       B3Clk_sim_en_param = 0
+      print (config["GLOBAL"].getboolean("external_clock"))
       self.DAQ_config_dict = {
         "GEMROC":                                   self.TARGET_GEMROC_ID,
         "UDP_DATA_DESTINATION_IPADDR":              self.UDP_DATA_DESTINATION_IPADDR,
@@ -1070,7 +1071,7 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
         "Enable_DAQPause_Until_First_Trigger":      ((self.Dbg_functions_ctrl_bits_LoNibble &0x8)>>3),
         "DAQPause_Set":                             ((self.Dbg_functions_ctrl_bits_LoNibble &0x4)>>2),
         "Tpulse_generation_w_ext_trigger_enable":   ((self.Dbg_functions_ctrl_bits_LoNibble &0x2)>>1),
-        "EXT_nINT_B3clk":                           config["GLOBAL"].getboolean("internal_clock"),
+        "EXT_nINT_B3clk":                           config["GLOBAL"].getboolean("external_clock"),
         "TL_nTM_ACQ":                               self.TL_nTM_ACQ,
         "AUTO_L1_EN":                               self.AUTO_L1_EN_bit,
         "AUTO_TP_EN":                               self.AUTO_TP_EN_bit,
@@ -1095,16 +1096,16 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
       ## ACR 2018-03-15 AT IHEP: BEGIN ADDED UDP_DATA_DESTINATION_IPADDR AND UDP_DATA_DESTINATION_IPPORT; GEMROC_CMD_DAQ_Num_of_params = 13 # acr 2018-01-15
       # self.cmd_header = header_tag + (self.TARGET_GEMROC_ID << 16) + gemroc_cmd_tag + gemroc_cmd_word_count
       self.cmd_header = header_tag + (self.TARGET_GEMROC_ID << 16) + gemroc_cmd_tag + ((self.UDP_DATA_DESTINATION_IPADDR & 0xFF)<<8) + gemroc_cmd_word_count
-      #self.cmd_word0 = ((self.number_of_repetitions & 0x3FF) << 16) + ((self.gemroc_cmd_code & 0xF) << 11) + ((self.target_TCAM_ID & 0x3) << 8) + ((self.to_ALL_TCAM_enable & 0x1) << 6)
-      self.cmd_word0 = ((self.UDP_DATA_DESTINATION_IPPORT & 0xF)<<26) + ((self.number_of_repetitions & 0x3FF) << 16) + ((self.gemroc_cmd_code & 0xF) << 11) + ((self.target_TCAM_ID & 0x3) << 8) + ((self.to_ALL_TCAM_enable & 0x1) << 6)
-      ## ACR 2018-03-15 AT IHEP: END ADDED UDP_DATA_DESTINATION_IPADDR AND UDP_DATA_DESTINATION_IPPORT; GEMROC_CMD_DAQ_Num_of_params = 13 # acr 2018-01-15
-
-      #self.cmd_word3 = ((self.L1_latency & 0x3FF) << 20) + ((self.Periodic_TP_EN_pattern & 0xF) << 16) + (self.L1_win_upper_edge_offset & 0xFFFF)
-      self.cmd_word3 = ((self.L1_TM_xtrct_start_latency & 0x3FF) << 20) + ((self.TP_width & 0xF) << 16) + (self.L1_win_upper_edge_offset & 0xFFFF)
-      #self.cmd_word2 = ((self.L1_period  & 0x3FF) << 20) + ((self.Periodic_TP_EN_pattern  & 0xF) << 16) + (self.L1_win_lower_edge_offset & 0xFFFF)
-      self.cmd_word2 = ((self.L1_period  & 0x3FF) << 20) + ((self.Dbg_functions_ctrl_bits_HiNibble  & 0xF) << 16) + (self.L1_win_lower_edge_offset & 0xFFFF)
-      # acr 2018-04-24 self.cmd_word1 = ((self.TP_period & 0x3FF) << 20) + ((self.Periodic_TP_EN_pattern & 0xF) << 16) + ((self.TL_nTM_ACQ & 0x1) << 11) + ((self.AUTO_L1_EN_pattern & 0x1) << 10) + ((self.AUTO_TP_EN_pattern & 0x1) << 9) + ((self.TP_Pos_nNeg & 0x1) << 8)  + (self.EN_TM_TCAM_pattern & 0xFF)
-      self.cmd_word1 = ((self.TP_period & 0x3FF) << 20) + ((self.Periodic_TP_EN_pattern & 0xF) << 16) + ((self.Dbg_functions_ctrl_bits_LoNibble & 0xF) << 12) + ((self.TL_nTM_ACQ & 0x1) << 11) + ((self.AUTO_L1_EN_bit & 0x1) << 10) + ((self.AUTO_TP_EN_bit & 0x1) << 9) + ((self.TP_Pos_nNeg & 0x1) << 8)  + (self.EN_TM_TCAM_pattern & 0xFF)
+      self.cmd_header &= ~(0xFF << 8)
+      self.cmd_header += ((self.DAQ_config_dict["UDP_DATA_DESTINATION_IPADDR"] & 0xFF) << 8)
+      self.cmd_word3 = ((self.DAQ_config_dict["L1_TM_extraction_latency"] & 0x3FF) << 20) + ((self.DAQ_config_dict["TP_width"] & 0xF) << 16) + (self.DAQ_config_dict["L1_scan_window_UPPER_edge"] & 0xFFFF)
+      self.cmd_word2 = ((self.DAQ_config_dict["L1_period_simulated"] & 0x3FF) << 20) + ((self.DAQ_config_dict["B3Clk_sim_en"] & 0x1) << 18) + ((self.DAQ_config_dict["Tpulse_generation_w_L1Chk_enable"] & 0x1) << 17) + ((self.DAQ_config_dict["Periodic_L1En"] & 0x1) << 16) + (
+                  self.DAQ_config_dict["L1_scan_window_LOWER_edge"] & 0xFFFF)
+      self.cmd_word1 = ((self.DAQ_config_dict["TP_period"] & 0x3FF) << 20) + ((self.DAQ_config_dict["Periodic_TP_EN_pattern"] & 0xF) << 16) + ((self.DAQ_config_dict["Enable_DAQPause_Until_First_Trigger"] & 0x1) << 15) + ((self.DAQ_config_dict["DAQPause_Set"] & 0x1) << 14) + (
+                  (self.DAQ_config_dict["Tpulse_generation_w_ext_trigger_enable"] & 0x1) << 13) + ((self.DAQ_config_dict["EXT_nINT_B3clk"] & 0x1) << 12) + ((self.DAQ_config_dict["TL_nTM_ACQ"] & 0x1) << 11) + ((self.DAQ_config_dict["AUTO_L1_EN"] & 0x1) << 10) + (
+                                   (self.DAQ_config_dict["AUTO_TP_EN"] & 0x1) << 9) + ((self.DAQ_config_dict["TP_Pos_nNeg"] & 0x1) << 8) + (self.DAQ_config_dict["EN_TM_TCAM_pattern"] & 0xFF)
+      self.cmd_word0 = ((self.DAQ_config_dict["UDP_DATA_DESTINATION_IPPORT"] & 0xF) << 26) + ((self.DAQ_config_dict["number_of_repetitions"] & 0x3FF) << 16) + ((self.gemroc_cmd_code & 0xF) << 11) + ((self.DAQ_config_dict["target_TCAM_ID"] & 0x3) << 8) + (
+                  (self.DAQ_config_dict["TO_ALL_TCAM_EN"] & 0x1) << 6)
       self.command_words = [ self.cmd_header,
                              self.cmd_word3,
                              self.cmd_word2,
