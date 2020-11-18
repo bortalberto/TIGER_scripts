@@ -718,6 +718,7 @@ class GEMROC_decoder(Thread):
         self.pkts_counter_rst=0
         self.pkts_counter = 0
         self.first_packet=True
+
     def send_mail(self, error, subject="DAQ stop"):
         text = error
         os.system("python3 {}send_mail.py '{}' '{}' ".format("lib" + sep, subject, text))

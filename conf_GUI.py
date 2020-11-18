@@ -288,6 +288,12 @@ class menu():
         Button(load_save_frame, text = "Load last saved thr", command =self.load_thr_from_file).pack(side=LEFT)
         Button(load_save_frame, text = "Load reference thr", command =self.load_thr_reference).pack(side=LEFT)
         Button(load_save_frame, text = "Load thr from folder", command =self.load_thr_from_specific_file).pack(side=LEFT)
+        Label(load_save_frame,text = "Max digits outside ref (per branch)").pack(side=LEFT)
+        self.tollerance_thr = IntVar(self.main_window)
+        self.tollerance_thr.set(7)
+        Entry(load_save_frame,textvariable=self.tollerance_thr, width=3).pack(side=LEFT)
+
+        Button(load_save_frame, text = "Print thr out of reference", command =self.print_bad_thr).pack(side=LEFT)
         Button(load_save_frame, text = "Fix thr out of reference", command =self.fix_bad_thr).pack(side=LEFT)
         self.desired_rate = IntVar(self.main_window)
         self.desired_rate.set(5000)
@@ -557,7 +563,7 @@ class menu():
         self.branch_thr_plot .set("T")
         framina=Frame(self.plot_window)
         framina.pack()
-        Label(framina,text="Thresholds setted").pack()
+        Label(framina,text="Thresholds set").pack()
         Label(framina,text="Branch").pack(side=LEFT)
         OptionMenu(framina,self.branch_thr_plot ,*("T","E"), command=self.calculate_FC).pack(side=LEFT)
 
@@ -2061,7 +2067,31 @@ class menu():
         :return:
         """
         self.build_DCT_matrix()
-        th_tollerance = (10,10)
+        th_tollerance = (self.tollerance_thr.get(), self.tollerance_thr.get())
+        for number, GEMROC in self.GEMROC_reading_dict.items():
+            filename = GEMROC.GEM_COM.conf_folder + sep + "thr" + sep + "GEMROC{}_reference_vth".format(GEMROC.GEM_COM.GEMROC_ID)
+            if os.path.exists(filename):
+                with open(filename, 'r') as f:
+                    for line in f.readlines():
+                        splitted = line.replace(" ", ":").split(":")
+                        if self.DCT_matrix[GEMROC.GEMROC_ID][int(splitted[1])] != 1:
+                            diff_T = int(splitted[5]) - GEMROC.c_inst.Channel_cfg_list[int(splitted[1])][int(splitted[3])]['Vth_T1']
+                            diff_E = int(splitted[7]) - GEMROC.c_inst.Channel_cfg_list[int(splitted[1])][int(splitted[3])]['Vth_T2']
+                            if diff_T > th_tollerance[0] or diff_E > th_tollerance[1]:
+                                GEMROC.GEM_COM.Load_VTH_from_scan_file_on_channel(GEMROC.c_inst, int(splitted[1]), 2, 2, 1, int(splitted[3]))
+            else:
+                print("Can't find reference for {}".format(number))
+
+
+    def print_bad_thr(self):
+
+        """
+        Checks if the thresholds are not too far from the refenrece values and print them
+
+        :return:
+        """
+        self.build_DCT_matrix()
+        th_tollerance = (self.tollerance_thr.get(), self.tollerance_thr.get())
         for number, GEMROC in self.GEMROC_reading_dict.items():
             filename = GEMROC.GEM_COM.conf_folder + sep + "thr" + sep + "GEMROC{}_reference_vth".format(GEMROC.GEM_COM.GEMROC_ID)
             if os.path.exists(filename):
@@ -2072,7 +2102,7 @@ class menu():
                             diff_T = int(splitted[5]) - GEMROC.c_inst.Channel_cfg_list[int(splitted[1])][int(splitted[3])]['Vth_T1']
                             diff_E = int(splitted[7]) - GEMROC.c_inst.Channel_cfg_list[int(splitted[1])][int(splitted[3])]['Vth_T2']
                             if diff_T > th_tollerance[0] or diff_E>th_tollerance[1]:
-                                GEMROC.GEM_COM.Load_VTH_from_scan_file_on_channel(GEMROC.c_inst, int(splitted[1]), 2, 2, 1 ,int(splitted[3]))
+                                print ("G {}, T {}, CH {}, thr out of ref (DeltaT : {}, DeltaE: {}".format(GEMROC.GEM_COM.GEMROC_ID,splitted[1], splitted[3], diff_T, diff_E))
             else:
                 print ("Can't find reference for {}".format(number))
 

@@ -80,7 +80,6 @@ class reader:
                 hexdata = binascii.hexlify(data)
                 string= "{:064b}".format(int(hexdata,16))
                 raw_raw="{} \n".format(string)
-                print (string)
                 inverted=[]
                 for i in range (8,0,-1):
                     inverted.append(string[(i-1)*8:i*8])
@@ -145,7 +144,7 @@ class reader:
                     else:
                         L1_TS_abs_diff = 65536 + ((int_x & 0xFFFF) - previous_L1_TS)
                     s = 'HEADER :  ' + 'STATUS BIT[2:0]: %01X: ' % ((int_x >> 58) & 0x7) + 'LOCAL L1 COUNT: %08X ' % (LOCAL_L1_COUNT) + 'HitCount: %02X ' % ((int_x >> 16) & 0xFF) + 'LOCAL L1 TIMESTAMP: %04X; ' % (int_x & 0xFFFF) + 'Diff w.r.t. previous L1_TS: %04f us\n' % (
-                                L1_TS_abs_diff * 6 / 1000)
+                                L1_TS_abs_diff * 25 / 1000)
                     previous_L1_TS = (int_x & 0xFFFF)
                     # s = 'HEADER :  ' + 'STATUS BIT[2:0]: %01X: '%((int_x >> 58)& 0x7) + 'LOCAL L1 COUNT: %08X '%( LOCAL_L1_COUNT ) + 'HitCount: %02X '%((int_x >> 16) & 0xFF) + 'LOCAL L1 TIMESTAMP: %04X\n'%(int_x & 0xFFFF)
                 if (((int_x & 0xE000000000000000) >> 61) == 0x7):

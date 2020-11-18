@@ -571,7 +571,7 @@ class menu():
                     with open(self.logfile, 'a') as f:
                         f.write("{} -- Stopping acquisition due to time out errors {} times in a row \n".format(time.ctime(), self.reset_timedout))
                     self.send_mail("{} -- Stopping acquisition due to time out errors {} times in a row (GEMROC {})\n (Note: there could be more errors).".format(time.ctime(), self.reset_timedout, i.GEMROC_ID))
-                    self.send_telegram("{} -- Stopping acquisition due to time out errors {} times in a row (GEMROC {})\n (Note: there could be more errors).".format(time.ctime(), self.reset_timedout, i.GEMROC_ID))
+                    self.reset_timedout = 0
                     self.restart.set(False)
                     self.stop_acq(True, stop_log=False)
                     break

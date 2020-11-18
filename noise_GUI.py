@@ -169,6 +169,10 @@ class noise_measure():
 
             Button(self.third_row, text="Fast noise scan", command=self.fast_noise_scan).pack(side=LEFT, padx=2)
             Button(self.third_row, text="2D scan", command=self.squared_noise_scan).pack(side=LEFT, padx=2)
+            Label(self.third_row, text='VCasp Vth  ').pack(side=LEFT)
+            self.VCasp_Vth = IntVar(self.error_window)
+            self.VCasp_Vth.set(55)
+            Entry(self.third_row, width=4, textvariable=self.VCasp_Vth).pack(side=LEFT)
         if self.title == "Baseline estimation":
             Button(self.third_row, text="Save baseline levels for thr setting", command=self.SAVE_baseline).pack(side=LEFT, padx=2)
 
@@ -749,7 +753,7 @@ class noise_measure():
                         self.line_list.append(self.plot_rate.plot(np.arange(0, 64), AN_CLASS.double_error_func(np.arange(0, 64), *parameters), '-.', label="Preliminary fit", linewidth=1))
 
                     if TPparameters[0] != "Fail":
-                        noise = round(AN_CLASS.convert_to_fC(TPparameters[1], 55), 2)
+                        noise = round(AN_CLASS.convert_to_fC(TPparameters[1], self.VCasp_Vth.get()), 2)
 
                         self.line_list.append(self.plot_rate.plot(np.arange(0, 64, 1.0), AN_CLASS.errorfunc(np.arange(0, 64, 1.0), *TPparameters), '-', label="TP fit"))
 
@@ -925,8 +929,8 @@ class noise_measure():
                     for CH, dictionary in self.TPfits[GEMROC][TIGER].items():
                         parameters = self.TPfits[GEMROC][TIGER][CH]
                         if parameters[0] != "Fail" and parameters[2] > int(self.TP_rate.get()) / 5 and parameters[2] < int(self.TP_rate.get()) * 5:
-                            noise = AN_CLASS.convert_to_fC(parameters[1], 55)
-                            cov = AN_CLASS.convert_to_fC(self.TPcovs[GEMROC][TIGER][CH][1][1], 55)
+                            noise = AN_CLASS.convert_to_fC(parameters[1], self.VCasp_Vth.get())
+                            cov = AN_CLASS.convert_to_fC(self.TPcovs[GEMROC][TIGER][CH][1][1], self.VCasp_Vth.get())
                         else:
                             noise = -1
                             cov = 9999

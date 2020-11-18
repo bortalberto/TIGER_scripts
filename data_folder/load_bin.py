@@ -9,4 +9,4 @@ GEM5.write_txt(filename)
 fig0,axarray0=GEM5.create_rate_plot()
 fig0.canvas.draw()
 command=(raw_input("Press enter to exit"))
-print "FINE"
+print ("FINE")
