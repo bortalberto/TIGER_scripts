@@ -20,6 +20,8 @@ import pickle
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 import os
+import requests
+import json
 
 OS = sys.platform
 if OS == 'win32':
@@ -35,6 +37,9 @@ import configparser
 config=configparser.ConfigParser()
 config.read("conf"+sep+"GUFI.ini")
 
+PMT = config["GLOBAL"].getboolean("PMT")
+PMT_dev = config["GLOBAL"].get("PMT_dev")
+grafana = config["GLOBAL"].get("Grafana")
 try:
     from lib import DB_classes as DB_classes
 
@@ -44,8 +49,23 @@ except:
     DB = False
     print("No DB library found")
 
-
-
+if grafana:
+    auth = requests.auth.HTTPBasicAuth('admin', 'Gr4fana')
+    url = 'http://localhost:3000/api/alerts'
+    r = requests.get(url=url,auth=auth)
+    alerts = r.json()
+    ivt_alert_list=[]
+    for alert in alerts:
+        if alert["dashboardSlug"] == "ivt-status" and alert["name"]!="FEB temperature alert":
+            ivt_alert_list.append(alert['id'])
+    acq_alert_list=[]
+    for alert in alerts:
+        if alert["dashboardSlug"] == "data-stream":
+            acq_alert_list.append(alert['id'])
+    HV_alert_list=[]
+    for alert in alerts:
+        if alert["dashboardSlug"] == "hv":
+            HV_alert_list.append(alert['id'])
 def cmp_to_key(mycmp):
     'Convert a cmp= function into a key= function'
     class K:
@@ -78,7 +98,8 @@ class menu():
         default_font.configure(size=9)
         defaultT_font = tkfont.nametofont("TkTextFont")
         defaultT_font.configure(size=9)
-
+        if grafana:
+            self.main_window.after(2000, self.check_temp_allarm_status)
         if OS == 'linux' :
             self.main_window.wm_iconbitmap('@'+"." + sep + 'icons' + sep +'CONF_ICON.xbm')
         self.icon_on = PhotoImage(file="." + sep + 'icons' + sep + 'on.gif')
@@ -223,6 +244,10 @@ class menu():
         # Button(cornice, text="Set threshold aiming to a certain rate", command=lambda: self.auto_tune(-1, -1, 15), activeforeground="#f77f00").pack(side=LEFT)
         Button(cornice, text="Load thresholds to all", command=lambda: self.load_thr(True, source="scan"), activeforeground="#f77f00").pack(side=LEFT)
         # Button(cornice, text="Load auto-thr to all", command=lambda: self.load_thr(True, source="auto"), activeforeground="#f77f00").pack(side=LEFT)
+        if PMT:
+            Button(cornice, text="Turn ON PMT", command=self.PMT_on, activeforeground="#f77f00").pack(side=LEFT)
+            Button(cornice, text="Turn OFF PMT", command=self.PMT_OFF, activeforeground="#f77f00").pack(side=LEFT)
+
         self.error_frame2 = Frame(Tante_frame)
         self.error_frame2.grid(row=5, column=5, sticky=N, pady=10,columnspan=20)
         Label(self.error_frame2, text='Message ').grid(row=0, column=1, sticky=NW, pady=4)
@@ -254,8 +279,17 @@ class menu():
         Checkbutton(TROPPi_frame, text="TP", var=self.TP_active).pack(side=RIGHT)
 
         Checkbutton(TROPPi_frame, text="Use equalized thr", var=self.use_ecq_thr).pack(side=RIGHT)
+        basic_operation_frame_2 = Frame(self.select_frame)
+        basic_operation_frame_2.pack(pady=10)
+        Button(basic_operation_frame_2, text="Enable alarms IVT", command= lambda: self.en_dis_alarms("IVT",False), activeforeground="orange").pack(side=RIGHT)
+        Button(basic_operation_frame_2, text="Disable alarms IVT", command= lambda: self.en_dis_alarms("IVT",True), activeforeground="orange").pack(side=RIGHT)
+        Label(basic_operation_frame_2, text='   ').pack(side=RIGHT)
+        Button(basic_operation_frame_2, text="Enable alarms acq", command= lambda: self.en_dis_alarms("ACQ",False), activeforeground="orange").pack(side=RIGHT)
+        Button(basic_operation_frame_2, text="Disable alarms acq", command= lambda: self.en_dis_alarms("ACQ",True), activeforeground="orange").pack(side=RIGHT)
+        Label(basic_operation_frame_2, text='   ').pack(side=RIGHT)
+        Button(basic_operation_frame_2, text="Enable alarms HV", command= lambda: self.en_dis_alarms("HV",False), activeforeground="orange").pack(side=RIGHT)
+        Button(basic_operation_frame_2, text="Disable alarms HV", command= lambda: self.en_dis_alarms("HV",True), activeforeground="orange").pack(side=RIGHT)
 
-        # Button(TROPPi_frame, text="Enable double thr", command=self.double_enable, activeforeground="blue").pack(side=RIGHT)
         self.LED = []
         for i in range(0, len(self.GEM_to_config)):
             if i < 10:
@@ -770,7 +804,7 @@ class menu():
                     print ("fast configuration waited for too long")
                     break
         for number, GEMROC in self.GEMROC_reading_dict.items():
-            GEMROC.GEM_COM.FEBPwrEnPattern_set(255)
+            GEMROC.GEM_COM.FEBPwrEnPattern_set(15)
 
         self.Launch_error_check['text'] = "FEB power ON"
         self.doing_something = False
@@ -1266,7 +1300,6 @@ class menu():
     def shut_down_FEB(self,num,gemroc):
         pwr_pattern=gemroc.GEM_COM.gemroc_LV_XX.FEB_PWR_EN_pattern
         pwr_pattern = pwr_pattern & ~(1 << num)
-        print (pwr_pattern)
         gemroc.GEM_COM.FEBPwrEnPattern_set(pwr_pattern)
 
     def DAQ_configurator(self):
@@ -2348,6 +2381,57 @@ class menu():
     def disable_channels(self):
         for GEMROC in self.GEMROC_reading_dict.values():
             GEMROC.c_inst.load_ch_to_dis("."+sep+"conf"+sep+"ch_to_disable")
+
+    def PMT_on(self):
+        print ("./HV_PMT {} 3 Pw 1".format(PMT_dev))
+
+        os.system("./HV_PMT {} 0 Pw 1".format(PMT_dev))
+        # os.system("./HV_PMT {} 1 Pw 1".format(PMT_dev))
+        os.system("./HV_PMT {} 2 Pw 1".format(PMT_dev))
+        os.system("./HV_PMT {} 3 Pw 1".format(PMT_dev))
+
+    def PMT_OFF(self):
+        os.system("./HV_PMT {} 0 Pw 0".format(PMT_dev))
+        # os.system("./HV_PMT {} 1 Pw 0".format(PMT_dev))
+        os.system("./HV_PMT {} 2 Pw 0".format(PMT_dev))
+        os.system("./HV_PMT {} 3 Pw 0".format(PMT_dev))
+
+    def en_dis_alarms(self, alert_t, paused):
+        """
+        Send an HTTP request to change the status of the grafana alerts
+        :param alert:
+        :param paused:
+        :return:
+        """
+        if (alert_t=="IVT"):
+            alert_list=ivt_alert_list
+        elif (alert_t=="ACQ"):
+            alert_list=acq_alert_list
+        else:
+            alert_list=HV_alert_list
+
+        for i in (alert_list):
+            payload = {"paused": paused}
+            url = 'http://localhost:3000/api/alerts/{}/pause'.format(i)
+            r = requests.post(url, auth=auth, json=payload)
+
+        if paused==True:
+            self.Launch_error_check['text'] = "Allert {} paused".format(alert_t)
+        else:
+            self.Launch_error_check['text'] = "Allert {} enabled".format(alert_t)
+
+    def check_temp_allarm_status(self):
+        url = 'http://localhost:3000/api/alerts'
+        r = requests.get(url=url, auth=auth)
+        alerts = r.json()
+        for alert in alerts:
+            if alert["name"]=="FEB temperature alert" and alert["state"]=="no_data":
+                if DB:
+                    self.stop_DB()
+                    time.sleep(2)
+                    self.start_DB()
+                    time.sleep(10)
+        self.main_window.after(30000, self.check_temp_allarm_status)
 
 def character_limit(entry_text):
     try:

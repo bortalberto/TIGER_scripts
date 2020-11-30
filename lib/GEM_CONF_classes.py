@@ -53,7 +53,7 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
       self.BufferBias = self.parameter_array [0] ## BufferBias_param; default 0
       self.TDCVcasN        = swap_order_N_bits(self.parameter_array [1],4)  # acr 2018-01-25 ## TDCVcasN_param; default 0
       self.TDCVcasP        = swap_order_N_bits(self.parameter_array [2],5)  # acr 2018-01-25 ## TDCVcasP_param; default 0
-      self.TDCVcasPHyst    = swap_order_N_bits(self.parameter_array [3],6)  # acr 2018-01-25 ## TDCVcasPHyst_param; default 55
+      self.Vcasp_Vth2    = swap_order_N_bits(self.parameter_array [3],6)  # acr 2018-01-25 ## Vcasp_Vth2_param; default 55
       self.DiscFE_Ibias    = swap_order_N_bits(self.parameter_array [4],6)  # acr 2018-01-25 ## DiscFE_Ibias_param; default 50
 
       self.BiasFE_PpreN = self.parameter_array [5] ## BiasFE_PpreN_param; default 10
@@ -101,7 +101,7 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
           "BufferBias" : self.parameter_array[0], ## BufferBias_param; default 0
           "TDCVcasN" : self.parameter_array[1],  # acr 2018-01-25 ## TDCVcasN_param; default 0
           "TDCVcasP": self.parameter_array[2],  # acr 2018-01-25 ## TDCVcasP_param; default 0
-          "TDCVcasPHyst": self.parameter_array[3],  # acr 2018-01-25 ## TDCVcasPHyst_param; default 55
+          "Vcasp_Vth2": self.parameter_array[3],  # acr 2018-01-25 ## Vcasp_Vth2_param; default 55
           "DiscFE_Ibias": self.parameter_array[4],   # acr 2018-01-25 ## DiscFE_Ibias_param; default 50
           "BiasFE_PpreN": self.parameter_array[5],  ## BiasFE_PpreN_param; default 10
           "AVcasp_global": self.parameter_array[6],  # acr 2018-01-25 ## AVcasp_global_param; default 20
@@ -152,7 +152,7 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
       gcfg_cmd_tag = Global_cfg_cmd_ID << 24
       gcfg_cmd_word_count = 11
       self.cmd_header = header_tag + (self.TARGET_GEMROC_ID << 16) + gcfg_cmd_tag + gcfg_cmd_word_count
-      self.cmd_word10 = ((self.BufferBias & 0x3) << 24) + ((self.TDCVcasN & 0xF) << 16) + ((self.TDCVcasP & 0x1F) << 8) + ((self.TDCVcasPHyst & 0x3F))
+      self.cmd_word10 = ((self.BufferBias & 0x3) << 24) + ((self.TDCVcasN & 0xF) << 16) + ((self.TDCVcasP & 0x1F) << 8) + ((self.Vcasp_Vth2 & 0x3F))
       self.cmd_word9 = ((self.DiscFE_Ibias & 0x3f) << 24) + ((self.BiasFE_PpreN & 0x3F) << 16) + ((self.AVcasp_global & 0x1F) << 8) + ((self.TDCcompVcas & 0xF))
       self.cmd_word8 = ((self.TDCIref_cs & 0x1f) << 24) + ((self.DiscVcasN & 0xF) << 16) + ((self.IntegVb1 & 0x3F) << 8) + ((self.BiasFE_A1 & 0xF))
       self.cmd_word7 = ((self.Vcasp_Vth & 0x3f) << 24) + ((self.TAC_I_LSB & 0x1F) << 16) + ((self.TDCcompVbias & 0x1F) << 8) + ((self.Vref_Integ & 0x3F))
@@ -190,7 +190,7 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
       self.BufferBias = self.parameter_array [0] ## BufferBias_param; default 0
       self.TDCVcasN        = swap_order_N_bits(self.parameter_array [1],4)  # acr 2018-01-25 ## TDCVcasN_param; default 0
       self.TDCVcasP        = swap_order_N_bits(self.parameter_array [2],5)  # acr 2018-01-25 ## TDCVcasP_param; default 0
-      self.TDCVcasPHyst    = swap_order_N_bits(self.parameter_array [3],6)  # acr 2018-01-25 ## TDCVcasPHyst_param; default 55
+      self.Vcasp_Vth2    = swap_order_N_bits(self.parameter_array [3],6)  # acr 2018-01-25 ## Vcasp_Vth2_param; default 55
       self.DiscFE_Ibias    = swap_order_N_bits(self.parameter_array [4],6)  # acr 2018-01-25 ## DiscFE_Ibias_param; default 50
       self.BiasFE_PpreN    = self.parameter_array [5] ## BiasFE_PpreN_param; default 10
       self.AVcasp_global   = swap_order_N_bits(self.parameter_array [6],5)  # acr 2018-01-25 ## AVcasp_global_param; default 20
@@ -277,7 +277,7 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
           BufferBias = self.Global_cfg_list[self.target_TIGER_ID]["BufferBias"] & 0x3  ## BufferBias_param; default 0
           TDCVcasN = swap_order_N_bits(self.Global_cfg_list[self.target_TIGER_ID]["TDCVcasN"] , 4) & 0xF  # acr 2018-01-25 ## TDCVcasN_param; default 0
           TDCVcasP = swap_order_N_bits(self.Global_cfg_list[self.target_TIGER_ID]["TDCVcasP"] , 5) & 0x1F  # acr 2018-01-25 ## TDCVcasP_param; default 0
-          TDCVcasPHyst = swap_order_N_bits(self.Global_cfg_list[self.target_TIGER_ID]["TDCVcasPHyst"] , 6) & 0x3F # acr 2018-01-25 ## TDCVcasPHyst_param; default 55
+          Vcasp_Vth2 = swap_order_N_bits(self.Global_cfg_list[self.target_TIGER_ID]["Vcasp_Vth2"] , 6) & 0x3F # acr 2018-01-25 ## Vcasp_Vth2_param; default 55
           DiscFE_Ibias = swap_order_N_bits(self.Global_cfg_list[self.target_TIGER_ID]["DiscFE_Ibias"] , 6) & 0x3F  # acr 2018-01-25 ## DiscFE_Ibias_param; default 50
           BiasFE_PpreN = self.Global_cfg_list[self.target_TIGER_ID]["BiasFE_PpreN"]  & 0x3F  ## BiasFE_PpreN_param; default 10
           AVcasp_global = swap_order_N_bits(self.Global_cfg_list[self.target_TIGER_ID]["AVcasp_global"],5)  & 0x1F  # acr 2018-01-25 ## AVcasp_global_param; default 20
@@ -312,7 +312,7 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
           TxDDR = self.Global_cfg_list[self.target_TIGER_ID]["TxDDR"] & 0x1  # =cr 2018-01-25 [36] ## TxDDR_param; default X (1?)
           TxLinks = self.Global_cfg_list[self.target_TIGER_ID]["TxLinks"] & 0x3   # acr 2018-01-25 [37] ## TxLinks_param; default 2 links nel GUI di Torino; dovrebbe corrispondeere ad un codice 1 per 2 links
 
-          self.cmd_word10 = (BufferBias << 24) + ( TDCVcasN << 16)  + (TDCVcasP << 8)  + TDCVcasPHyst
+          self.cmd_word10 = (BufferBias << 24) + ( TDCVcasN << 16)  + (TDCVcasP << 8)  + Vcasp_Vth2
           self.cmd_word9 =  (DiscFE_Ibias  << 24)     + (BiasFE_PpreN  << 16)    + ( AVcasp_global << 8)   + TDCcompVcas
           self.cmd_word8 =  (TDCIref_cs  << 24)          + (DiscVcasN  << 16)        + (IntegVb1  << 8)        + (BiasFE_A1 )
           self.cmd_word7 =  (Vcasp_Vth  << 24)        + (TAC_I_LSB  << 16)       + (TDCcompVbias  << 8)    + (Vref_Integ )
@@ -351,7 +351,7 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
    #       self.cmd_word2  = 0
    #       self.cmd_word1  = 0
    #    else :
-   #       self.cmd_word10 = ((self.BufferBias & 0x3) << 24)        + ((self.TDCVcasN & 0xF) << 16)         + ((self.TDCVcasP & 0x1F) << 8)        + ((self.TDCVcasPHyst & 0x3F))
+   #       self.cmd_word10 = ((self.BufferBias & 0x3) << 24)        + ((self.TDCVcasN & 0xF) << 16)         + ((self.TDCVcasP & 0x1F) << 8)        + ((self.Vcasp_Vth2 & 0x3F))
    #       self.cmd_word9 =  ((self.DiscFE_Ibias & 0x3f) << 24)     + ((self.BiasFE_PpreN & 0x3F) << 16)    + ((self.AVcasp_global & 0x1F) << 8)   + ((self.TDCcompVcas & 0xF))
    #       self.cmd_word8 =  ((self.TDCIref_cs & 0x1f) << 24)          + ((self.DiscVcasN & 0xF) << 16)        + ((self.IntegVb1 & 0x3F) << 8)        + ((self.BiasFE_A1 & 0xF))
    #       self.cmd_word7 =  ((self.Vcasp_Vth & 0x3f) << 24)        + ((self.TAC_I_LSB & 0x1F) << 16)       + ((self.TDCcompVbias & 0x1F) << 8)    + ((self.Vref_Integ & 0x3F))
@@ -379,7 +379,7 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
 ## acr 2018-01-29 BEGIN must take into account the different endianness for different fields
    def extract_parameters_from_UDP_packet(self):
       print ('\nList of parameters sent to TIGER%d:'%self.target_TIGER_ID)
-      print ( "\nBufferBias:%02X;\t\tTDCVcasN:%02X;\t\tTDCVcasP:%02X;\t\tTDCVcasPHyst:%02X;" %( ((self.cmd_word10>>24)&0x3), swap_order_N_bits(((self.cmd_word10>>16)&0xF),4), swap_order_N_bits(((self.cmd_word10>>8)&0x1F),5), swap_order_N_bits(((self.cmd_word10>>0)&0x3F),6) ) )
+      print ( "\nBufferBias:%02X;\t\tTDCVcasN:%02X;\t\tTDCVcasP:%02X;\t\tVcasp_Vth2:%02X;" %( ((self.cmd_word10>>24)&0x3), swap_order_N_bits(((self.cmd_word10>>16)&0xF),4), swap_order_N_bits(((self.cmd_word10>>8)&0x1F),5), swap_order_N_bits(((self.cmd_word10>>0)&0x3F),6) ) )
       print ( "\nDiscFE_Ibias:%02X;\tBiasFE_PpreN:%02X;\tAVcasp_global:%02X;\tTDCcompVcas:%02X;" %( swap_order_N_bits(((self.cmd_word9>>24)&0x3F),6), ((self.cmd_word9>>16)&0x3F), swap_order_N_bits(((self.cmd_word9>>8)&0x1F),5), swap_order_N_bits(((self.cmd_word9>>0)&0xF),4) ) )
       print ( "\nTDCIref_cs:%02X;\t\tDiscVcasN:%02X;\t\tIntegVb1:%02X;\t\tBiasFE_A1:%02X;" %( swap_order_N_bits(((self.cmd_word8>>24)&0x1F),5), swap_order_N_bits(((self.cmd_word8>>16)&0xF),4), swap_order_N_bits(((self.cmd_word8>>8)&0x3F),6), ((self.cmd_word8>>0)&0xF) ) )
       print ( "\nVcasp_Vth:%02X;\t\tTAC_I_LSB:%02X;\t\tTDCcompVbias:%02X;\tVref_Integ:%02X;" %( swap_order_N_bits(((self.cmd_word7>>24)&0x3F),6), ((self.cmd_word7>>16)&0x1F), ((self.cmd_word7>>8)&0x1F), swap_order_N_bits(((self.cmd_word7>>0)&0x3F),6) ) )
@@ -392,7 +392,7 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
       print ( "\nTxDDR:%02X;\t\tTxLinks:%02X;" %( ((self.cmd_word1>>24)&0x1), ((self.cmd_word1>>16)&0x3) ) )
    def extract_d_parameters_from_UDP_packet(self):
       print ('\nList of parameters sent to TIGER%d:'%self.target_TIGER_ID)
-      print ( "\nBufferBias:%d;\t\tTDCVcasN:%d;\t\tTDCVcasP:%d;\t\tTDCVcasPHyst:%d;" %( ((self.cmd_word10>>24)&0x3), swap_order_N_bits(((self.cmd_word10>>16)&0xF),4), swap_order_N_bits(((self.cmd_word10>>8)&0x1F),5), swap_order_N_bits(((self.cmd_word10>>0)&0x3F),6) ) )
+      print ( "\nBufferBias:%d;\t\tTDCVcasN:%d;\t\tTDCVcasP:%d;\t\tVcasp_Vth2:%d;" %( ((self.cmd_word10>>24)&0x3), swap_order_N_bits(((self.cmd_word10>>16)&0xF),4), swap_order_N_bits(((self.cmd_word10>>8)&0x1F),5), swap_order_N_bits(((self.cmd_word10>>0)&0x3F),6) ) )
       print ( "\nDiscFE_Ibias:%d;\tBiasFE_PpreN:%d;\tAVcasp_global:%d;\tTDCcompVcas:%d;" %( swap_order_N_bits(((self.cmd_word9>>24)&0x3F),6), ((self.cmd_word9>>16)&0x3F), swap_order_N_bits(((self.cmd_word9>>8)&0x1F),5), swap_order_N_bits(((self.cmd_word9>>0)&0xF),4) ) )
       print ( "\nTDCIref_cs:%d;\t\tDiscVcasN:%d;\t\tIntegVb1:%d;\t\tBiasFE_A1:%d;" %( swap_order_N_bits(((self.cmd_word8>>24)&0x1F),5), swap_order_N_bits(((self.cmd_word8>>16)&0xF),4), swap_order_N_bits(((self.cmd_word8>>8)&0x3F),6), ((self.cmd_word8>>0)&0xF) ) )
       print ( "\nVcasp_Vth:%d;\t\tTAC_I_LSB:%d;\t\tTDCcompVbias:%d;\tVref_Integ:%d;" %( swap_order_N_bits(((self.cmd_word7>>24)&0x3F),6), ((self.cmd_word7>>16)&0x1F), ((self.cmd_word7>>8)&0x1F), swap_order_N_bits(((self.cmd_word7>>0)&0x3F),6) ) )
@@ -410,7 +410,7 @@ class g_reg_settings: # purpose: organize the Global Configuration Register Sett
    def load_glob_conf(self,filename):
         with  open(filename,'rb') as f:
             self.Global_cfg_list=pickle.load(f)
-        print (self.Global_cfg_list)
+        # print (self.Global_cfg_list)
         return 0
 
    def load_TP_cal(self,config_dict, TP_amplitude= "low"):
@@ -1055,7 +1055,6 @@ class gemroc_cmd_DAQ_settings(object): # purpose: organize the GEMROC Configurat
       # else:
       #     B3Clk_sim_en_param=0
       B3Clk_sim_en_param = 0
-      print (config["GLOBAL"].getboolean("external_clock"))
       self.DAQ_config_dict = {
         "GEMROC":                                   self.TARGET_GEMROC_ID,
         "UDP_DATA_DESTINATION_IPADDR":              self.UDP_DATA_DESTINATION_IPADDR,

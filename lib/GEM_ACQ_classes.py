@@ -19,6 +19,10 @@ else:
     sys.exit()
 local_test = False
 
+import configparser
+config=configparser.ConfigParser()
+config.read("conf"+sep+"GUFI.ini")
+ACQ_timeout = config["GLOBAL"].getfloat("ACQ_timeout")
 
 class Thread_handler(Thread):
     def __init__(self, name, acq_time, reader,sub_folder=".",sub_run_number=0):
@@ -192,7 +196,7 @@ class reader:
         self.datalist = []
         self.log_path=logfile
         self.data_online_monitor = online_monitor
-        self.timeout_for_sockets = 18
+        self.timeout_for_sockets = ACQ_timeout
         if self.data_online_monitor:
             if local_reader:
                 self.port_for_cloning = 57880 + self.GEMROC_ID
@@ -214,7 +218,6 @@ class reader:
 
     def start_socket(self):
         self.TIMED_out=False
-
         try:
             self.dataSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.dataSock.settimeout(self.timeout_for_sockets)

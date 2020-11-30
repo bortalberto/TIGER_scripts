@@ -34,6 +34,9 @@ debug = False
 db_address = '192.168.38.191'
 db_port = 8086
 
+import configparser
+config=configparser.ConfigParser()
+config.read("conf"+sep+"GUFI.ini")
 
 
 class menu():
@@ -47,7 +50,8 @@ class menu():
             self.DB = False
 
         self.father = father
-        self.PMT = True
+        self.PMT = config["GLOBAL"].getboolean("PMT")
+        self.PMT_dev = config["GLOBAL"].get("PMT_dev")
         self.std_alone = std_alone
         self.GEM_to_read = np.zeros((22))
         self.GEM_to_read_last = np.zeros((22))
@@ -170,8 +174,8 @@ class menu():
         b_frame = LabelFrame(a_frame)
         b_frame.grid(row=1, column=8, sticky=NW, pady=4, padx=40)
         if self.PMT:
-            Button(b_frame, text='Turn ON PMTs', command=self.PMT_on, width=10, activeforeground="green").pack(side=LEFT)
-            Button(b_frame, text='Turn OFF PMTs', command=self.PMT_OFF, width=10, activeforeground="red").pack(side=LEFT)
+            Button(b_frame, text='Lower PMTs', command=self.PMT_OFF, width=10, activeforeground="green").pack(side=LEFT)
+            Button(b_frame, text='Raise PMTs', command=self.PMT_ON, width=10, activeforeground="red").pack(side=LEFT)
 
         # Label(b_frame,text='Message ').grid(row=0, column=1, sticky=NW, pady=4)
         # self.Launch_error_check=Label(b_frame, text='-', background='white')
@@ -339,6 +343,8 @@ class menu():
         self.mail_start_but.config(state='normal')
         self.mail_stop_but.config(state='normal')
         self.launch_GRAAL_bt.config(state='normal')
+
+
     def set_last_folder(self):
         """
         Funzione per andare all'ultima cartella
@@ -457,11 +463,16 @@ class menu():
         third_row.pack()
 
         self.check_pause = BooleanVar(self.master_window)
-        self.check_pause.set(True)
+        self.check_pause.set(False)
         self.check_TM = BooleanVar(self.master_window)
         self.check_TM.set(True)
+        self.lower_PMT = BooleanVar(third_row)
+        self.lower_PMT.set(False)
+
         Checkbutton(third_row, var=self.check_pause, text="Check pause").pack(side=LEFT)
         Checkbutton(third_row, var=self.check_TM, text="Check TM").pack(side=LEFT)
+        Checkbutton(third_row, var=self.lower_PMT, text="Lower PMT every subrun").pack(side=LEFT)
+
 
     def myfunction(self, event):
         self.canvas2.configure(scrollregion=self.canvas2.bbox("all"), width=1200, height=700)
@@ -548,45 +559,46 @@ class menu():
                             # self.stop_acq(True)
                             break
 
-            for i in self.GEM:
-                # print ("{} timeout:{}".format(i.GEMROC_ID,i.TIMED_out))
-                if i.TIMED_out and self.reset_timedout < int(self.numb_of_timeout_reset.get()):
-                    self.reset_timedout += 1
-                    self.LED_UDP['image'] = self.icon_bad
+        for i in self.GEM:
+            # print ("{} timeout:{}".format(i.GEMROC_ID,i.TIMED_out))
+            if i.TIMED_out and self.reset_timedout < int(self.numb_of_timeout_reset.get()):
+                self.reset_timedout += 1
+                self.LED_UDP['image'] = self.icon_bad
 
-                    self.messagge_field['text'] = "Restarting acquisition for timeout"
+                self.messagge_field['text'] = "Restarting acquisition for timeout"
 
-                    print("Number of reset for time out errors in a row: {}".format(self.reset_timedout))
-                    if self.restart.get():
-                        self.relaunch_acq()
+                print("Number of reset for time out errors in a row: {}".format(self.reset_timedout))
+                if self.restart.get():
+                    self.relaunch_acq()
 
-                    else:
-                        self.restart.set(False)
-                        self.stop_acq(True)
-                    break
-                if i.TIMED_out and self.reset_timedout >= int(self.numb_of_timeout_reset.get()) and self.stop_timeout.get():
-                    self.messagge_field['text'] = "Stopping acquisition for {} timeouts in a row".format(self.reset_timedout)
-                    self.LED_UDP['image'] = self.icon_bad
-
-                    with open(self.logfile, 'a') as f:
-                        f.write("{} -- Stopping acquisition due to time out errors {} times in a row \n".format(time.ctime(), self.reset_timedout))
-                    self.send_mail("{} -- Stopping acquisition due to time out errors {} times in a row (GEMROC {})\n (Note: there could be more errors).".format(time.ctime(), self.reset_timedout, i.GEMROC_ID))
-                    self.reset_timedout = 0
+                else:
                     self.restart.set(False)
-                    self.stop_acq(True, stop_log=False)
-                    break
+                    self.stop_acq(True)
+                break
+            if i.TIMED_out and self.reset_timedout >= int(self.numb_of_timeout_reset.get()) and self.stop_timeout.get():
+                self.messagge_field['text'] = "Stopping acquisition for {} timeouts in a row".format(self.reset_timedout)
+                self.LED_UDP['image'] = self.icon_bad
+
+                with open(self.logfile, 'a') as f:
+                    f.write("{} -- Stopping acquisition due to time out errors {} times in a row \n".format(time.ctime(), self.reset_timedout))
+                self.send_mail("{} -- Stopping acquisition due to time out errors {} times in a row (GEMROC {})\n (Note: there could be more errors).".format(time.ctime(), self.reset_timedout, i.GEMROC_ID))
+                self.reset_timedout = 0
+                self.restart.set(False)
+                self.stop_acq(True, stop_log=False)
+                break
 
 
 
 
 
-    def PMT_on(self):
-        os.system("./HVWrappdemo_0 ttyUSB0 VSet 2000")
-        os.system("./HVWrappdemo_2 ttyUSB0 VSet 2100")
+    def PMT_ON(self):
+        os.system("./HV_PMT {} 0 VSet 2000".format(self.PMT_dev))
+        os.system("./HV_PMT {} 2 VSet 2100".format(self.PMT_dev))
+
 
     def PMT_OFF(self):
-        os.system("./HVWrappdemo_0 ttyUSB0 VSet 1300")
-        os.system("./HVWrappdemo_2 ttyUSB0 VSet 800")
+        os.system("./HV_PMT {} 0 VSet 800".format(self.PMT_dev))
+        os.system("./HV_PMT {} 2 VSet 800".format(self.PMT_dev))
 
     def relaunch_acq(self):
         self.stop_acq(True)
@@ -598,10 +610,12 @@ class menu():
                 # self.father.hard_reset(1)
                 if debug:
                     print("Restarting")
-                if self.PMT:
+                if self.PMT and self.lower_PMT.get():
                     if debug:
                         print("PMT down")
                     self.PMT_OFF()
+                    time.sleep(10)
+
                 # time.sleep(17)
                 # print ("Writing GEMROC configuration")
                 # for number, GEMROC in self.GEMROC_reading_dict.items():
@@ -609,7 +623,6 @@ class menu():
                 #     self.father.write_default_LV_conf(GEMROC)
                 #     GEMROC.GEM_COM.reload_default_td()
                 #
-                time.sleep(10)
 
                 # self.father.reactivate_TIGERS()
                 # self.refresh_buttons_TIGERs()
@@ -631,11 +644,12 @@ class menu():
                     print("Setting pause")
                 self.father.set_pause_mode(to_all=True, value=1)
 
-                if self.PMT:
+                if self.PMT and self.lower_PMT.get():
                     if debug:
                         print("PMT ON")
                     self.PMT_on()
-                time.sleep(15)
+                    time.sleep(15)
+
                 self.start_acq(First_launch=False)
         except:
             if not self.std_alone:

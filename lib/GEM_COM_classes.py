@@ -734,7 +734,8 @@ class communication:  #The directory are declared here to avoid multiple declara
         print('BufferBias: %d' % ((L_array[1] >> 24) & 0x3))
         print('TDCVcasN: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[1] >> 16) & 0xF), 4)))
         print('TDCVcasP: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[1] >> 8) & 0x1F), 5)))
-        print('TDCVcasPHyst: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[1] >> 0) & 0x3F), 6)))
+        print('Vcasp_Vth2: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[1] >> 0) & 0x3F), 6)))
+        # print('TDCVcasPHyst: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[1] >> 0) & 0x3F), 6)))
         print('DiscFE_Ibias: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[2] >> 24) & 0x3F), 6)))
         print('BiasFE_PpreN: %d' % ((L_array[2] >> 16) & 0x3F))
         print('AVcasp_global: %d' % (GEM_CONF_classes.swap_order_N_bits(((L_array[2] >> 8) & 0x1F), 5)))
@@ -1162,7 +1163,7 @@ class communication:  #The directory are declared here to avoid multiple declara
         self.gemroc_DAQ_XX.update_command_words_dict()
         # print '\n gemroc_DAQ_inst_param.number_of_repetitions = %03X' % gemroc_DAQ_inst_param.number_of_repetitions
         array_to_send = self.gemroc_DAQ_XX.command_words
-        print (array_to_send)
+        # print (array_to_send)
         command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING_PARAM, array_to_send, self.DEST_IP_ADDRESS,
                                                     self.DEST_PORT_NO)
         return command_echo
