@@ -39,7 +39,7 @@ config.read("conf"+sep+"GUFI.ini")
 
 PMT = config["GLOBAL"].getboolean("PMT")
 PMT_dev = config["GLOBAL"].get("PMT_dev")
-grafana = config["GLOBAL"].get("Grafana")
+grafana = config["GLOBAL"].getboolean("Grafana")
 try:
     from lib import DB_classes as DB_classes
 
@@ -66,6 +66,8 @@ if grafana:
     for alert in alerts:
         if alert["dashboardSlug"] == "hv":
             HV_alert_list.append(alert['id'])
+
+
 def cmp_to_key(mycmp):
     'Convert a cmp= function into a key= function'
     class K:
@@ -88,7 +90,8 @@ def cmp_to_key(mycmp):
 
 class menu():
     def __init__(self):
-
+        if DB == False:
+            self.DB_Manager = None
         self.GEM_to_config = np.zeros((20))
         self.configuring_gemroc = 0
         # main window
@@ -513,6 +516,7 @@ class menu():
         self.noise_wind.noise_measure_.TP_rate.set(19700)
         self.noise_wind.noise_measure_.fit()
         self.doing_something = False
+
     def start_TP(self):
         for number, GEMROC_number in self.GEMROC_reading_dict.items():
             GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['number_of_repetitions'] = int(self.NUM_TP.get())

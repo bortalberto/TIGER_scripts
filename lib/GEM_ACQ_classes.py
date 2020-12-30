@@ -119,7 +119,7 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
             self.reader.send_start_packet(self.sub_folder, self.sub_run_number, datapath)
         while True:
             Total_Data = 0
-            Total_packets =0
+            Total_packets = 0
             while (Total_Data < Total_data_MAX_size) and (Total_packets<Total_MAX_packets) and self.running:
                 try:
                     x = self.reader.fast_acquisition(data_list)  # self.reader.fast_acquisition(data_list)

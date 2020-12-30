@@ -398,7 +398,7 @@ class analisys_conf: #Analysis class used for configurations10
 
         return scan_matrix
 
-    def noise_scan_using_GEMROC_COUNTERS_progress_bar(self, T,j,i, print_to_screen=True,vth2=False):
+    def noise_scan_using_GEMROC_COUNTERS_progress_bar(self, T,j,i, print_to_screen=True,vth2=False, step_time=0.1):
 
         self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode", T, j, 0,send_command=False)
         self.GEM_COM.Set_param_dict_channel(self.c_inst,"TP_disable_FE", T, j, 0,send_command=False)
@@ -411,7 +411,7 @@ class analisys_conf: #Analysis class used for configurations10
         # self.GEM_COM.SynchReset_to_TgtTCAM(0, 1)
         # self.GEM_COM.Access_diagn_DPRAM_read_and_log(1,0)
         self.GEM_COM.reset_counter()
-        time.sleep(0.1)
+        time.sleep(step_time)
         value = self.GEM_COM.GEMROC_counter_get()
         print (value)
         if print_to_screen:

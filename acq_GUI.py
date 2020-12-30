@@ -62,9 +62,11 @@ class menu():
             try:
                 self.db_sender = DB_classes.Database_Manager()
             except:
+                self.db_sender = None
                 print("Can't connect to BD")
                 self.DB = False
-
+        else:
+            self.db_sender = None
         self.sub_run_number = 0
         self.mode = 'TL'
         self.LED = []

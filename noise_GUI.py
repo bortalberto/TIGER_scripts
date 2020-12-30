@@ -173,6 +173,10 @@ class noise_measure():
             self.VCasp_Vth = IntVar(self.error_window)
             self.VCasp_Vth.set(55)
             Entry(self.third_row, width=4, textvariable=self.VCasp_Vth).pack(side=LEFT)
+            Label(self.third_row, text='Step time').pack(side=LEFT)
+            self.step_time = DoubleVar(self.error_window)
+            self.step_time.set(0.1)
+            Entry(self.third_row, width=4, textvariable=self.step_time).pack(side=LEFT)
         if self.title == "Baseline estimation":
             Button(self.third_row, text="Save baseline levels for thr setting", command=self.SAVE_baseline).pack(side=LEFT, padx=2)
 
@@ -630,12 +634,12 @@ class noise_measure():
                     sender.log_IVT_in_DB_GEM_COM(GEM_COM)
                 GEMROC.GEM_COM.Set_param_dict_global(g_inst, "CounterEnable", T, 0)
                 for i in range(0, 64):  # THR
-                    scan_matrix[T, J, i] = test_c.noise_scan_using_GEMROC_COUNTERS_progress_bar(T, J, i, False, vth2)
+                    scan_matrix[T, J, i] = test_c.noise_scan_using_GEMROC_COUNTERS_progress_bar(T, J, i, False, vth2,self.step_time.get())
                     position = ((T - first) * (lastch - firstch)) * 64 + (J-firstch) * 64 + i
                     pipe_out.send(position)
 
         test_r.thr_scan_matrix = scan_matrix
-        test_r.thr_scan_rate = scan_matrix * 10
+        test_r.thr_scan_rate = scan_matrix * (1/self.step_time.get())
         test_r.colorPlot(GEM_COM.Noise_folder + sep + "GEMROC{}".format(GEMROC_ID) + sep + "GEMROC {}".format(GEMROC_ID) + "rate", first, last, True)
         test_r.colorPlot(GEM_COM.Noise_folder + sep + "GEMROC{}".format(GEMROC_ID) + sep + "GEMROC {}".format(GEMROC_ID) + "conteggi", first, last)
 
