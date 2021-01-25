@@ -212,6 +212,8 @@ class menu():
         first_row_coperations= Frame (Tante_frame)
         first_row_coperations.grid(row=2, column=5, sticky=N, pady=10,columnspan=20)
         Button(first_row_coperations, text="Sync Reset to all", command=lambda : self.Synch_reset(direct_call=True), activeforeground="#f77f00").pack(side=LEFT)
+        Button(first_row_coperations, text="TCAM Reset to all", command=lambda : self.TCAM_reset(to_all=True), activeforeground="#f77f00").pack(side=LEFT)
+
         Button(first_row_coperations, text="Set ext clock to all", command=lambda: self.change_clock_mode(1, 1), activeforeground="#f77f00").pack(side=LEFT)
         Button(first_row_coperations, text="Set int clock to all", command=lambda: self.change_clock_mode(1, 0), activeforeground="#f77f00").pack(side=LEFT)
         Button(first_row_coperations, text="Set pause mode to all", command=lambda: self.set_pause_mode(True, 1), activeforeground="#f77f00").pack(side=LEFT)
@@ -722,7 +724,7 @@ class menu():
         mainloop()
         # while True:
         #     self.main_window.update_idletasks()
-        #     self.main_window.update()
+        #     self.main_window.update_sub_end()
 
     def toggle(self, i):
         if self.GEM_to_config[i] == 0:
@@ -1321,11 +1323,11 @@ class menu():
 
             for line in f.readlines():
                 self.label_array.append(Label(single_use_frame, text=line.rstrip('\n')))
-                self.label_array[i].grid(row=i + 1, column=0, sticky=W, pady=0.2)
+                self.label_array[i].grid(row=i + 1, column=0, sticky=W, pady=1)
                 self.field_array.append(Label(single_use_frame, text='-'))
-                self.field_array[i].grid(row=i + 1, column=1, sticky=W, pady=0.2)
+                self.field_array[i].grid(row=i + 1, column=1, sticky=W, pady=1)
                 self.input_array.append(Entry(single_use_frame, width="4"))
-                self.input_array[i].grid(row=i + 1, column=2, sticky=W, pady=0.2)
+                self.input_array[i].grid(row=i + 1, column=2, sticky=W, pady=1)
                 i += 1
         Label(single_use_frame, text="TP_repeat_burst_param").grid(row=i + 1, column=0, pady=1, sticky=W)
         Label(single_use_frame, text="---").grid(row=i + 1, column=1, pady=1, sticky=W)

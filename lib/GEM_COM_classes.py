@@ -246,7 +246,7 @@ class communication:  #The directory are declared here to avoid multiple declara
     ## acr 2018-02-19 BEGIN definining a function to call within the display loop
     def display_counter(self, command_echo_param):
         L_array = array.array('I')  # L is an array of unsigned long, I for some systems, L for others
-        L_array.fromstring(command_echo_param)
+        L_array.frombytes(command_echo_param)
         L_array.byteswap()
         TIGER_for_counter = (L_array[0] >> 21 & 0x7)  # TIGER on which we count error or hits
         HIT_counter_disable = (L_array[0] >> 15 & 0x1)  # 1 = counting errors, 0 = counting hits
@@ -285,7 +285,7 @@ class communication:  #The directory are declared here to avoid multiple declara
         :return:
         """
         L_array = array.array('I')  # L is an array of unsigned long, I for some systems, L for others
-        L_array.fromstring(command_echo_param)
+        L_array.frombytes(command_echo_param)
         L_array.byteswap()
         VERSION = ((L_array[11]) >> 16) & 0xf
 
@@ -293,7 +293,7 @@ class communication:  #The directory are declared here to avoid multiple declara
 
     def save_IVT_converter(self, command_echo_param):
         L_array = array.array('I')  # L is an array of unsigned long, I for some systems, L for others
-        L_array.fromstring(command_echo_param)
+        L_array.frombytes(command_echo_param)
         L_array.byteswap()
 
         FEB3_T_U = (L_array[1] >> 22) & 0Xff
@@ -444,7 +444,7 @@ class communication:  #The directory are declared here to avoid multiple declara
 
     def save_IVT_converter_new_calib(self, command_echo_param):
         L_array = array.array('I')  # L is an array of unsigned long, I for some systems, L for others
-        L_array.fromstring(command_echo_param)
+        L_array.frombytes(command_echo_param)
         L_array.byteswap()
 
         FEB3_T_U = (L_array[1] >> 22) & 0Xff
@@ -587,7 +587,7 @@ class communication:  #The directory are declared here to avoid multiple declara
     def display_and_log_IVT(self, command_echo_param, display_enable_param, log_enable_param,
                             log_filename_param):  ## acr 2018-02-23
         L_array = array.array('I')  # L is an array of unsigned long, I for some systems, L for others
-        L_array.fromstring(command_echo_param)
+        L_array.frombytes(command_echo_param)
         L_array.byteswap()
 
         FEB3_T_U = (L_array[1] >> 22) & 0Xff
@@ -726,7 +726,7 @@ class communication:  #The directory are declared here to avoid multiple declara
 
     def display_log_GCfg_readback(self, command_echo_param, log_enable):  # acr 2018-03-02
         L_array = array.array('I')  # L is an array of unsigned long
-        L_array.fromstring(command_echo_param)
+        L_array.frombytes(command_echo_param)
         L_array.byteswap()
         print('List of Global Config Register parameters read back from TIGER%d on RESPONDING GEMROC%d:' % (
             ((L_array[11] >> 8) & 0X7), ((L_array[0] >> 16) & 0X1f)))  # acr 2018-01-23
@@ -831,7 +831,7 @@ class communication:  #The directory are declared here to avoid multiple declara
 
     def display_log_ChCfg_readback(self, command_echo_param, log_enable):  # acr 2018-03-02
         L_array = array.array('I')  # L is an array of unsigned long
-        L_array.fromstring(command_echo_param)
+        L_array.frombytes(command_echo_param)
         L_array.byteswap()
         print('List of Channel %d Config Register parameters read back from TIGER%d on RESPONDING GEMROC%d:' % (
             ((L_array[9] >> 0) & 0X3F), ((L_array[9] >> 8) & 0X7), ((L_array[0] >> 16) & 0X1f)))  # acr 2018-01-23
@@ -1034,13 +1034,13 @@ class communication:  #The directory are declared here to avoid multiple declara
     def GEMROC_counter_get(self):
         command_echo_ivt = self.Read_GEMROC_LV_CfgReg(False)
         L_array = array.array('I')  # L is an array of unsigned long, I for some systems, L for others
-        L_array.fromstring(command_echo_ivt)
+        L_array.frombytes(command_echo_ivt)
         L_array.byteswap()
         # print L_array
         while len(L_array) < 8:
             command_echo_ivt = self.Read_GEMROC_LV_CfgReg(False)
             L_array = array.array('I')  # L is an array of unsigned long, I for some systems, L for others
-            L_array.fromstring(command_echo_ivt)
+            L_array.frombytes(command_echo_ivt)
             L_array.byteswap()
 
         counter1 = ((L_array[8]) >> 22) & 0xff
@@ -1840,7 +1840,7 @@ class communication:  #The directory are declared here to avoid multiple declara
 
     def display_log_GEMROC_LV_CfgReg_readback(self, command_echo_param, display_enable_param, log_enable_param):  # acr 2018-03-16 at IHEP
         L_array = array.array('I')  # L is an array of unsigned long
-        L_array.fromstring(command_echo_param)
+        L_array.frombytes(command_echo_param)
         L_array.byteswap()
         if (display_enable_param == 1):
             print ('\nList of LV related GEMROC Config Register parameters read back RESPONDING GEMROC%d:' % (
@@ -1959,7 +1959,7 @@ class communication:  #The directory are declared here to avoid multiple declara
 
     def display_log_GEMROC_DAQ_CfgReg_readback(self, command_echo_param, display_enable_param, log_enable_param):  # acr 2018-03-16 at IHEP
         L_array = array.array('I')  # L is an array of unsigned long
-        L_array.fromstring(command_echo_param)
+        L_array.frombytes(command_echo_param)
         L_array.byteswap()
         if (display_enable_param == 1):
             print ('List of DAQ related GEMROC Config Register parameters read back RESPONDING GEMROC%d:' % (
@@ -2247,7 +2247,7 @@ class communication:  #The directory are declared here to avoid multiple declara
     ## acr 2018-08-08 END
     def global_set_check(self, command_echo_param, command_read_param):
         L_array = array.array('I')  # L is an array of unsigned long
-        L_array.fromstring(command_echo_param)
+        L_array.frombytes(command_echo_param)
         L_array.byteswap()
         Tiger = ((L_array[11] >> 8) & 0X7)
         Gemroc = ((L_array[0] >> 16) & 0X1f)  # acr 2018-01-23
@@ -2259,7 +2259,7 @@ class communication:  #The directory are declared here to avoid multiple declara
 
     def channel_set_check_GUI(self, command_echo_param, command_read_param):
         L_array = array.array('I')  # L is an array of unsigned long
-        L_array.fromstring(command_echo_param)
+        L_array.frombytes(command_echo_param)
         L_array.byteswap()
         Tiger = ((L_array[9] >> 8) & 0X7)
         Gemroc = ((L_array[9] >> 16) & 0X1f)  # acr 2018-01-23
@@ -2271,11 +2271,11 @@ class communication:  #The directory are declared here to avoid multiple declara
 
     def Channel_set_check(self, command_echo_param, command_read_param, log):  # check for differnces between configuration and lecture
         L_array = array.array('I')  # L is an array of unsigned long
-        L_array.fromstring(command_echo_param)
+        L_array.frombytes(command_echo_param)
         L_array.byteswap()
 
         L_array2 = array.array('I')  # L is an array of unsigned long
-        L_array2.fromstring(command_read_param)
+        L_array2.frombytes(command_read_param)
         L_array2.byteswap()
 
         if ((L_array[9] >> 0) & 0X3F) != ((L_array2[9] >> 0) & 0X3F):
@@ -2342,7 +2342,7 @@ class communication:  #The directory are declared here to avoid multiple declara
         if logtype == "auto":
             logpth = self.DiagnDPRAM_data_log_fname
         L_array = array.array('I')  # L is an array of unsigned long
-        L_array.fromstring(command_echo_param)
+        L_array.frombytes(command_echo_param)
         L_array.byteswap()
         L_array_size = len(L_array)
         # print '\n L_array_size: %d' % L_array_size

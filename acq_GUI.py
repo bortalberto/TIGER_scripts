@@ -48,6 +48,7 @@ class menu():
         except:
             print("Can't find DB library")
             self.DB = False
+        self.value_index = 0
 
         self.father = father
         self.PMT = config["GLOBAL"].getboolean("PMT")
@@ -331,10 +332,11 @@ class menu():
     def send_acq_stop(self):
         self.send_mail(error="Run stop {}. ~ {} triggers in this run".format(self.run_folder, self.get_total_trig()), subject="Run stop {}".format(self.run_folder))
         self.mail_stop_but.config(state='disabled')
-        self.master_window.after(5000, lambda: self.reset_mail_but())
         if TER:
             subprocess.call(['/bin/bash', "copy_data {}".format(self.run_folder.split("_")[1])])
             subprocess.call(['/bin/bash', "sync_data"])
+        self.master_window.after(5000, lambda: self.reset_mail_but())
+
     def run_GRAAL(self):
         self.launch_GRAAL_bt.config(state='disabled')
         subprocess.call(["/home/cgemlab2/GRAAL/GRAAL.sh", "-a", str(self.run_folder.split("_")[1])])
@@ -363,6 +365,33 @@ class menu():
 
         print("Data folder set: {}".format(self.run_folder))
         self.folder_label['text'] = "Folder : {}".format(self.run_folder)
+
+    def set_folder_by_number(self,run_num):
+        """
+        Funzione per andare all'ultima cartella
+        """
+        list_folder = [name for name in os.listdir("." + sep + "data_folder") if os.path.isdir("." + sep + "data_folder" + sep + name)]
+        list_number = [int(folder[4:]) for folder in list_folder if folder[0:3] == "RUN"]
+        if len(list_number) != 0:
+            list_number.sort()
+            self.run_folder = "RUN_{}".format(run_num)
+        else:
+            os.mkdir("." + sep + "data_folder" + sep + "RUN_0")
+
+            self.run_folder = "RUN_0"
+
+        print("Data folder set: {}".format(self.run_folder))
+        self.folder_label['text'] = "Folder : {}".format(self.run_folder)
+
+    def create_folder_by_number(self,run_num):
+        """
+        Build folder by number
+        :param run_num:
+        :return:
+        """
+        if not os.path.isdir("." + sep + "data_folder" + sep + "RUN_{}".format(run_num)):
+            os.mkdir("." + sep + "data_folder" + sep + "RUN_{}".format(run_num))
+
 
     def new_run_folder(self):
         list_folder = [name for name in os.listdir("." + sep + "data_folder") if os.path.isdir("." + sep + "data_folder" + sep + name)]
@@ -475,7 +504,33 @@ class menu():
         Checkbutton(third_row, var=self.check_TM, text="Check TM").pack(side=LEFT)
         Checkbutton(third_row, var=self.lower_PMT, text="Lower PMT every subrun").pack(side=LEFT)
 
+        self.adv_options_frame = Frame(self.tabControl)
+        # self.adv_self.canvas = Canvas(self.adv_frame,scrollregion=(0,0,500,500))
+        self.tabControl.add(self.adv_options_frame, text='Adv_optons')
+        self.mini_acq=BooleanVar(self.master_window)
+        self.mini_acq.set(False)
 
+        first_row_2 = Frame(self.adv_options_frame)
+        first_row_2.pack()
+        Checkbutton(first_row_2, text="Mini subrun",var=self.mini_acq).pack(side=LEFT)
+
+        fields_options = ["Min_max_integ_time"]
+
+        self.value_scan_var=StringVar(self.master_window)
+        self.value_scan_var.set("1,2,3")
+        Label(first_row_2, text="Value to scan( sep=',' )").pack(side=LEFT)
+        Entry(first_row_2, width=10, textvariable=self.value_scan_var).pack(side=LEFT)
+
+        self.minirun_folders_var = StringVar(self.master_window)
+        self.minirun_folders_var.set("20,21,22")
+        Label(first_row_2, text="Folders( sep=',' )").pack(side=LEFT)
+        Entry(first_row_2, width=10, textvariable=self.minirun_folders_var).pack(side=LEFT)
+
+
+        self.configure_field = StringVar(self.master_window)
+        self.configure_field.set(fields_options[0])
+        self.select_field = OptionMenu(first_row_2, self.configure_field, *fields_options)
+        self.select_field.pack(side=LEFT)
     def myfunction(self, event):
         self.canvas2.configure(scrollregion=self.canvas2.bbox("all"), width=1200, height=700)
 
@@ -618,23 +673,9 @@ class menu():
                     self.PMT_OFF()
                     time.sleep(10)
 
-                # time.sleep(17)
-                # print ("Writing GEMROC configuration")
-                # for number, GEMROC in self.GEMROC_reading_dict.items():
-                #     GEMROC.GEM_COM.DAQ_set_with_dict()
-                #     self.father.write_default_LV_conf(GEMROC)
-                #     GEMROC.GEM_COM.reload_default_td()
-                #
 
-                # self.father.reactivate_TIGERS()
-                # self.refresh_buttons_TIGERs()
                 self.father.Synch_reset()
 
-                # self.father.Synch_reset()
-                # print ("Writing TIGER configuration")
-                # # self.father.Synch_reset()
-                # self.father.load_default_config_parallel(set_check=False)
-                # self.father.Synch_reset()
                 self.father.load_default_config_parallel(set_check=False)
                 self.father.doing_something=False
                 print("Configuration wrote")
@@ -653,7 +694,8 @@ class menu():
                     time.sleep(15)
 
                 self.start_acq(First_launch=False)
-        except:
+        except Exception as E:
+            print ("Failed realunch {}".format(E))
             if not self.std_alone:
                 self.error_thread = (Thread_handler_errors(self.GEMROC_reading_dict, self.GEM, self.errors_counters_810, self))
 
@@ -779,7 +821,46 @@ class menu():
 
         print("Sub_run={}".format(self.sub_run_number))
 
+    def set_configuration_minisubrun(self):
+        if self.configure_field.get() == "Min_max_integ_time":
+            for number, GEMROC in self.GEMROC_reading_dict.items():
+                for T in range (0,8):
+                    for ch in range (0,64):
+                        GEMROC.c_inst.Channel_cfg_list[T][ch]["MaxIntegTime"]=self.values_scan[self.value_index]
+                        GEMROC.c_inst.Channel_cfg_list[T][ch]["MinIntegTime"]=self.values_scan[self.value_index]
+            self.father.load_default_config_parallel(set_check=False)
+            self.father.doing_something = False
+            print("Configuration wrote")
+            time.sleep(0.1)
+            self.father.Synch_reset()
+            self.father.set_pause_mode(to_all=True, value=1)
+        else:
+            pass
+
     def start_acq(self, First_launch=True):
+        if self.mini_acq.get():
+            if First_launch:
+                print ("Setting folder for the minsubrun acquisition")
+                self.values_scan = list(map(int, self.value_scan_var.get().split(",")))
+                self.minirun_numbers = list(map(int, self.minirun_folders_var.get().split(",")))
+                if len(self.values_scan) != len(self.minirun_numbers):
+                    print("Folders and number of values doens't match")
+                    self.messagge_field['text'] = "Folders and number of values doens't match"
+                    return 0
+                self.value_index = 0
+                for run_numb in self.minirun_numbers:
+                    self.create_folder_by_number(run_numb)
+            else:
+                self.value_index = self.value_index + 1
+
+
+            if self.value_index == len(self.values_scan) :
+                self.value_index=0
+
+            self.set_folder_by_number(self.minirun_numbers[self.value_index])
+            self.set_configuration_minisubrun()
+            self.messagge_field['text'] = "Value_index = {}".format(self.value_index)
+
         self.check_sub_run()
         self.logfile = "." + sep + "data_folder" + sep + self.run_folder + sep + "ACQ_log_{}".format(self.sub_run_number)
 

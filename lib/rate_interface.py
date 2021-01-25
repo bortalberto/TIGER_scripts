@@ -647,7 +647,7 @@ class Acquire_rate():
 
 # class Get_rate(Thread):
 #     """
-#     Thread to get the numbers and update plots
+#     Thread to get the numbers and update_sub_end plots
 #     """
 #     def __init__(self,caller, queue):
 #         self.queue = queue

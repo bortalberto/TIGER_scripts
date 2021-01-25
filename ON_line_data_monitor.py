@@ -701,7 +701,7 @@ class GEMROC_decoder(Thread):
             self.number_TP_rst = np.zeros((8))
             self.pkts_counter_rst = 0
             send_gem_error_updates = True
-        if send_gem_error_updates:  ##If any status bit changed, update it on DB
+        if send_gem_error_updates:  ##If any status bit changed, update_sub_end it on DB
             self.send_gemroc_error_status_to_DB()
     def write_log(self, text):
         with open(self.logpath, 'a+') as logfile:
