@@ -333,8 +333,8 @@ class menu():
         self.send_mail(error="Run stop {}. ~ {} triggers in this run".format(self.run_folder, self.get_total_trig()), subject="Run stop {}".format(self.run_folder))
         self.mail_stop_but.config(state='disabled')
         if TER:
-            subprocess.call(['/bin/bash', "copy_data {}".format(self.run_folder.split("_")[1])])
-            subprocess.call(['/bin/bash', "sync_data"])
+            subprocess.call(['/bin/bash','-i','-c', "copy_data {} &".format(self.run_folder.split("_")[1])])
+            subprocess.call(['/bin/bash','-i','-c', "sync_data &"])
         self.master_window.after(5000, lambda: self.reset_mail_but())
 
     def run_GRAAL(self):
