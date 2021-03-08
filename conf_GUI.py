@@ -21,7 +21,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 import os
 import requests
-import json
+import threading
 
 OS = sys.platform
 if OS == 'win32':
@@ -52,21 +52,24 @@ except:
 if grafana:
     auth = requests.auth.HTTPBasicAuth('admin', 'Gr4fana')
     url = 'http://localhost:3000/api/alerts'
-    r = requests.get(url=url,auth=auth)
-    alerts = r.json()
-    ivt_alert_list=[]
-    for alert in alerts:
-        if alert["dashboardSlug"] == "ivt-status" and alert["name"]!="FEB temperature alert":
-            ivt_alert_list.append(alert['id'])
-    acq_alert_list=[]
-    for alert in alerts:
-        if alert["dashboardSlug"] == "data-stream":
-            acq_alert_list.append(alert['id'])
-    HV_alert_list=[]
-    for alert in alerts:
-        if alert["dashboardSlug"] == "hv":
-            HV_alert_list.append(alert['id'])
-
+    try:
+        r = requests.get(url=url,auth=auth)
+        alerts = r.json()
+        ivt_alert_list=[]
+        for alert in alerts:
+            if alert["dashboardSlug"] == "ivt-status" and alert["name"]!="FEB temperature alert":
+                ivt_alert_list.append(alert['id'])
+        acq_alert_list=[]
+        for alert in alerts:
+            if alert["dashboardSlug"] == "data-stream":
+                acq_alert_list.append(alert['id'])
+        HV_alert_list=[]
+        for alert in alerts:
+            if alert["dashboardSlug"] == "hv":
+                HV_alert_list.append(alert['id'])
+    except requests.exceptions.ConnectionError:
+        print ("Connection error, disabling Grafana")
+    grafana=False
 
 def cmp_to_key(mycmp):
     'Convert a cmp= function into a key= function'
@@ -286,14 +289,14 @@ class menu():
         Checkbutton(TROPPi_frame, text="Use equalized thr", var=self.use_ecq_thr).pack(side=RIGHT)
         basic_operation_frame_2 = Frame(self.select_frame)
         basic_operation_frame_2.pack(pady=10)
-        Button(basic_operation_frame_2, text="Enable alarms IVT", command= lambda: self.en_dis_alarms("IVT",False), activeforeground="orange").pack(side=RIGHT)
-        Button(basic_operation_frame_2, text="Disable alarms IVT", command= lambda: self.en_dis_alarms("IVT",True), activeforeground="orange").pack(side=RIGHT)
+        Button(basic_operation_frame_2, text="Enable alarms IVT", command= lambda: self.en_dis_alarms_caller("IVT", False), activeforeground="orange").pack(side=RIGHT)
+        Button(basic_operation_frame_2, text="Disable alarms IVT", command= lambda: self.en_dis_alarms_caller("IVT", True), activeforeground="orange").pack(side=RIGHT)
         Label(basic_operation_frame_2, text='   ').pack(side=RIGHT)
-        Button(basic_operation_frame_2, text="Enable alarms acq", command= lambda: self.en_dis_alarms("ACQ",False), activeforeground="orange").pack(side=RIGHT)
-        Button(basic_operation_frame_2, text="Disable alarms acq", command= lambda: self.en_dis_alarms("ACQ",True), activeforeground="orange").pack(side=RIGHT)
+        Button(basic_operation_frame_2, text="Enable alarms acq", command= lambda: self.en_dis_alarms_caller("ACQ", False), activeforeground="orange").pack(side=RIGHT)
+        Button(basic_operation_frame_2, text="Disable alarms acq", command= lambda: self.en_dis_alarms_caller("ACQ", True), activeforeground="orange").pack(side=RIGHT)
         Label(basic_operation_frame_2, text='   ').pack(side=RIGHT)
-        Button(basic_operation_frame_2, text="Enable alarms HV", command= lambda: self.en_dis_alarms("HV",False), activeforeground="orange").pack(side=RIGHT)
-        Button(basic_operation_frame_2, text="Disable alarms HV", command= lambda: self.en_dis_alarms("HV",True), activeforeground="orange").pack(side=RIGHT)
+        Button(basic_operation_frame_2, text="Enable alarms HV", command= lambda: self.en_dis_alarms_caller("HV", False), activeforeground="orange").pack(side=RIGHT)
+        Button(basic_operation_frame_2, text="Disable alarms HV", command= lambda: self.en_dis_alarms_caller("HV", True), activeforeground="orange").pack(side=RIGHT)
 
         self.LED = []
         for i in range(0, len(self.GEM_to_config)):
@@ -1879,6 +1882,8 @@ class menu():
             print (E)
             self.error_led_update()
         self.doing_something=False
+
+
     def write_TIGER_GLOBAL_allGEM(self):
         self.doing_something = True
         start=time.time()
@@ -2402,6 +2407,20 @@ class menu():
         os.system("./HV_PMT {} 2 Pw 0".format(PMT_dev))
         os.system("./HV_PMT {} 3 Pw 0".format(PMT_dev))
 
+    def en_dis_alarms_caller(self, alert_t, paused):
+        """
+        Send an HTTP request to change the status of the grafana alerts
+        :param alert:
+        :param paused:
+        :return:
+        """
+        if paused==True:
+            self.en_dis_alarms(alert_t, paused)
+        else:
+            self.Launch_error_check['text'] = "Alert {} enabling in 30 sec".format(alert_t)
+            timer = threading.Timer(30.0, lambda : self.en_dis_alarms(alert_t,paused))
+            timer.start()
+
     def en_dis_alarms(self, alert_t, paused):
         """
         Send an HTTP request to change the status of the grafana alerts
@@ -2422,10 +2441,9 @@ class menu():
             r = requests.post(url, auth=auth, json=payload)
 
         if paused==True:
-            self.Launch_error_check['text'] = "Allert {} paused".format(alert_t)
+            self.Launch_error_check['text'] = "Alert {} paused".format(alert_t)
         else:
-            self.Launch_error_check['text'] = "Allert {} enabled".format(alert_t)
-
+            self.Launch_error_check['text'] = "Alert {} enabled".format(alert_t)
     def check_temp_allarm_status(self):
         url = 'http://localhost:3000/api/alerts'
         r = requests.get(url=url, auth=auth)
