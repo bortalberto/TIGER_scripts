@@ -614,6 +614,7 @@ class menu():
                             # self.send_telegram("{} --8/10 bit errors counter saturated {} times in a row: GEMROC {} TIGER {}\n (Note: there could be more errors).".format(time.ctime(), self.reset_810, GEMROC, TIGER))
                             # self.restart.set(False)
                             # self.stop_acq(True)
+                            self._delete_window()
                             break
 
         for i in self.GEM:
@@ -642,6 +643,7 @@ class menu():
                 self.reset_timedout = 0
                 self.restart.set(False)
                 self.stop_acq(True, stop_log=False)
+                self._delete_window()
                 break
 
 
