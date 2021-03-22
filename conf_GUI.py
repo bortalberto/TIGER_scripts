@@ -104,7 +104,7 @@ class menu():
         default_font.configure(size=9)
         defaultT_font = tkfont.nametofont("TkTextFont")
         defaultT_font.configure(size=9)
-        if grafana:
+        if DB:
             self.main_window.after(2000, self.check_temp_allarm_status)
         if OS == 'linux' :
             self.main_window.wm_iconbitmap('@'+"." + sep + 'icons' + sep +'CONF_ICON.xbm')
@@ -2446,6 +2446,7 @@ class menu():
             self.Launch_error_check['text'] = "Alert {} paused".format(alert_t)
         else:
             self.Launch_error_check['text'] = "Alert {} enabled".format(alert_t)
+
     def check_temp_allarm_status(self):
         url = 'http://localhost:3000/api/alerts'
         r = requests.get(url=url, auth=auth)

@@ -34,7 +34,7 @@ local_test = config["GLOBAL"].getboolean("local_test")
 
 class communication:  #The directory are declared here to avoid multiple declaration
 
-    def __init__(self, gemroc_ID, keep_cfg_log=False, keep_IVT_log=False):
+    def __init__(self, gemroc_ID, keep_cfg_log=False, keep_IVT_log=False, std_log_port=None):
         self.conf_folder = "conf"
         self.lib_folder = "lib"
         self.Tscan_folder = "thr_scan"
@@ -67,7 +67,10 @@ class communication:  #The directory are declared here to avoid multiple declara
             self.DEST_IP_ADDRESS = "127.0.0.1"
             self.DEST_PORT_NO = 58913 + 1 + self.GEMROC_ID
         else:
-            self.HOST_IP = "192.168.1.200"
+            if std_log_port:
+                self.HOST_IP = "192.168.1.200"
+            else:
+                self.HOST_IP = "192.168.1.{}".format(std_log_port)
             self.HOST_PORT = 54816 + 1 + self.GEMROC_ID  # Port from where send to the gemroc
             self.HOST_PORT_RECEIVE = 58912 + 1 + self.GEMROC_ID  # Port where listen to configuration answer
 
@@ -2506,9 +2509,12 @@ class GEMROC_HANDLER:
     """
     Single GEMROC wrapper class
     """
-    def __init__(self, GEMROC_ID):
+    def __init__(self, GEMROC_ID, std_alone_logger=False):
         self.GEMROC_ID = GEMROC_ID
-        self.GEM_COM = communication(GEMROC_ID)  # Create communication class
+        if std_alone_logger:
+            self.GEM_COM = communication(GEMROC_ID, std_log_port=201)  # Create communication class
+        else:
+            self.GEM_COM = communication(GEMROC_ID)  # Create communication class
         self.GEM_COM.change_acq_mode(0)
         default_g_inst_settigs_filename = self.GEM_COM.conf_folder + sep + "TIGER_def_g_cfg_2018.txt"
         self.g_inst = GEM_CONF_classes.g_reg_settings(GEMROC_ID, default_g_inst_settigs_filename)

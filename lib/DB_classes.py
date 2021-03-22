@@ -95,45 +95,44 @@ class Database_Manager():
 
     def log_IVT_in_DB(self, GEMROC_num, GEM_dict, pipe):
         FEB_to_shut_down=[]
-        if DB:
-            GEMROC = GEM_dict[GEMROC_num]
-            IVT = GEMROC.GEM_COM.save_IVT()
+        GEMROC = GEM_dict[GEMROC_num]
+        IVT = GEMROC.GEM_COM.save_IVT()
 
-            for FEB in range(0, 4):
-                body = [{
-                    "measurement": "Offline",
-                    "tags": {
-                        "type": "IVT_LOG_FEB",
-                        "gemroc": GEMROC.GEM_COM.GEMROC_ID,
-                        "FEB": FEB
-                    },
-                    "time": str(datetime.datetime.utcnow()),
-                    "fields":
-                        IVT['status']['FEB{}'.format(FEB)]
-                }]
-                if (IVT['status']['FEB{}'.format(FEB)]["TEMP[degC]"] < 117):
-                    if IVT['status']['FEB{}'.format(FEB)]["TEMP[degC]"] > 47:
-                            if GEMROC_num!="GEMROC 8" and FEB!=1:
-                                FEB_to_shut_down.append(FEB)
-                    if not ((GEMROC.GEM_COM.GEMROC_ID == 8 and FEB in (1, 2)) or (GEMROC.GEM_COM.GEMROC_ID == 12 and FEB in (2, 3))):
-                        self.send_to_db(body)
-                else:
-                    print("Rejected IVT value")
-
+        for FEB in range(0, 4):
             body = [{
                 "measurement": "Offline",
                 "tags": {
-                    "type": "IVT_LOG_GEMROC",
+                    "type": "IVT_LOG_FEB",
                     "gemroc": GEMROC.GEM_COM.GEMROC_ID,
+                    "FEB": FEB
                 },
                 "time": str(datetime.datetime.utcnow()),
                 "fields":
-                    IVT['status']['ROC']
-
+                    IVT['status']['FEB{}'.format(FEB)]
             }]
-            pipe.send((GEMROC_num, FEB_to_shut_down))
-            pipe.close()
-            self.send_to_db(body)
+            if (IVT['status']['FEB{}'.format(FEB)]["TEMP[degC]"] < 117):
+                if IVT['status']['FEB{}'.format(FEB)]["TEMP[degC]"] > 47:
+                        if GEMROC_num!="GEMROC 8" and FEB!=1:
+                            FEB_to_shut_down.append(FEB)
+                if not ((GEMROC.GEM_COM.GEMROC_ID == 8 and FEB in (1, 2)) or (GEMROC.GEM_COM.GEMROC_ID == 12 and FEB in (2, 3))):
+                    self.send_to_db(body)
+            else:
+                print("Rejected IVT value")
+
+        body = [{
+            "measurement": "Offline",
+            "tags": {
+                "type": "IVT_LOG_GEMROC",
+                "gemroc": GEMROC.GEM_COM.GEMROC_ID,
+            },
+            "time": str(datetime.datetime.utcnow()),
+            "fields":
+                IVT['status']['ROC']
+
+        }]
+        pipe.send((GEMROC_num, FEB_to_shut_down))
+        pipe.close()
+        self.send_to_db(body)
 
     def log_IVT_in_DB_GEM_COM(self, GEM_COM ):
         """
@@ -142,42 +141,41 @@ class Database_Manager():
         :return:
         """
         FEB_to_shut_down=[]
-        if DB:
-            IVT =GEM_COM.save_IVT()
+        IVT =GEM_COM.save_IVT()
 
-            for FEB in range(0, 4):
-                body = [{
-                    "measurement": "Offline",
-                    "tags": {
-                        "type": "IVT_LOG_FEB",
-                        "gemroc": GEM_COM.GEMROC_ID,
-                        "FEB": FEB
-                    },
-                    "time": str(datetime.datetime.utcnow()),
-                    "fields":
-                        IVT['status']['FEB{}'.format(FEB)]
-                }]
-                if (IVT['status']['FEB{}'.format(FEB)]["TEMP[degC]"] < 117):
-                    if IVT['status']['FEB{}'.format(FEB)]["TEMP[degC]"] > 47:
-                            if GEM_COM.GEMROC_ID !=8 and FEB!=1:
-                                FEB_to_shut_down.append(FEB)
-                    if not ((GEM_COM.GEMROC_ID == 8 and FEB in (1, 2)) or (GEM_COM.GEMROC_ID == 12 and FEB in (2, 3))):
-                        self.send_to_db(body)
-                else:
-                    print("Rejected IVT value")
-
+        for FEB in range(0, 4):
             body = [{
                 "measurement": "Offline",
                 "tags": {
-                    "type": "IVT_LOG_GEMROC",
+                    "type": "IVT_LOG_FEB",
                     "gemroc": GEM_COM.GEMROC_ID,
+                    "FEB": FEB
                 },
                 "time": str(datetime.datetime.utcnow()),
                 "fields":
-                    IVT['status']['ROC']
-
+                    IVT['status']['FEB{}'.format(FEB)]
             }]
-            self.send_to_db(body)
+            if (IVT['status']['FEB{}'.format(FEB)]["TEMP[degC]"] < 117):
+                if IVT['status']['FEB{}'.format(FEB)]["TEMP[degC]"] > 47:
+                        if GEM_COM.GEMROC_ID !=8 and FEB!=1:
+                            FEB_to_shut_down.append(FEB)
+                if not ((GEM_COM.GEMROC_ID == 8 and FEB in (1, 2)) or (GEM_COM.GEMROC_ID == 12 and FEB in (2, 3))):
+                    self.send_to_db(body)
+            else:
+                print("Rejected IVT value")
+
+        body = [{
+            "measurement": "Offline",
+            "tags": {
+                "type": "IVT_LOG_GEMROC",
+                "gemroc": GEM_COM.GEMROC_ID,
+            },
+            "time": str(datetime.datetime.utcnow()),
+            "fields":
+                IVT['status']['ROC']
+
+        }]
+        self.send_to_db(body)
         if GEM_COM.GEMROC_ID == 3 or GEM_COM.GEMROC_ID == 7:
             self.log_PC_stats()
 
