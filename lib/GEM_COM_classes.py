@@ -2502,3 +2502,26 @@ class communication:  #The directory are declared here to avoid multiple declara
                 if branch == "E":
                     if 0 < (ChCFGReg_setting_inst.Channel_cfg_list[T][ch]['Vth_T2'] + delta) < 64:
                         ChCFGReg_setting_inst.Channel_cfg_list[T][ch]['Vth_T2'] = ChCFGReg_setting_inst.Channel_cfg_list[T][ch]['Vth_T2'] + delta
+class GEMROC_HANDLER:
+    """
+    Single GEMROC wrapper class
+    """
+    def __init__(self, GEMROC_ID):
+        self.GEMROC_ID = GEMROC_ID
+        self.GEM_COM = communication(GEMROC_ID)  # Create communication class
+        self.GEM_COM.change_acq_mode(0)
+        default_g_inst_settigs_filename = self.GEM_COM.conf_folder + sep + "TIGER_def_g_cfg_2018.txt"
+        self.g_inst = GEM_CONF_classes.g_reg_settings(GEMROC_ID, default_g_inst_settigs_filename)
+        self.g_inst.load_specif_settings(filename=self.GEM_COM.conf_folder+sep+"specific_conf")
+        default_ch_inst_settigs_filename = self.GEM_COM.conf_folder + sep + "TIGER_def_ch_cfg_2018.txt"
+        self.c_inst = GEM_CONF_classes.ch_reg_settings(GEMROC_ID, default_ch_inst_settigs_filename)
+        self.thr="None"
+        if GEMROC_ID<4:
+            self.layer=1
+        elif GEMROC_ID<10:
+            self.layer=2
+        else:
+            self.layer=3
+
+    def __del__(self):
+        self.GEM_COM.__del__()

@@ -306,3 +306,50 @@ class Thread_handler_IVT(Thread):
     def __del__(self):
         self.Database_Manager.__del__()
         return 0
+
+class Thread_handler_IVT_std_alone(Thread):
+    """
+    To handle the logging in standalone mode
+    """
+
+    def __init__(self,GEMROC_reading_dict):
+        Thread.__init__(self)
+        self.Database_Manager=Database_Manager()
+        print ("thread created")
+        self.logging=False
+        self.terminator=False
+        self.GEMROC_reading_dict = GEMROC_reading_dict
+
+    def run(self):
+        last_time=0
+        while True:
+            if self.terminator:
+                return 0
+            if  (time.time()-last_time > 7):
+                self.logging = True
+                last_time=time.time()
+                process_list_2 = []
+                pipe_list_2 = []
+                for number, GEMROC in self.GEMROC_reading_dict.items():
+                        pipe_in, pipe_out = Pipe()
+                        p = Process(target=self.Database_Manager.log_IVT_in_DB, args=(number, self.GEMROC_reading_dict, pipe_in))
+                        pipe_list_2.append(pipe_out)
+                        process_list_2.append(p)
+                        p.start()
+                        time.sleep(0.05)
+                self.Database_Manager.log_PC_stats()
+                for process, pipe_out in zip(process_list_2, pipe_list_2):
+                    try:
+                        process.join(timeout=2)
+                        gem_number, FEBs_to_off = pipe_out.recv()
+                        if len(FEBs_to_off) > 0:
+                            for FEB in FEBs_to_off:
+                                self.Database_Manager.shut_down_FEB(self.GEMROC_reading_dict[gem_number].GEM_COM, FEB)
+                    except Exception as e:
+                        print("IVT logger controller timeout: {}".format(e))
+                self.logging = False
+            time.sleep(1)
+
+    def __del__(self):
+        self.Database_Manager.__del__()
+        return 0

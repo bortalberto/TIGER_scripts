@@ -695,6 +695,8 @@ class menu():
 
     def launch_scan_window(self):
         self.scan_wind = scan_GUI.menu(self.main_window, self.GEMROC_reading_dict)
+
+
     def open_rate_window(self):
         """
         Open a window to assert the noise rate condition of the setup
@@ -739,7 +741,7 @@ class menu():
     def convert0(self, i):
         if self.GEM_to_config[i] == 1:
             try:
-                self.handler_list.append(GEMROC_HANDLER(i))
+                self.handler_list.append(COM_class.GEMROC_HANDLER(i))
                 self.LED[i]["image"] = self.icon_on
             except  Exception as error:
                 self.Launch_error_check['text'] = "GEMROC {}: {}".format(i, error)
@@ -2468,26 +2470,6 @@ def character_limit(entry_text):
         "Not valid input in channel field"
 
 
-class GEMROC_HANDLER:
-    def __init__(self, GEMROC_ID):
-        self.GEMROC_ID = GEMROC_ID
-        self.GEM_COM = COM_class.communication(GEMROC_ID)  # Create communication class
-        self.GEM_COM.change_acq_mode(0)
-        default_g_inst_settigs_filename = self.GEM_COM.conf_folder + sep + "TIGER_def_g_cfg_2018.txt"
-        self.g_inst = GEM_CONF.g_reg_settings(GEMROC_ID, default_g_inst_settigs_filename)
-        self.g_inst.load_specif_settings(filename=self.GEM_COM.conf_folder+sep+"specific_conf")
-        default_ch_inst_settigs_filename = self.GEM_COM.conf_folder + sep + "TIGER_def_ch_cfg_2018.txt"
-        self.c_inst = GEM_CONF.ch_reg_settings(GEMROC_ID, default_ch_inst_settigs_filename)
-        self.thr="None"
-        if GEMROC_ID<4:
-            self.layer=1
-        elif GEMROC_ID<10:
-            self.layer=2
-        else:
-            self.layer=3
-
-    def __del__(self):
-        self.GEM_COM.__del__()
 
 def sort_by_number(stringa1,stringa2):
     number1 = find_number(stringa1)
