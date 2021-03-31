@@ -44,7 +44,7 @@ class menu():
         try:
             from influxdb import InfluxDBClient
             from lib import DB_classes
-            self.DB = True
+            self.DB = config["DB"].getboolean("active")
         except:
             print("Can't find DB library")
             self.DB = False
@@ -179,7 +179,7 @@ class menu():
         if self.PMT:
             Button(b_frame, text='Lower PMTs', command=self.PMT_OFF, width=10, activeforeground="green").pack(side=LEFT)
             Button(b_frame, text='Raise PMTs', command=self.PMT_ON, width=10, activeforeground="red").pack(side=LEFT)
-
+        self.sent_mail=False
         # Label(b_frame,text='Message ').grid(row=0, column=1, sticky=NW, pady=4)
         # self.Launch_error_check=Label(b_frame, text='-', background='white')
         # self.Launch_error_check.grid(row=0, column=2, sticky=NW, pady=4)
@@ -612,9 +612,10 @@ class menu():
                                 f.write("{} -- Stopping acquisition due to 8/10bit errors {} times in a row \n".format(time.ctime(), self.reset_810))
                             self.send_mail("{} --8/10 bit errors counter saturated {} times in a row: GEMROC {} TIGER {}\n (Note: there could be more errors).".format(time.ctime(), self.reset_810, GEMROC, TIGER))
                             # self.send_telegram("{} --8/10 bit errors counter saturated {} times in a row: GEMROC {} TIGER {}\n (Note: there could be more errors).".format(time.ctime(), self.reset_810, GEMROC, TIGER))
-                            # self.restart.set(False)
-                            # self.stop_acq(True)
-                            self._delete_window()
+                            self.restart.set(False)
+                            self.stop_acq(True)
+                            self.reset_810=0
+                            # self._delete_window()
                             break
 
         for i in self.GEM:
@@ -643,7 +644,7 @@ class menu():
                 self.reset_timedout = 0
                 self.restart.set(False)
                 self.stop_acq(True, stop_log=False)
-                self._delete_window()
+                # self._delete_window()
                 break
 
 
@@ -1105,8 +1106,13 @@ class menu():
 
     def send_mail(self, error, subject="DAQ stop"):
         text = error
-        os.system("python3 {}send_mail.py '{}' '{}' ".format("lib" + sep, subject, text))
-
+        if not self.sent_mail:
+            os.system("python3 {}send_mail.py '{}' '{}' ".format("lib" + sep, subject, text))
+            self.master_window.after(10000, lambda : self.off_sent_mail())
+        else:
+            print ("Not sending mail")
+    def off_sent_mail(self):
+        self.sent_mail=False
     def send_telegram(self, error):
         pass
 
@@ -1232,14 +1238,15 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
                 pipe_list_2 = []
 
                 if check_counter % 2 == 0 and self.caller.online_monitor.get():
-                    self.check_buffer()
-                    for number, GEMROC in self.GEMROC_reading_dict.items():
-                        pipe_in, pipe_out = Pipe()
-                        p = Process(target=self.caller.db_sender.log_IVT_in_DB, args=(number,self.GEMROC_reading_dict, pipe_in))
-                        pipe_list_2.append(pipe_out)
-                        process_list_2.append(p)
-                        p.start()
-                        time.sleep(0.05)
+                    if self.caller.DB:
+                        self.check_buffer()
+                        for number, GEMROC in self.GEMROC_reading_dict.items():
+                            pipe_in, pipe_out = Pipe()
+                            p = Process(target=self.caller.db_sender.log_IVT_in_DB, args=(number,self.GEMROC_reading_dict, pipe_in))
+                            pipe_list_2.append(pipe_out)
+                            process_list_2.append(p)
+                            p.start()
+                            time.sleep(0.05)
 
                     for process, pipe_out in zip(process_list_2, pipe_list_2):
                         if self.running:
