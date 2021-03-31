@@ -2311,6 +2311,7 @@ class menu():
         self.Synch_reset(1)
         self.Synch_reset(1)
         self.shut_down_FEB(2,self.GEMROC_reading_dict["GEMROC 8"])
+        self.shut_down_FEB(3,self.GEMROC_reading_dict["GEMROC 10"])
         self.set_pause_mode(True, 1)
         self.Launch_error_check['text'] = "Fast configuration done"
 
