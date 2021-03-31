@@ -305,6 +305,8 @@ class Thread_handler_IVT(Thread):
         self.Database_Manager.__del__()
         return 0
 
+
+
 class Thread_handler_IVT_std_alone(Thread):
     """
     To handle the logging in standalone mode
@@ -321,8 +323,11 @@ class Thread_handler_IVT_std_alone(Thread):
     def run(self):
         last_time=0
         while True:
+            print ("Logging")
             if self.terminator:
+                print ("Terminated")
                 return 0
+
             if  (time.time()-last_time > 7):
                 self.logging = True
                 last_time=time.time()

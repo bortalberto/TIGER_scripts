@@ -22,7 +22,7 @@ else:
     exit()
 
 # Create the handlers to handle the GEMROC communication
-GEMROC_LIST=[0,1,2,3,4,5,6,7,8,9,10,11]
+GEMROC_LIST=[0,1,2,3,4,5,6,7,8,9,10]
 handler_list=[]
 for G_N in GEMROC_LIST:
     handler_list.append(GEM_COM_classes.GEMROC_HANDLER(G_N, std_alone_logger=True) )
@@ -57,11 +57,11 @@ def check_temp_allarm_status(IVT_LOG_thread):
     alerts = r.json()
     for alert in alerts:
         if alert["name"] == "FEB temperature alert" and alert["state"] == "no_data":
-                stop_DB(IVT_LOG_thread)
-                time.sleep(2)
-                start_DB()
-                time.sleep(10)
-    time.sleep(30)
+            stop_DB(IVT_LOG_thread)
+            time.sleep(2)
+            IVT_LOG_thread=start_DB()
+            time.sleep(10)
+    return IVT_LOG_thread
 
 class check_alarm_thread_handler(Thread):
     """
@@ -71,10 +71,14 @@ class check_alarm_thread_handler(Thread):
     def __init__(self, IVT_LOG_thread):
         self.IVT_LOG_thread=IVT_LOG_thread
     def run(self):
-        check_temp_allarm_status(IVT_LOG_thread)
+        time.sleep(5)
+        while True:
+            self.IVT_LOG_thread=check_temp_allarm_status(self.IVT_LOG_thread)
+            time.sleep(5)
 
     def __del__(self):
         return 0
 
 IVT_LOG_thread=start_DB()
-check_alarm_thread_handler(IVT_LOG_thread)
+alarm_ck=check_alarm_thread_handler(IVT_LOG_thread)
+alarm_ck.run()

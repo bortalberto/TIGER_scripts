@@ -894,6 +894,8 @@ class noise_measure():
                         # if values[2][2]!="Fail":
                         # gauss_values=gauss_fit_baseline(matrix[TIG][channel],values[0][1],values[0][3],values[2][2])
                         # self.gaussians[GEMROC]["TIG{}".format(TIG)]["CH{}".format(channel)]=gauss_values
+
+
         print ("Check those channels, they may be dead:")
         for GEMROC, matrix in self.scan_matrixs.items():
             for TIG in range(0, 8):
@@ -903,6 +905,8 @@ class noise_measure():
                         # print np.size(np.where(matrix[TIG][channel] > 200))
                         if np.size(np.where(matrix[TIG][channel] > 200))<3:
                             print ("{} - {} - {}".format(GEMROC,TIG,channel))
+
+
         print ("Check those channels, they may be dying:")
         for GEMROC, matrix in self.scan_matrixs.items():
             for TIG in range(0, 8):

@@ -1469,6 +1469,10 @@ def error_fit(data,TP_rate, Ebranch=True):
             M=going_down+bigger
         for i in range(M, 64):
             ydata[i] = TP_rate
+
+        for i in range (0,64):
+            if ydata[i]>TP_rate*1.5:
+                ydata[i]=TP_rate
         boundsd = ((0, 0, TP_rate * 0.2), (64, 7, TP_rate * 2))
         guess = np.array([32, 2, TP_rate])
         xdata = np.arange(0, 64)
@@ -1486,6 +1490,10 @@ def error_fit(data,TP_rate, Ebranch=True):
     for i in range(M, 64):
         ydata[i] = np.max(data)
 
+    for i in range (0,64):
+        if ydata[i]>TP_rate*1.5:
+            ydata[i]=TP_rate
+    print (ydata)
     xdata = np.arange(0, 64)
     #  popt, pcov = curve_fit(errorfunc, xdata, ydata[:m], method='lm', maxfev=5000)
     #  double_error_func(x, x0, x1, sig0, sig1, c0, c1)115fvb
@@ -1536,6 +1544,7 @@ def error_fit(data,TP_rate, Ebranch=True):
         else:
             popt2 = ("Fail", "Fail", "Fail")
             pcov2 = np.zeros((3, 3))
+
     except Exception as e:
         print ("Failed preliminary fit {}".format(e))
         popt1 = ('Fail', 'Fail', 'Fail')

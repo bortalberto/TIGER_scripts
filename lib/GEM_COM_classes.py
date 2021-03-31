@@ -55,6 +55,8 @@ class communication:  #The directory are declared here to avoid multiple declara
         self.success_counter = 0
         self.fail_counter = 0
         self.local_test = local_test
+        if gemroc_ID==100:
+            self.local_test=True
         if self.local_test:
             # HOST_DYNAMIC_IP_ADDRESS = "192.168.1.%d" %(GEMROC_ID)
             self.HOST_IP = "127.0.0.1"  # uncomment for test only
@@ -68,9 +70,10 @@ class communication:  #The directory are declared here to avoid multiple declara
             self.DEST_PORT_NO = 58913 + 1 + self.GEMROC_ID
         else:
             if std_log_port:
-                self.HOST_IP = "192.168.1.200"
-            else:
                 self.HOST_IP = "192.168.1.{}".format(std_log_port)
+            else:
+                self.HOST_IP = "192.168.1.200"
+
             self.HOST_PORT = 54816 + 1 + self.GEMROC_ID  # Port from where send to the gemroc
             self.HOST_PORT_RECEIVE = 58912 + 1 + self.GEMROC_ID  # Port where listen to configuration answer
 
@@ -114,8 +117,8 @@ class communication:  #The directory are declared here to avoid multiple declara
 
         COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
         self.gemroc_LV_XX.set_gemroc_cmd_code(COMMAND_STRING, 1)
-
-        command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
+        if not std_log_port:
+            command_echo = self.send_GEMROC_CFG_CMD_PKT(COMMAND_STRING, array_to_send, self.DEST_IP_ADDRESS,
                                                     self.DEST_PORT_NO, retry=False)
         ##print 'CMD_GEMROC_LV_CFG_WR'
 
@@ -130,15 +133,16 @@ class communication:  #The directory are declared here to avoid multiple declara
         # cfg_filename =self.conf_folder+sep+ 'GEMROC_%d_def_cfg_DAQ_2018v5.txt' % self.GEMROC_ID
 
         ##acr 2018-03-16 added yesterday while debugging DAQ_CFG readback, removed today: gemroc_DAQ_XX.extract_parameters_from_UDP_packet()
-        COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
-        command_echo = self.send_GEMROC_DAQ_CMD(self.gemroc_DAQ_XX, COMMAND_STRING)
-        # self.enable_pattern_array_test = array.array('I',[0x0, 0x3, 0x9, 0xA, 0x41, 0x42, 0x81, 0x82,  0xC0]) #Test 2 Tigers
-        COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
-        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
-        COMMAND_STRING = 'CMD_GEMROC_TIMING_DELAYS_UPDATE'
-        command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
-        # self.flush_rcv_socket()
-        self.test_GEMROC_communication()
+        if not std_log_port:
+            COMMAND_STRING = 'CMD_GEMROC_DAQ_CFG_WR'
+            command_echo = self.send_GEMROC_DAQ_CMD(self.gemroc_DAQ_XX, COMMAND_STRING)
+            # self.enable_pattern_array_test = array.array('I',[0x0, 0x3, 0x9, 0xA, 0x41, 0x42, 0x81, 0x82,  0xC0]) #Test 2 Tigers
+            COMMAND_STRING = 'CMD_GEMROC_LV_CFG_WR'
+            command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
+            COMMAND_STRING = 'CMD_GEMROC_TIMING_DELAYS_UPDATE'
+            command_echo = self.send_GEMROC_LV_CMD(COMMAND_STRING)
+            # self.flush_rcv_socket()
+            self.test_GEMROC_communication()
 
         # Communication errors acquisition
         # self.receiveSock.settimeout(1)
@@ -2515,7 +2519,6 @@ class GEMROC_HANDLER:
             self.GEM_COM = communication(GEMROC_ID, std_log_port=201)  # Create communication class
         else:
             self.GEM_COM = communication(GEMROC_ID)  # Create communication class
-        self.GEM_COM.change_acq_mode(0)
         default_g_inst_settigs_filename = self.GEM_COM.conf_folder + sep + "TIGER_def_g_cfg_2018.txt"
         self.g_inst = GEM_CONF_classes.g_reg_settings(GEMROC_ID, default_g_inst_settigs_filename)
         self.g_inst.load_specif_settings(filename=self.GEM_COM.conf_folder+sep+"specific_conf")
