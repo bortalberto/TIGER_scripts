@@ -167,7 +167,7 @@ class menu():
         Label(Title_frame2, text="GUFI software",font=("TkDefaultFont", 25)).pack(side=LEFT)
         Label(Title_frame2, image=self.icon_GUFI2).pack(side=LEFT)
 
-        Label(Title_frame, text="             v.4.0 -- 2019 -- INFN-TO (abortone@to.infn.it)", font=("TkDefaultFont", 7, "italic")).pack(anchor=SE, side=RIGHT)
+        Label(Title_frame, text="             v.4.1 -- 2021 -- INFN-TO (abortone@to.infn.it)", font=("TkDefaultFont", 7, "italic")).pack(anchor=SE, side=RIGHT)
         Title_frame2.pack(anchor=S)
         Title_frame.pack(fill=BOTH)
 
