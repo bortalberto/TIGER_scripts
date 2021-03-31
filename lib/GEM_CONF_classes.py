@@ -799,11 +799,15 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
       # setting of delay of timing signals to TIGER FEB0 in xns units (relative to TIGER_CLK_LVDS)
       try:
           with open(delay_save, "r") as f:
-              while True:
-                  line = f.readline()
-                  if (line.split())[0] == "GEMROC" and int(line.split()[1]) == TARGET_GEMROC_ID_param:
-                      timing_array = f.readline().split()
-                      break
+                try:
+                    while True:
+                        line = f.readline()
+                        if (line.split())[0] == "GEMROC" and int(line.split()[1]) == TARGET_GEMROC_ID_param:
+                          timing_array = f.readline().split()
+                          break
+                except:
+                    print ("Can't load timing delay for GEMROC {}".format(TARGET_GEMROC_ID_param))
+                    timing_array=[0,0,0,0]
           self.TIMING_DLY_FEB0 = int(timing_array[0]) # acr 2018-01-15 last parameter written in default configuration file
           self.TIMING_DLY_FEB1 = int(timing_array[1])
           self.TIMING_DLY_FEB2 = int(timing_array[2])
