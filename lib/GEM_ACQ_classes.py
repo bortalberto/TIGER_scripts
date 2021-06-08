@@ -91,7 +91,7 @@ class Thread_handler(Thread):
 
 
 class Thread_handler_TM(Thread):  # In order to scan during configuration is mandatory to use multithreading
-    def __init__(self, name, reader,sub_folder=".",sub_run_number=0):
+    def __init__(self, name, reader,sub_folder=".",sub_run_number=0, downsampling=1):
         Thread.__init__(self)
         self.name = name
         self.reader = reader
@@ -99,12 +99,12 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
         self.isTM = True
         self.sub_folder = sub_folder
         self.sub_run_number = sub_run_number
-
+        self.downsampling=downsampling
 
     def run(self):
         Totallissimi_packets=0
         Total_data_MAX_size = 2 ** 20
-        Total_MAX_packets=20
+        Total_MAX_packets=50
         datapath = "." + sep + "data_folder" + sep+self.sub_folder+sep + "SubRUN_{}_GEMROC_{}_TM.dat".format(self.sub_run_number, self.reader.GEMROC_ID)
         with open(self.reader.log_path, 'a') as f:
             f.write("{} -- Saving data from  GEMROC {} in file {}\n".format(time.ctime(), self.reader.GEMROC_ID,datapath))
@@ -120,12 +120,12 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
         while True:
             Total_Data = 0
             Total_packets = 0
-            while (Total_Data < Total_data_MAX_size) and (Total_packets<Total_MAX_packets) and self.running:
+            while (Total_Data < Total_data_MAX_size) and (Total_packets < Total_MAX_packets) and self.running:
                 try:
-                    x = self.reader.fast_acquisition(data_list)  # self.reader.fast_acquisition(data_list)
-                    Total_Data += x
                     Total_packets += 1
                     Totallissimi_packets += 1
+                    x = self.reader.fast_acquisition(data_list, total_packets=Totallissimi_packets, downsampling=self.downsampling)  # self.reader.fast_acquisition(data_list)
+                    Total_Data += x
                     #print ("Packet from GEMROC {}".format(self.reader.GEMROC_ID))
                 except Exception as e:
                     print (e)
@@ -398,7 +398,7 @@ class reader:
     #
     #     return 0
 
-    def fast_acquisition(self, data_list_tmp):  # remove savefile to be added in a new class GM 11.06.18
+    def fast_acquisition(self, data_list_tmp, total_packets=0, downsampling=0):  # remove savefile to be added in a new class GM 11.06.18
         if self.local_test:
             with open("./data_folder/SubRUN_5_GEMROC_0_TM.dat", 'rb') as fi:
                 data = fi.read()
@@ -409,7 +409,11 @@ class reader:
         else:
             data = self.dataSock.recv(self.BUFSIZE)
             if self.data_online_monitor:
-                self.cloning_sock.sendto(data,(self.address_for_cloning_rcv, self.port_for_cloning))
+                if downsampling:
+                    if total_packets % downsampling == 0:
+                        self.cloning_sock.sendto(data, (self.address_for_cloning_rcv, self.port_for_cloning))
+                else:
+                    self.cloning_sock.sendto(data, (self.address_for_cloning_rcv, self.port_for_cloning))
             # savefile.write(data) # here the file is written - maybe to slow? APPEND? GM
             data_list_tmp.append(data)  # here append the data to the list, stored waiting to be dumped.
         return len(data)

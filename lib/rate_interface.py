@@ -222,7 +222,7 @@ class noise_rate_measure():
             except ValueError:
                 MIN_count = 1
                 MAX_count = 1
-            self.cbar_total.set_clim(vmin=MIN_count, vmax=MAX_count)
+            self.cbar_total.mappable.set_clim(vmin=MIN_count, vmax=MAX_count)
             cbar_ticks = np.linspace(MIN_count, MAX_count, num=11, endpoint=True)
             self.cbar_total.set_ticks(cbar_ticks)
             self.cbar_total.draw_all()
@@ -254,8 +254,8 @@ class noise_rate_measure():
 
             self.cbar_GEMRORB.ax.set_ylabel("Rate [hit/s]", rotation=-90, va="bottom")
             self.cbar_GEMRORA.ax.set_ylabel("Rate [hit/s]", rotation=-90, va="bottom")
-            self.cbar_GEMRORB.set_clim(vmin=MIN_count, vmax=MAX_count)
-            self.cbar_GEMRORA.set_clim(vmin=MIN_count, vmax=MAX_count)
+            self.cbar_GEMRORB.mappable.set_clim(vmin=MIN_count, vmax=MAX_count)
+            self.cbar_GEMRORA.mappable.set_clim(vmin=MIN_count, vmax=MAX_count)
 
             self.cbar_GEMRORB.set_ticks(cbar_ticks)
             self.cbar_GEMRORB.draw_all()
@@ -469,7 +469,7 @@ class Acquire_rate():
                     scan_matrix = test_c.both_vth_scan(T, ch, extreme_t=(vt1_current - (square_size - 1) / 2, vt1_current + (square_size - 1) / 2), extreme_e=((vt2_current - (square_size - 1) / 2, vt2_current + (square_size - 1) / 2)), acq_time=acq_time)
                     scan_matrix = scan_matrix * (1 / (acq_time))
                     diff_matrix = abs(scan_matrix - des_rate)
-                    vt1, vt2 = (np.argmin(diff_matrix) // 64, np.argmin(diff_matrix) % 64)
+                    vt1, vt2 = (np.nanargmin(diff_matrix) // 64, np.nanargmin(diff_matrix) % 64)
                     # print "T {} Ch {} -set vth1 {}, set vth 2 {}".format(T,ch,vt1,vt2)
                     if vt1 == 0:
                         vt1 = vt1_current + 1

@@ -144,30 +144,7 @@ class analisys_conf: #Analysis class used for configurations10
                                 time.sleep(0.1)
                                 break
                         test_r.dataSock.close()
-                        # globalcheck= self.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(self.g_inst, T)
-                        # if (int(binascii.b2a_hex(globalset), 16)) != ((int(binascii.b2a_hex(globalcheck), 16)) - 2048):
-                        #     with open(self.log_path, 'a') as log_file:
-                        #         log_file.write("Global configuration error\n")
-                        # globalcheck= self.GEM_COM.ReadTgtGEMROC_TIGER_GCfgReg(self.g_inst, T)
-                        # if (int(binascii.b2a_hex(globalset), 16)) != ((int(binascii.b2a_hex(globalcheck), 16)) - 2048):
-                        #     with open(self.log_path, 'a') as log_file:
-                        #         log_file.write("Global configuration error\n")
-                        # command_reply = self.GEM_COM.ReadTgtGEMROC_TIGER_ChCfgReg(self.c_inst, T, j, 0)
-                        # L_array = array.array('I')  # L is an array of unsigned long
-                        # L_array.fromstring(command_reply)
-                        # L_array.byteswap()
-                        # if ((L_array[8] >> 16) & 0x3) != 0:
-                        #     self.GEM_COM.display_log_ChCfg_readback(command_reply,0)
-                        #     print "TRIGGERMODE SBAGLIATA!!!\n"
-                        #     time.sleep(10)
 
-                        #print bin(int (binascii.b2a_hex(command_reply),16))
-                        # self.GEM_COM.Channel_set_check(command_sent,command_reply,self.log_path)
-                        # if (int (binascii.b2a_hex(command_sent),16)) !=( (int (binascii.b2a_hex(command_reply),16)) -2048 ):
-                        #     print "---____----____----____----____----"
-                        #     print "!!! ERROR IN CONFIGURATION !!!"
-                        #     print "---____----____----____----____----"
-                        #     time.sleep(400)
                         os.system('clear')
                         string="SCANNING [TIGER={}, VTh={}, CH={}]\n".format(T,i,j)
                         sys.stdout.write(string)
@@ -326,7 +303,8 @@ class analisys_conf: #Analysis class used for configurations10
     def both_vth_scan(self, T, j, extreme_t=(0, 63), extreme_e=(0, 63),acq_time=0.1):
         maximum_matrix = self.GEM_COM.load_thr_max_from_file()[T][j]
         DEBUG=True
-        scan_matrix=np.zeros((64,64))
+        scan_matrix=np.empty((64,64))
+        scan_matrix[:]=np.NaN
         self.GEM_COM.Set_param_dict_channel(self.c_inst,"TriggerMode", T, j, 0)
         # self.GEM_COM.Set_param_dict_channel(self.c_inst,"TP_disable_FE", T, j, 1)
         E_T=[extreme_t[0],extreme_t[1]]
@@ -733,7 +711,6 @@ class analisys_conf: #Analysis class used for configurations10
                         self.vthr_matrix[T, channel] = self.vthr_matrix[T, channel] + 1
                     if autotune_scan_matrix[T, channel] > desired_rate:
                         self.vthr_matrix[T, channel] = self.vthr_matrix[T, channel] - 1
-
                     if self.vthr_matrix[T, channel] <= 0:
                         self.GEM_COM.Set_GEMROC_TIGER_ch_TPEn(self.c_inst, T, channel, 1, 3)
                         self.vthr_matrix[T, channel] = 0
