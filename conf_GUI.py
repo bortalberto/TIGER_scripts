@@ -2307,7 +2307,7 @@ class menu():
         self.load_default_config_parallel()
         self.Synch_reset(1)
         self.load_default_config_parallel()
-        self.TCAM_reset(1)
+        # self.TCAM_reset(1)
         self.Synch_reset(1)
         self.Synch_reset(1)
         self.shut_down_FEB(2,self.GEMROC_reading_dict["GEMROC 8"])
@@ -2328,8 +2328,10 @@ class menu():
     def specific_channel_fast_setting(self):
         for number, GEMROC in self.GEMROC_reading_dict.items():
             if self.TP_active.get():
+                    GEMROC.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict["Tpulse_generation_w_L1Chk_enable"]=1
+                    GEMROC.GEM_COM.DAQ_set_with_dict()
                     for T in range(0, 8):
-                        GEMROC.g_inst.Global_cfg_list[T]["FE_TPEnable"] = 1
+                        # GEMROC.g_inst.Global_cfg_list[T]["FE_TPEnable"] = 1
                         GEMROC.c_inst.Channel_cfg_list[T][62]["TriggerMode"] = 1
                         if int(number.split()[1])>3 and int(number.split()[1])<11:
                             GEMROC.c_inst.Channel_cfg_list[T][61]["TriggerMode"] = 3

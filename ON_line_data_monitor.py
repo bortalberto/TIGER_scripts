@@ -537,9 +537,15 @@ class GEMROC_decoder(Thread):
                         self.send_run_end()
                         if TER:
                             if not os.path.isdir ("/home/cgemlab2/data/{}".format(self.RUN)):
-                                os.mkdir ("/home/cgemlab2/data/{}".format(self.RUN))
+                                try:
+                                    os.mkdir ("/home/cgemlab2/data/{}".format(self.RUN))
+                                except FileExistsError:
+                                    pass
                             if not os.path.isdir ("/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/data/raw_root/{}".format(self.RUN.split("_")[1])):
-                                os.mkdir ("/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/data/raw_root/{}".format(self.RUN.split("_")[1]))
+                                try:
+                                    os.mkdir ("/home/cgemlab2/TIGER_Event_Reconstruction/TIGER_Event_Reconstruction/data/raw_root/{}".format(self.RUN.split("_")[1]))
+                                except FileExistsError:
+                                    pass
                             time.sleep(0.05)
                             os.system("cp ./data_folder/{}/SubRUN_{}_GEMROC_{}_TM.dat ~/data/{}/".format(self.RUN,self.subRun,self.GEMROC_id,self.RUN))
                             # print ("Copy return: {}".format(result))

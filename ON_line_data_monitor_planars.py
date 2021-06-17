@@ -70,6 +70,11 @@ class menu():
             self.LED[i].grid(row=riga, column=colonna)
             self.button.append(Button(self.grid_frame, text='ROC {}'.format(i), command=lambda c=i: self.toggle(c)))
             self.button[i].grid(row=riga, column=colonna - 1)
+
+        self.downsamplig_online = IntVar(self.main_win)
+        self.downsamplig_online.set(1)
+        Label(self.select_frame, text="Downsampling online monitor").pack(side=LEFT)
+        Entry(self.select_frame, width=10, textvariable=self.downsamplig_online).pack(side=LEFT)
         self.error_frame = Frame(self.main_win)
         self.error_frame.pack(side=TOP)
         self.Launch_error_check = Label(self.error_frame, text='-', background='white')
@@ -503,13 +508,16 @@ class analyzer():
         for GEMROC in GEMROCs_keys:
             self.GEMROCs_done[GEMROC]=False
 
-    def update_sub_end (self, GEMROC, run, subrun):
+    def update_sub_end (self, GEMROC, run, subrun, downsampling):
         self.GEMROCs_done[GEMROC]=True
         if all(value for value in self.GEMROCs_done.values()):
             for key in self.GEMROCs_done.keys():
                 self.GEMROCs_done[key]=False
             # os.system(f"/media/alb/Removibile/analisi_planari/civetta.py {run} -sf {subrun}")
-            os.system(f"/media/besiii-to/Space/data_visualizer/analisi_planari/civetta.py {run} -sf {subrun}")
+            if downsampling == 1:
+                os.system(f"/media/besiii-to/Space/data_visualizer/analisi_planari/civetta.py {run} -sf {subrun}")
+            else:
+                os.system(f"/media/besiii-to/Space/data_visualizer/analisi_planari/civetta.py {run} -sf {subrun} -down {downsampling}")
 
 
 class GEMROC_decoder(Thread):
@@ -520,7 +528,7 @@ class GEMROC_decoder(Thread):
         self.reader = reader
         self.data_buffer = data_buffer
         self.caller2 = caller2
-        self.analyzer=analyzer
+        self.analyzer = analyzer
         self.last_UDP_number = 0
         self.skipped_UDP_number = []
         self.RUN = ""
@@ -569,12 +577,15 @@ class GEMROC_decoder(Thread):
                     if "End" in dato:
                         self.write_log("Subrun end --> {}, Subrun {}".format(self.RUN, self.subRun))
                         self.send_run_end()
-                        self.analyzer.update_sub_end(f"GEMROC {self.GEMROC_id}", self.RUN.split("_")[1], self.subRun)
+                        self.analyzer.update_sub_end(f"GEMROC {self.GEMROC_id}", self.RUN.split("_")[1], self.subRun, self.caller2.downsamplig_online.get())
 
 
             self.caller2.update_buffers(self.GEMROC_id, len(self.data_buffer))
             # time.sleep(0.001)
-            time.sleep(0.1)
+            if len(self.data_buffer) == 0:
+                time.sleep(0.1)
+            else:
+                time.sleep(0.0001)
 
 
     def decode(self, pacchetto):

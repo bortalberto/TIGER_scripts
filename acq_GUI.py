@@ -75,7 +75,7 @@ class menu():
         self.LED_UDP = []
         self.plotting_gemroc = 0
         self.plotting_TIGER = 0
-        self.time = 2
+        self.time_acq = 2
         self.GEM = []
         self.run_folder = "."
         self.reset_810 = 0
@@ -174,6 +174,10 @@ class menu():
         self.but7 = Button(a_frame, text='Trigger less file name', command=self.switch_mode, background='#ccffff', activebackground='#ccffff', height=1, width=18)
         self.but7.grid(row=1, column=3, sticky=NW, pady=4)
         self.but8 = Button(a_frame, text='Stop acquisition', command=self.stop_acq, state='normal')
+        self.but8.grid(row=1, column=4, sticky=NW, pady=4)
+
+        self.time_label = Label(a_frame, text="Time :  |  ")
+        self.time_label.grid(row=1, column=5, sticky=NW, pady=8)
         b_frame = LabelFrame(a_frame)
         b_frame.grid(row=1, column=8, sticky=NW, pady=4, padx=40)
         if self.PMT:
@@ -186,7 +190,6 @@ class menu():
         # Button(self.master,text='Exit', command='close').place(relx=0.9, rely=0.9, anchor=NW)
         # Button(a_frame, text='Communication errorinterfacee',command=error_GUI)
 
-        self.but8.grid(row=1, column=4, sticky=NW, pady=4)
         for i in range(0, len(self.GEM_to_read)):
             if i < 10:
                 riga = 0
@@ -512,6 +515,8 @@ class menu():
 
         first_row_2 = Frame(self.adv_options_frame)
         first_row_2.pack()
+        first_row_3 = Frame(self.adv_options_frame)
+        first_row_3.pack()
         Checkbutton(first_row_2, text="Mini subrun",var=self.mini_acq).pack(side=LEFT)
 
         fields_options = ["Min_max_integ_time"]
@@ -526,6 +531,10 @@ class menu():
         Label(first_row_2, text="Folders( sep=',' )").pack(side=LEFT)
         Entry(first_row_2, width=10, textvariable=self.minirun_folders_var).pack(side=LEFT)
 
+        self.downsamplig_online = IntVar (self.master_window)
+        self.downsamplig_online.set(1)
+        Label(first_row_3, text="Downsampling online monitor").pack(side=LEFT)
+        Entry(first_row_3, width=10, textvariable=self.downsamplig_online).pack(side=LEFT)
 
         self.configure_field = StringVar(self.master_window)
         self.configure_field.set(fields_options[0])
@@ -611,7 +620,7 @@ class menu():
                             with open(self.logfile, 'a') as f:
                                 f.write("{} -- Stopping acquisition due to 8/10bit errors {} times in a row \n".format(time.ctime(), self.reset_810))
                             self.send_mail("{} --8/10 bit errors counter saturated {} times in a row: GEMROC {} TIGER {}\n (Note: there could be more errors).".format(time.ctime(), self.reset_810, GEMROC, TIGER))
-                            # self.send_telegram("{} --8/10 bit errors counter saturated {} times in a row: GEMROC {} TIGER {}\n (Note: there could be more errors).".format(time.ctime(), self.reset_810, GEMROC, TIGER))
+                            # self.send_telegram("{} --8/10 bit errors counter saturated {} times in a row: GEMROC {} TIGER {}\n (Note: there could be more errors).".format(time_acq.ctime(), self.reset_810, GEMROC, TIGER))
                             self.restart.set(False)
                             self.stop_acq(True)
                             self.reset_810=0
@@ -685,7 +694,7 @@ class menu():
                 time.sleep(2)
 
                 self.father.Synch_reset()
-                self.father.TCAM_reset()
+                # self.father.TCAM_reset()
                 if debug:
                     print("Setting pause")
                 self.father.set_pause_mode(to_all=True, value=1)
@@ -841,28 +850,29 @@ class menu():
             pass
 
     def start_acq(self, First_launch=True):
-        if self.mini_acq.get():
-            if First_launch:
-                print ("Setting folder for the minsubrun acquisition")
-                self.values_scan = list(map(int, self.value_scan_var.get().split(",")))
-                self.minirun_numbers = list(map(int, self.minirun_folders_var.get().split(",")))
-                if len(self.values_scan) != len(self.minirun_numbers):
-                    print("Folders and number of values doens't match")
-                    self.messagge_field['text'] = "Folders and number of values doens't match"
-                    return 0
-                self.value_index = 0
-                for run_numb in self.minirun_numbers:
-                    self.create_folder_by_number(run_numb)
-            else:
-                self.value_index = self.value_index + 1
+        if not self.std_alone:
+            if self.mini_acq.get():
+                if First_launch:
+                    print ("Setting folder for the minsubrun acquisition")
+                    self.values_scan = list(map(int, self.value_scan_var.get().split(",")))
+                    self.minirun_numbers = list(map(int, self.minirun_folders_var.get().split(",")))
+                    if len(self.values_scan) != len(self.minirun_numbers):
+                        print("Folders and number of values doens't match")
+                        self.messagge_field['text'] = "Folders and number of values doens't match"
+                        return 0
+                    self.value_index = 0
+                    for run_numb in self.minirun_numbers:
+                        self.create_folder_by_number(run_numb)
+                else:
+                    self.value_index = self.value_index + 1
 
 
-            if self.value_index == len(self.values_scan) :
-                self.value_index=0
+                if self.value_index == len(self.values_scan) :
+                    self.value_index=0
 
-            self.set_folder_by_number(self.minirun_numbers[self.value_index])
-            self.set_configuration_minisubrun()
-            self.messagge_field['text'] = "Value_index = {}".format(self.value_index)
+                self.set_folder_by_number(self.minirun_numbers[self.value_index])
+                self.set_configuration_minisubrun()
+                self.messagge_field['text'] = "Value_index = {}".format(self.value_index)
 
         self.check_sub_run()
         self.logfile = "." + sep + "data_folder" + sep + self.run_folder + sep + "ACQ_log_{}".format(self.sub_run_number)
@@ -894,7 +904,7 @@ class menu():
         self.GEM = []
         self.thread = []
 
-        self.time = self.time_in.get()
+        self.time_acq = self.time_in.get()
         lista = []
         if not self.std_alone:
             for number, GEMROC in self.GEMROC_reading_dict.items():
@@ -913,10 +923,10 @@ class menu():
 
         for i in range(0, len(self.GEM)):
             if self.mode == 'TL':
-                self.thread.append(GEM_ACQ.Thread_handler("GEM ".format(i), float(self.time), self.GEM[i], sub_folder=self.run_folder, sub_run_number=self.sub_run_number))
+                self.thread.append(GEM_ACQ.Thread_handler("GEM ".format(i), float(self.time_acq), self.GEM[i], sub_folder=self.run_folder, sub_run_number=self.sub_run_number))
 
             else:
-                self.thread.append(GEM_ACQ.Thread_handler_TM("GEM ".format(i), self.GEM[i], sub_folder=self.run_folder, sub_run_number=self.sub_run_number))
+                self.thread.append(GEM_ACQ.Thread_handler_TM("GEM ".format(i), self.GEM[i], sub_folder=self.run_folder, sub_run_number=self.sub_run_number, downsampling=self.downsamplig_online.get()))
         if not self.std_alone:
             self.error_thread = (Thread_handler_errors(self.GEMROC_reading_dict, self.GEM, self.errors_counters_810, self))
         self.GEM_to_read_last = self.GEM_to_read
@@ -1181,18 +1191,18 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
 
     def run(self):
         if self.caller.mode == 'TM':
-            print("Acquiring for {:.2f} seconds".format(float(self.caller.time) * 60))
+            print("Acquiring for {:.2f} seconds".format(float(self.caller.time_acq) * 60))
         self.start_time = time.time()
         check_time = 7
         check_counter = 0
         self.stopper_thr = stopper(self.caller, self.start_time, )
         self.stopper_thr.daemon = True
         self.stopper_thr.start()
-
         while self.running:
-            # if (time.time()-self.start_time)>float(self.caller.time)*60:
+            # if (time_acq.time_acq()-self.start_time)>float(self.caller.time_acq)*60:
             #     self.caller.relaunch_acq()
             time.sleep(0.2)
+            # self.caller.time_label["text"] = "Acq time: {:.2f}".format((self.start_time - time.time()))
 
             if (time.time() - self.start_time) > check_counter * check_time:
                 if debug:
@@ -1347,10 +1357,13 @@ class stopper(Thread):  #
 
     def run(self):
         while self.running:
+
             if self.caller.mode == "TM":
-                time_max = float(self.caller.time) * 60
+                time_max = float(self.caller.time_acq) * 60
             else:
-                time_max = float(self.caller.time)
+                time_max = float(self.caller.time_acq)
+            self.caller.time_label["text"] = "Acq time: {:.0f}".format(time_max-(time.time()-self.start_time))
+
             if debug:
                 print("Elapsed time {}".format(time.time() - self.start_time))
             # print (time_max)
@@ -1370,6 +1383,7 @@ class stopper(Thread):  #
                     self.caller.relaunch_acq()
                     return 0
                 return 0
+
             time.sleep(0.5)
 
 
