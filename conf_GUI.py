@@ -6,6 +6,7 @@ import tkinter.font as tkfont
 import numpy as np
 from lib import GEM_COM_classes as COM_class
 import communication_error_GUI as error_GUI
+import noise_GUI_fast as noise_GUI_fast
 import noise_GUI as noise_GUI
 import generic_scan as scan_GUI
 from lib import rate_interface as rate_interface
@@ -245,6 +246,8 @@ class menu():
         Button(cornice, text="THR scan (E-branch)", command=lambda: self.thr_Scan(-1, -1, 2), activeforeground="#f77f00").pack(side=LEFT)
 
         Button(cornice, text="Noise measure tool", command=self.launch_noise_window, activeforeground="#f77f00").pack(side=LEFT)
+        Button(cornice, text="Fast noise measure tool", command=self.launch_noise_fast_window, activeforeground="#f77f00").pack(side=LEFT)
+
         Button(cornice, text="Generic scan tool", command=self.launch_scan_window, activeforeground="#f77f00").pack(side=LEFT)
 
         Label(cornice, text="Rate").pack(side=LEFT)
@@ -692,6 +695,10 @@ class menu():
     def launch_noise_window(self):
         self.doing_something=True
         self.noise_wind = noise_GUI.menu(self.main_window, self.GEMROC_reading_dict,self)
+
+    def launch_noise_fast_window(self):
+        self.doing_something = True
+        self.noise_wind_fast = noise_GUI_fast.menu(self.main_window, self.GEMROC_reading_dict, self)
 
     def launch_scan_window(self):
         self.scan_wind = scan_GUI.menu(self.main_window, self.GEMROC_reading_dict)

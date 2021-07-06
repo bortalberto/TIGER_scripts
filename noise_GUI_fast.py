@@ -9,6 +9,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
 from lib import DB_classes
+from multiprocessing import Array
 
 from tkinter import *
 from tkinter import filedialog
@@ -54,8 +55,8 @@ class noise_measure():
         except:
             print("Can't find DB library")
             self.DB = False
-
-        self.title = "Noise_measure"
+        self.stop=False
+        self.title = "Fast noise measure"
         self.tabControl = tab_control
         self.main_window = main_window
         self.main_menu_istance = main_menu_istance
@@ -147,19 +148,21 @@ class noise_measure():
 
         self.third_row = Frame(self.error_window)
         self.third_row.grid(row=3, column=1, sticky=S, pady=4, columnspan=10)
-        if self.title == "Noise_measure":
+        if self.title == "Fast noise measure":
             Button(self.third_row, text='Start TP', command=self.start_TP).pack(side=LEFT, padx=2)
 
         self.strart_button = Button(self.third_row, text='Threshold scan', command=self.noise_scan)
         self.strart_button.pack(side=LEFT, padx=2)
         self.strart_button = Button(self.third_row, text='Threshold scan on VTH2', command=lambda: self.noise_scan(True))
         self.strart_button.pack(side=LEFT, padx=2)
+        self.strart_button = Button(self.third_row, text='Stop scan', command=self.stop_scan)
+        self.strart_button.pack(side=LEFT, padx=2)
         Button(self.third_row, text="Save", command=self.SAVE).pack(side=LEFT, padx=2)
         Button(self.third_row, text="Load", command=self.LOAD).pack(side=LEFT, padx=2)
         Button(self.third_row, text="Fit", command=self.fit).pack(side=LEFT, padx=2)
         self.E_branch = BooleanVar(self.main_window)
         Checkbutton(self.third_row, text="Save for E-branch", variable=self.E_branch).pack(side=LEFT, padx=2)
-        if self.title == "Noise_measure":
+        if self.title == "Fast noise measure":
             Button(self.third_row, text="Save noise levels", command=self.SAVE_noise).pack(side=LEFT, padx=2)
             self.load_TP_button = Button(self.third_row, text="Load TP settings", command=self.load_TP_settings)
             self.load_TP_button.pack(side=LEFT, padx=2)
@@ -175,7 +178,7 @@ class noise_measure():
             Entry(self.third_row, width=4, textvariable=self.VCasp_Vth).pack(side=LEFT)
             Label(self.third_row, text='Step time').pack(side=LEFT)
             self.step_time = DoubleVar(self.error_window)
-            self.step_time.set(0.1)
+            self.step_time.set(0.05)
             Entry(self.third_row, width=4, textvariable=self.step_time).pack(side=LEFT)
         if self.title == "Baseline estimation":
             Button(self.third_row, text="Save baseline levels for thr setting", command=self.SAVE_baseline).pack(side=LEFT, padx=2)
@@ -221,7 +224,7 @@ class noise_measure():
         self.CHentry.grid(row=0, column=2, sticky=S, pady=4)
         Button(self.usefullframe, text='Go', command=lambda: self.change_G_or_T(1, "GO")).grid(row=0, column=3, sticky=S, pady=4)
         Button(self.usefullframe, text='>', command=lambda: self.change_G_or_T(1, "C")).grid(row=0, column=4, sticky=S, pady=4)
-        if self.title == "Noise_measure":
+        if self.title == "Fast noise measure":
             self.gufo = Label(self.corn0, image=self.icon_sleep)
             self.gufo.grid(row=4, column=1, sticky=S, pady=4)
         self.corn1 = Frame(self.error_window)
@@ -252,7 +255,6 @@ class noise_measure():
         for key in self.GEMROC_reading_dict.keys():
             number = key
             self.scan_matrixs[number] = np.zeros((8, 64, 64))
-
             self.baseline[number] = {}
             self.TP_settings = {}
             self.baseline_pos[number] = {}
@@ -329,7 +331,7 @@ class noise_measure():
             with open(logfile, 'a+') as fi:
                 fi.write("{} Scanning branch E with TP\n".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")))
             self.load__fast_TP_settings(branch="E")
-            self.noise_scan(True)
+            self.noise_scan(True) 
             self.unload_TP_settings()
             File_name = "periodic_noise_scan" + sep + "E_branch_with_TP_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
 
@@ -403,8 +405,8 @@ class noise_measure():
     def save_txt(self, filename):
         """
         To save scans in TXT
-        :param filename:
-        :return:
+        :param filename: 
+        :return: 
         """
         with open(filename, 'w') as fi:
 
@@ -497,6 +499,7 @@ class noise_measure():
             test_c.both_vth_scan(first, firstch)
 
     def noise_scan(self, vth2=False):  # if GEMROC num=-1--> To all GEMROC, if TIGER_num=-1 --> To all TIGERs
+        self.stop=False
         self.main_menu_istance.doing_something = True
         start=time.time()
         if self.DB:
@@ -515,32 +518,21 @@ class noise_measure():
         else:
             self.db_sender=None
 
-        self.bar_win = Toplevel(self.error_window)
         # self.bar_win.focus_set()  # set focus on the ProgressWindow
         # self.bar_win.grab_set()
-        progress_bars = []
-        progress_list = []
         dictio = {}
         GEMROC_n = self.GEMROC_num.get()
-        Label(self.bar_win, text="Threshold Scan completition").pack()
 
         if GEMROC_n == "All":
             dictio = self.GEMROC_reading_dict.copy()
         else:
             dictio["{}".format(GEMROC_n)] = self.GEMROC_reading_dict[GEMROC_n]
-        i = 0
-        for number, GEMROC_number in dictio.items():
-            Label(self.bar_win, text='{}'.format(number)).pack()
-            progress_list.append(IntVar())
-            maxim = ((self.CHANNEL_num_last.get() - self.CHANNEL_num_first.get() + 1) * (self.TIGER_num_last.get() - self.TIGER_num_first.get() + 1)) * 64
-            progress_bars.append(Progressbar(self.bar_win, maximum=maxim, orient=HORIZONTAL, variable=progress_list[i], length=200, mode='determinate'))
-            progress_bars[i].pack()
 
-            i += 1
         process_list = []
         pipe_list = []
         i = 0
         for number, GEMROC_num in dictio.items():
+            print (number)
             pipe_in, pipe_out = Pipe()
             p = Process(target=self.noise_scan_process, args=(number, pipe_out, vth2, self.DB, self.db_sender))
             # pipe_in.send(progress_bars[i])
@@ -550,35 +542,40 @@ class noise_measure():
             i += 1
         while True:
             alive_list = []
-            for process in process_list:
-                alive_list.append(process.is_alive())
-            if all(v == False for v in alive_list):
-                break
-            else:
-                for progress, pipe in zip(progress_list, pipe_list):
-                    try:
-                        progress.set(pipe.recv())
-                    except:
-                        Exception("Can't acquire status")
-                        # print ("Can't acquire status")
 
-                    self.bar_win.update()
-                    time.sleep(0.1)
-                    # print progress.get()
+            for process,pipe in zip(process_list,pipe_list):
+                alive_list.append(process.is_alive())
+                if process.is_alive():
+                    count_element = pipe.recv()
+                    self.scan_matrixs[f"GEMROC {count_element[0]}"][count_element[1]][count_element[2]][count_element[3]] = count_element[4]
+                    self.plotting_TIGER = count_element[1]
+                    self.plotting_Channel =  count_element[2]
+                    self.plotta()
+
+            if all(v == False for v in alive_list):
+                if not self.stop:
+                    for number, GEMROC_num in dictio.items():
+                        self.scan_matrixs[number]=np.zeros((8, 64, 64))
+                        pipe_in, pipe_out = Pipe()
+                        p = Process(target=self.noise_scan_process, args=(number, pipe_out, vth2, self.DB, self.db_sender))
+                        # pipe_in.send(progress_bars[i])
+                        process_list.append(p)
+                        pipe_list.append(pipe_in)
+                        p.start()
+                        i += 1
+                if self.stop:
+                    break
 
         for process in process_list:
             if process.is_alive():
                 process.join()
-
-        for number, GEMROC_num in dictio.items():
-            filename = GEMROC_num.GEM_COM.Noise_folder + sep + "GEMROC{}".format(GEMROC_num.GEM_COM.GEMROC_ID) + sep + "scan_matrix"
-            with  open(filename, 'rb') as f:
-                self.scan_matrixs[number] = pickle.load(f)
-        self.plotta()
-        self.bar_win.destroy()
         if self.DB:
             self.db_sender.__del__()
         self.main_menu_istance.doing_something = False
+
+        self.plotta()
+    def stop_scan(self):
+        self.stop=True
 
     def sampling_time_scan(self):
         self.sampling_scan = True
@@ -611,13 +608,11 @@ class noise_measure():
 
     def noise_scan_process(self, number, pipe_out, vth2,DB=False, sender=None):
         self.sampling_scan = False
-        scan_matrix = np.zeros((8, 64, 64))
         GEMROC = self.GEMROC_reading_dict[number]
         GEM_COM = GEMROC.GEM_COM
         c_inst = GEMROC.c_inst
         g_inst = GEMROC.g_inst
         test_c = AN_CLASS.analisys_conf(GEM_COM, c_inst, g_inst)
-        test_r = AN_CLASS.analisys_read(GEM_COM, c_inst)
 
         firstch = self.CHANNEL_num_first.get()
         lastch = self.CHANNEL_num_last.get() + 1
@@ -625,8 +620,8 @@ class noise_measure():
 
         first = self.TIGER_num_first.get()
         last = self.TIGER_num_last.get() + 1
-        # print (f'First: {first}')
-        # print (f'Last:{last}')
+
+
         for T in range(first, last):  # TIGER
             print ("TIGER: {}".format(T))
             for J in range(firstch, lastch):  # Channel
@@ -634,22 +629,9 @@ class noise_measure():
                     sender.log_IVT_in_DB_GEM_COM(GEM_COM)
                 GEMROC.GEM_COM.Set_param_dict_global(g_inst, "CounterEnable", T, 0)
                 for i in range(0, 64):  # THR
-                    scan_matrix[T, J, i] = test_c.noise_scan_using_GEMROC_COUNTERS_progress_bar(T, J, i, False, vth2,self.step_time.get())
-                    position = ((T - first) * (lastch - firstch)) * 64 + (J-firstch) * 64 + i
-                    pipe_out.send(position)
-
-        test_r.thr_scan_matrix = scan_matrix
-        test_r.thr_scan_rate = scan_matrix * (1/self.step_time.get())
-        test_r.colorPlot(GEM_COM.Noise_folder + sep + "GEMROC{}".format(GEMROC_ID) + sep + "GEMROC {}".format(GEMROC_ID) + "rate", first, last, True)
-        test_r.colorPlot(GEM_COM.Noise_folder + sep + "GEMROC{}".format(GEMROC_ID) + sep + "GEMROC {}".format(GEMROC_ID) + "conteggi", first, last)
-
-        filename = GEM_COM.Noise_folder + sep + "GEMROC{}".format(GEMROC_ID) + sep + "scan_matrix"
-        with  open(filename, 'wb') as f:
-            pickle.dump(test_r.thr_scan_rate, f)
-
-        print ("GEMROC {} done".format(GEMROC_ID))
-        position = (last * (lastch - firstch) + 1) + (lastch)
-        pipe_out.send(position)
+                    counts = test_c.noise_scan_using_GEMROC_COUNTERS_progress_bar(T, J, i, False, vth2,self.step_time.get())
+                    counts = counts * (1/self.step_time.get())
+                    pipe_out.send((GEMROC_ID,T,J,i,counts))
 
     def change_G_or_T(self, i, G_or_T):
         if G_or_T == "G":
@@ -769,7 +751,7 @@ class noise_measure():
                         translated_gas = AN_CLASS.gaus(np.arange(TPparameters[0], 64, 1.0), *Bas_parameters_fit) + TPparameters[2]
                         self.line_list.append(self.plot_rate.plot(np.arange(TPparameters[0], 64, 1.0), translated_gas, '--', label="Gaussian baseline estimation"))
                     self.plot_rate.set_title("ROC {},TIG {}, CH {} , Sigma Noise={} fC".format(self.plotting_gemroc, self.plotting_TIGER, self.plotting_Channel, noise))
-                    if self.title == "Noise_measure":
+                    if self.title == "Fast noise measure":
                         try:
                             if noise == "Canno't fit" or self.mapping_matrix[self.plotting_gemroc][self.plotting_TIGER][self.plotting_Channel] == "0":
                                 self.gufo["image"] = self.icon_sleep

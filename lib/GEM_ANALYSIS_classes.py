@@ -9,7 +9,7 @@ import sys
 import matplotlib
 import numpy as np
 
-matplotlib.use('pdf',warn=False, force=True)
+matplotlib.use('pdf', force=True)
 import matplotlib.pyplot as plt
 import math
 from scipy.optimize import curve_fit
