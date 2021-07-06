@@ -277,13 +277,13 @@ class generic_scan ():
         self.canvas.draw()
         self.canvas.flush_events()
     def SAVE(self):
-        File_name = tkFileDialog.asksaveasfilename(initialdir="." + sep + "noise_scan" + sep + "saves", title="Select file", filetypes=(("Noise scan files", "*.ns"), ("all files", "*.*")))
+        File_name = filedialog.asksaveasfilename(initialdir="." + sep + "noise_scan" + sep + "saves", title="Select file", filetypes=(("Noise scan files", "*.ns"), ("all files", "*.*")))
         with  open(File_name, 'wb') as f:
             pickle.dump(self.scan_matrixs,f)
 
 
     def LOAD(self):
-        filename = tkFileDialog.askopenfilename(initialdir="." + sep + "noise_scan" + sep + "saves", title="Select file", filetypes=(("Noise scan files", "*.ns"), ("all files", "*.*")))
+        filename = filedialog.askopenfilename(initialdir="." + sep + "noise_scan" + sep + "saves", title="Select file", filetypes=(("Noise scan files", "*.ns"), ("all files", "*.*")))
         with  open(filename, 'rb') as f:
             self.scan_matrixs=pickle.load(f)
 
@@ -292,7 +292,7 @@ class generic_scan ():
         Dump the matrix in a txt file
         :return:
         """
-        File_name = tkFileDialog.asksaveasfilename(initialdir=".", title="Select file for dump", filetypes=(("txt", "*.txt"), ("all files", "*.*")))
+        File_name = filedialog.asksaveasfilename(initialdir=".", title="Select file for dump", filetypes=(("txt", "*.txt"), ("all files", "*.*")))
         with open (File_name,'a+') as dumpfile:
             dumpfile.write("## Total event        Efine      Sigma")
             for GEMROC_key, dictG in self.efine_average.items():
