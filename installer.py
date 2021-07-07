@@ -68,5 +68,5 @@ if not os.path.exists("gufi_venv"):
     ans = query_yes_no("Vistual env doens't exist, do you want to create one?")
     if ans:
         print("Creating virtual env")
-        os.system("python3.7 -m venv gufi_venv && . gufi_venv/bin/activate && pip install -r requirements.txt")
+        os.system("python3.8 -m venv gufi_venv && . gufi_venv/bin/activate && pip install -r requirements.txt")
 os.system("chmod +x GUFI.sh")
