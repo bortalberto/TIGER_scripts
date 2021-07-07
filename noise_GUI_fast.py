@@ -8,7 +8,14 @@ import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
-from lib import DB_classes
+try:
+    from lib import DB_classes as DB_classes
+
+
+except:
+    DB = False
+    print("No DB library found")
+
 from multiprocessing import Array
 
 from tkinter import *
