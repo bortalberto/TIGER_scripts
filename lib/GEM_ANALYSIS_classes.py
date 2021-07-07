@@ -988,6 +988,7 @@ class analisys_read:
     def start_socket(self):
         self.dataSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.dataSock.settimeout(0.1)
+        self.dataSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.dataSock.bind((self.HOST_IP, self.HOST_PORT))
         #self.dataSock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 8388608 )
         #self.dataSock.getsockopt(socket.SOL_SOCKET,socket.SO_RCVBUF)
@@ -1055,8 +1056,6 @@ class analisys_read:
         efine=[]
         while True:
             data, addr = self.dataSock.recvfrom(BUFSIZE)
-            print (data)
-            print (len(data))
             for j in range(0, int(len(data)/8)):
                 hexdata = binascii.hexlify(data[j*8:j*8+8])
                 string = "{:064b}".format(int(hexdata, 16))
@@ -1064,7 +1063,6 @@ class analisys_read:
                 inverted = []
                 for i in range(8, 0, -1):
                     inverted.append(string[(i - 1) * 8:i * 8])
-                print(string)
 
                 string_inv = "".join(inverted)
                 int_x = int(string_inv, 2)
@@ -1075,7 +1073,6 @@ class analisys_read:
                                 (int_x >> 30) & 0xFFFF) + 'Ecoarse: %03X ' % (
                                 (int_x >> 20) & 0x3FF) + 'Tfine: %03X ' % ((int_x >> 10) & 0x3FF) + 'Efine: %03X \n' % (
                                 int_x & 0x3FF)
-                    print("Data: {}".format(s))
                     if ((ch & 0x3F)==(int(int_x >> 48) & 0x3F) and (TIG == (int_x >> 56) & 0x7)):
                         efine.append(int(int_x & 0x3FF))
 

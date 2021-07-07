@@ -7,6 +7,8 @@ from tkinter import *
 from tkinter import filedialog
 from tkinter.ttk import Progressbar
 from tkinter.ttk import Notebook
+from tkinter.ttk import Combobox
+
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
@@ -98,11 +100,13 @@ class generic_scan ():
 
         fields_optionsG = self.GEMROC_reading_dict.keys()
         # fields_optionsG.append("All") Add again all lter
-        OptionMenu(self.first_row, self.GEMROC_num, *fields_optionsG).pack(side=LEFT)
+        OptionMenu(self.first_row, self.GEMROC_num, *fields_optionsG,).pack(side=LEFT)
         self.third_row=Frame(self.error_window)
         self.third_row.grid(row=3, column=1, sticky=S, pady=4,columnspan=10)
-        fields_optionspar = self.acquire_keys()
-        OptionMenu(self.third_row, self.scan_key, *fields_optionspar).pack(side=LEFT)
+        self.fields_optionspar_c,  self.fields_optionspar_g= self.acquire_keys()
+        fields_optionspar = self.fields_optionspar_c + self.fields_optionspar_g
+        self.scan_key.set("TP_Vcal_ref")
+        Combobox(self.third_row, textvariable=self.scan_key, values=fields_optionspar).pack(side=LEFT)
         self.strart_button=Button(self.third_row, text ='Launch scan',  command=self.launch_scan)
         self.strart_button.pack(side=LEFT,padx=2)
         Button(self.third_row, text="Save", command=self.SAVE).pack(side=LEFT,padx=2)
@@ -142,7 +146,7 @@ class generic_scan ():
         x = np.arange(0, 64)
         v = np.zeros((64))
 
-        self.fig = Figure(figsize=(6,6))
+        self.fig = Figure(figsize=(4,4))
         self.plot_rate = self.fig.add_subplot(111)
         self.scatter, = self.plot_rate.plot(x, v, 'r+',label = "data")
 
@@ -158,7 +162,7 @@ class generic_scan ():
         self.canvas.draw()
         self.canvas.flush_events()
         self.toolbar = NavigationToolbar2Tk(self.canvas, self.corn1)
-        self.toolbar.draw()
+        self.toolbar.canvas.draw_idle()
         self.line_list=[]
         # for number, GEMROC_number in self.GEMROC_reading_dict.items():
         #     print number
@@ -193,9 +197,12 @@ class generic_scan ():
         :return:
         """
         self.sampling_scan=True
+        if self.Activate_TP.get():
+            self.start_TP()
         GEMROC=self.GEMROC_reading_dict["{}".format(self.GEMROC_num.get())]
         GEM_COM = GEMROC.GEM_COM
         c_inst = GEMROC.c_inst
+        g_inst = GEMROC.g_inst
         test_r = AN_CLASS.analisys_read(GEM_COM, c_inst)
         first = self.TIGER_num_first.get()
         last = self.TIGER_num_last.get()+1
@@ -211,18 +218,25 @@ class generic_scan ():
 
                 for i in range(int(self.param_first.get()), int(self.param_last.get())):
                     print ("{} set {}".format(self.scan_key.get(),i))
-                    if self.Activate_TP:
+                    if self.Activate_TP.get():
                         GEM_COM.Set_param_dict_channel(c_inst,"TP_disable_FE", T, J, 0)
+                        GEM_COM.Set_param_dict_global(g_inst,"FE_TPEnable", T, 1)
+
                     GEM_COM.Set_param_dict_channel(c_inst, "TriggerMode", T, J, 0)
-                    GEM_COM.Set_param_dict_channel(c_inst, self.scan_key.get(), T,J, i)
+                    if self.scan_key.get() in self.fields_optionspar_c:
+                        GEM_COM.Set_param_dict_channel(c_inst, self.scan_key.get(), T,J, i)
+                    if self.scan_key.get() in self.fields_optionspar_g:
+                        GEM_COM.Set_param_dict_global(g_inst, self.scan_key.get(), T, i)
                     GEM_COM.SynchReset_to_TgtFEB()
                     average,stdv,total=test_r.acquire_Efine(J,T,0.5)
                     self.efine_average["GEMROC {}".format(GEMROC_ID)]["TIG{}".format(T)]["CH{}".format(J)].append(average)
                     self.efine_stdv["GEMROC {}".format(GEMROC_ID)]["TIG{}".format(T)]["CH{}".format(J)].append(stdv)
                     self.total_events["GEMROC {}".format(GEMROC_ID)]["TIG{}".format(T)]["CH{}".format(J)].append(total)
                     GEM_COM.Set_param_dict_channel(c_inst, "TriggerMode", T, J, 3)
-                    if self.Activate_TP:
+                    if self.Activate_TP.get():
                         GEM_COM.Set_param_dict_channel(c_inst,"TP_disable_FE", T, J, 1)
+                        GEM_COM.Set_param_dict_global(g_inst,"FE_TPEnable", T, 0)
+
 
     def change_G_or_T(self, i, G_or_T):
         if G_or_T == "G":
@@ -259,17 +273,30 @@ class generic_scan ():
         self.CHentry.insert(END,self.plotting_Channel)
         self.plotta()
 
+    def start_TP(self):
+        for number, GEMROC_number in self.GEMROC_reading_dict.items():
+            GEMROC_number.GEM_COM.Soft_TP_generate()
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TL_nTM_ACQ'] = 1
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['Periodic_TP_EN_pattern'] = 15
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['number_of_repetitions'] = 512 + 1
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TP_width'] = 14
+            GEMROC_number.GEM_COM.DAQ_set_with_dict()
     def plotta(self):
         for number, GEMROC_number in self.GEMROC_reading_dict.items():
             if int(number.split()[1]) == int(self.plotting_gemroc):
                 GEMROC_ID=self.plotting_gemroc
                 self.plot_rate.set_title("ROC {},TIG {}, CH {} ".format(self.plotting_gemroc, self.plotting_TIGER, self.plotting_Channel))
                 y=(self.efine_average["GEMROC {}".format(GEMROC_ID)]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)])
-                x=(range(0,11))
-
+                x=(range(self.param_first.get(),self.param_last.get()))
+                y=np.nan_to_num(y)
+                print (y)
+                print (len(x))
+                print ("------")
                 self.scatter.set_ydata(y)
                 self.scatter.set_xdata(x)
-                self.plot_rate.set_xlim(right=len(x)+1)
+                self.plot_rate.set_xlim([x[0]-1,x[-1]+1])
+                self.plot_rate.set_ylim([np.min(y)-0.1*np.max(y), np.max(y)+0.1*np.max(y)])
+
                 self.canvas.draw()
                 self.canvas.flush_events()
                 break
@@ -293,31 +320,31 @@ class generic_scan ():
         :return:
         """
         File_name = filedialog.asksaveasfilename(initialdir=".", title="Select file for dump", filetypes=(("txt", "*.txt"), ("all files", "*.*")))
-        with open (File_name,'a+') as dumpfile:
-            dumpfile.write("## Total event        Efine      Sigma")
-            for GEMROC_key, dictG in self.efine_average.items():
-                dumpfile.write(GEMROC_key)
-                for TIGER_key, dictT in dictG.items():
-                    dumpfile.write(TIGER_key)
-                    for chkey, dictC in dictT.items():
-                        dumpfile.write(chkey)
-                        for tota,Efine,sigma in self.efine_average[GEMROC_key][TIGER_key][chkey], self.efine_stdv[GEMROC_key][TIGER_key][chkey], self.total_events[GEMROC_key][TIGER_key][chkey]:
-                            dumpfile.write(tota+"    "+Efine+"    "+"    "+sigma)
+        with open (File_name,'w+') as dumpfile:
+            GEMROC_key=self.GEMROC_num.get()
+            dumpfile.write(f"Scan of {self.scan_key.get()} from {self.param_first.get()} to {self.param_last.get()-1}\n")
+            for TIGER_key in range(self.TIGER_num_first.get(), self.TIGER_num_last.get()+1):
+                for chkey in range(self.CHANNEL_num_first.get(), self.CHANNEL_num_last.get()+1):
+                        dumpfile.write(f"{GEMROC_key}   Tiger {TIGER_key}   Channel {chkey}\n")
+                        dumpfile.write("Total event\t Efine\tSigma\n")
+                        for Efine,sigma,tota in zip(self.efine_average[GEMROC_key][f"TIG{TIGER_key}"][f"CH{chkey}"], self.efine_stdv[GEMROC_key][f"TIG{TIGER_key}"][f"CH{chkey}"], self.total_events[GEMROC_key][f"TIG{TIGER_key}"][f"CH{chkey}"]):
+                            dumpfile.write(f"{tota}\t{Efine}\t{sigma}\n")
 
     def acquire_keys(self):
         """
         Function to acquire all the keys for global and channel configuration
         :return:
         """
-        key_list = []
-        with open ("lib"+sep+"keys"+sep+"global_conf_file_keys", 'r') as G:
+        key_list_channel = []
+        with open ("lib"+sep+"keys"+sep+"channel_conf_file_keys", 'r') as G:
             for line in G.readlines():
-                key_list.append(line.strip())
+                key_list_channel.append(line.strip())
 
-        with open("lib" + sep + "keys" + sep + "channel_conf_file_keys", 'r') as C:
+        key_list_global = []
+        with open("lib" + sep + "keys" + sep + "global_conf_file_keys", 'r') as C:
             for line in C.readlines():
-                key_list.append(line.strip())
-        return key_list
+                key_list_global.append(line.strip())
+        return key_list_channel,key_list_global
 
 def squared_sum(A,B):
     #A= Aspettati

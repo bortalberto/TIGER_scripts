@@ -244,7 +244,7 @@ class noise_measure():
         self.canvas.draw()
         self.canvas.flush_events()
         self.toolbar = NavigationToolbar2Tk(self.canvas, self.corn1)
-        self.toolbar.draw()
+        self.toolbar.canvas.draw_idle()
         self.line_list = []
         # for number, GEMROC_number in self.GEMROC_reading_dict.items():
         #     print number
@@ -694,7 +694,7 @@ class noise_measure():
             GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['number_of_repetitions'] = 512 + self.number_of_TP.get()
             period = 8190 / self.number_of_TP.get()
             GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TP_period'] = int(period)
-            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TP_width'] = 10
+            GEMROC_number.GEM_COM.gemroc_DAQ_XX.DAQ_config_dict['TP_width'] = 14
             GEMROC_number.GEM_COM.DAQ_set_with_dict()
 
     def plotta(self):
