@@ -289,16 +289,14 @@ class generic_scan ():
                 y=(self.efine_average["GEMROC {}".format(GEMROC_ID)]["TIG{}".format(self.plotting_TIGER)]["CH{}".format(self.plotting_Channel)])
                 x=(range(self.param_first.get(),self.param_last.get()))
                 y=np.nan_to_num(y)
-                print (y)
-                print (len(x))
-                print ("------")
-                self.scatter.set_ydata(y)
-                self.scatter.set_xdata(x)
-                self.plot_rate.set_xlim([x[0]-1,x[-1]+1])
-                self.plot_rate.set_ylim([np.min(y)-0.1*np.max(y), np.max(y)+0.1*np.max(y)])
+                if len (y)>0:
+                    self.scatter.set_ydata(y)
+                    self.scatter.set_xdata(x)
+                    self.plot_rate.set_xlim([x[0]-1,x[-1]+1])
+                    self.plot_rate.set_ylim([np.min(y)-0.1*np.max(y), np.max(y)+0.1*np.max(y)])
 
-                self.canvas.draw()
-                self.canvas.flush_events()
+                    self.canvas.draw()
+                    self.canvas.flush_events()
                 break
 
         self.canvas.draw()
