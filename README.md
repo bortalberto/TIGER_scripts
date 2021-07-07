@@ -19,7 +19,10 @@ Finally, the GUI uses tlc-tk, so install the python3 support for it:
 ```
 sudo apt install python3-tk
 ```
-
+If you haven't done it yet, download GUFI:
+```
+git clone https://github.com/bortalberto/TIGER_scripts.git
+```
 To install GUFI run
 ```
 python3.8 installer.py
