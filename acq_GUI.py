@@ -93,9 +93,10 @@ class menu():
 
         self.master_window.wm_title("GEMROC acquisition")
         self.restart = BooleanVar(self.master_window)
-        self.configure_every_restart = BooleanVar(self.master_window)
         self.restart.set(True)
-        self.configure_every_restart.set(True)
+
+        self.configure_every_restart = BooleanVar(self.master_window)
+        self.configure_every_restart.set(False)
 
         self.error_GEMROC = BooleanVar(self.master_window)
         self.error_GEMROC.set(False)
@@ -151,11 +152,20 @@ class menu():
         self.time_in = Entry(self.start_frame, width=3)
         self.time_in.insert(END, '10')
         self.time_in.grid(row=0, column=1, sticky=NW, pady=4)
-        Checkbutton(self.start_frame, text="Fast analysis", variable=self.simple_analysis).grid(row=0, column=2, sticky=NW, pady=4)
-        Checkbutton(self.start_frame, text="On run analysis", variable=self.run_analysis).grid(row=0, column=3, sticky=NW, pady=4)
-        Checkbutton(self.start_frame, text="Restart", variable=self.restart).grid(row=0, column=4, sticky=NW, pady=4)
-        Checkbutton(self.start_frame, text="Save conf. at every subrun", variable=self.save_conf_every_run).grid(row=0, column=5, sticky=NW, pady=4)
-        Checkbutton(self.start_frame, text="Save GEMROC global errors at the end", variable=self.error_GEMROC).grid(row=0, column=5, sticky=NW, pady=4)
+        Label(self.start_frame, text="Events run (x1000)").grid(row=0, column=2, sticky=NW, pady=4)
+        self.event_max = Entry(self.start_frame, width=5)
+        self.event_max.insert(END, '100')
+        self.event_max.grid(row=0, column=3, sticky=NW, pady=4)
+        Label(self.start_frame, text="Events subrun (x1000)").grid(row=0, column=4, sticky=NW, pady=4)
+        self.event_max_sub = Entry(self.start_frame, width=5)
+        self.event_max_sub.insert(END, '10')
+        self.event_max_sub.grid(row=0, column=5, sticky=NW, pady=4)
+        Checkbutton(self.start_frame, text="Fast analysis", variable=self.simple_analysis).grid(row=0, column=6, sticky=NW, pady=4)
+        Checkbutton(self.start_frame, text="On run analysis", variable=self.run_analysis).grid(row=0, column=7, sticky=NW, pady=4)
+        Checkbutton(self.start_frame, text="Restart", variable=self.restart).grid(row=0, column=8, sticky=NW, pady=4)
+        Checkbutton(self.start_frame, text="configure every restart", variable=self.configure_every_restart).grid(row=0, column=9, sticky=NW, pady=4)
+        # Checkbutton(self.start_frame, text="Save conf. at every subrun", variable=self.save_conf_every_run).grid(row=0, column=6, sticky=NW, pady=4)
+        # Checkbutton(self.start_frame, text="Save GEMROC global errors at the end", variable=self.error_GEMROC).grid(row=0, column=7, sticky=NW, pady=4)
 
         a_frame = Frame(self.master)
         a_frame.pack()
@@ -236,8 +246,8 @@ class menu():
             self.open_on_run_tab()
             self.online_monitor.set(True)
             self.online_monitor_data.set(True)
-            Checkbutton(self.start_frame, text="Online monitor", variable=self.online_monitor).grid(row=0, column=6, sticky=NW, pady=4)
-            Checkbutton(self.start_frame, text="Online data monitor", variable=self.online_monitor_data).grid(row=0, column=7, sticky=NW, pady=4)
+            Checkbutton(self.start_frame, text="Online monitor", variable=self.online_monitor).grid(row=0, column=10, sticky=NW, pady=4)
+            Checkbutton(self.start_frame, text="Online data monitor", variable=self.online_monitor_data).grid(row=0, column=11, sticky=NW, pady=4)
 
         # TO be restored
         # Checkbutton(self.start_frame, text="Data online monitor", variable=self.online_monitor_data).grid(row=0, column=3, sticky=NW, pady=4)
@@ -532,7 +542,7 @@ class menu():
         Entry(first_row_2, width=10, textvariable=self.minirun_folders_var).pack(side=LEFT)
 
         self.downsamplig_online = IntVar (self.master_window)
-        self.downsamplig_online.set(1)
+        self.downsamplig_online.set(500)
         Label(first_row_3, text="Downsampling online monitor").pack(side=LEFT)
         Entry(first_row_3, width=10, textvariable=self.downsamplig_online).pack(side=LEFT)
 
@@ -685,26 +695,24 @@ class menu():
                     self.PMT_OFF()
                     time.sleep(10)
 
-
-                self.father.Synch_reset()
-
-                self.father.load_default_config_parallel(set_check=False)
-                self.father.doing_something=False
-                print("Configuration wrote")
-                time.sleep(2)
-
-                self.father.Synch_reset()
-                # self.father.TCAM_reset()
-                if debug:
-                    print("Setting pause")
-                self.father.set_pause_mode(to_all=True, value=1)
+                if self.configure_every_restart.get():
+                    self.father.Synch_reset()
+                    self.father.load_default_config_parallel(set_check=False)
+                    self.father.doing_something=False
+                    print("Configuration wrote")
+                    time.sleep(2)
+                    self.father.Synch_reset()
+                    # self.father.TCAM_reset()
+                    if debug:
+                        print("Setting pause")
+                    self.father.set_pause_mode(to_all=True, value=1)
 
                 if self.PMT and self.lower_PMT.get():
                     if debug:
                         print("PMT ON")
                     self.PMT_on()
                     time.sleep(15)
-
+                time.sleep(0.5)
                 self.start_acq(First_launch=False)
         except Exception as E:
             print ("Failed realunch {}".format(E))
@@ -926,7 +934,7 @@ class menu():
                 self.thread.append(GEM_ACQ.Thread_handler("GEM ".format(i), float(self.time_acq), self.GEM[i], sub_folder=self.run_folder, sub_run_number=self.sub_run_number))
 
             else:
-                self.thread.append(GEM_ACQ.Thread_handler_TM("GEM ".format(i), self.GEM[i], sub_folder=self.run_folder, sub_run_number=self.sub_run_number, downsampling=self.downsamplig_online.get()))
+                self.thread.append(GEM_ACQ.Thread_handler_TM("GEM ".format(i), self.GEM[i], sub_folder=self.run_folder, sub_run_number=self.sub_run_number, downsampling=self.downsamplig_online.get(), max_packets_sub=self.event_max_sub.get()*1000,max_packets=self.event_max.get()*1000 ))
         if not self.std_alone:
             self.error_thread = (Thread_handler_errors(self.GEMROC_reading_dict, self.GEM, self.errors_counters_810, self))
         self.GEM_to_read_last = self.GEM_to_read
@@ -1349,7 +1357,6 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
 
 class stopper(Thread):  #
     def __init__(self, caller, start_time):
-        self.running = True
         Thread.__init__(self)
         self.caller = caller
         self.start_time = start_time
@@ -1357,9 +1364,9 @@ class stopper(Thread):  #
 
     def run(self):
         while self.running:
-
             if self.caller.mode == "TM":
                 time_max = float(self.caller.time_acq) * 60
+
             else:
                 time_max = float(self.caller.time_acq)
             self.caller.time_label["text"] = "Acq time: {:.0f}".format(time_max-(time.time()-self.start_time))

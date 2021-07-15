@@ -140,22 +140,22 @@ class generic_scan ():
         Button(self.usefullframe, text='>', command=lambda: self.change_G_or_T(1, "C")).grid(row=0, column=4, sticky=S, pady=4)
 
         self.corn1 = Frame(self.error_window)
-        self.corn1.grid(row=12, column=1, sticky=S, pady=4,columnspan=100)
+        self.corn1.grid(row=12, column=1, sticky=S, pady=8,padx=8,columnspan=100)
 
         # Plot
-        x = np.arange(0, 64)
-        v = np.zeros((64))
+        x = np.arange(0, 1)
+        v = np.zeros((1))
 
-        self.fig = Figure(figsize=(4,4))
-        self.plot_rate = self.fig.add_subplot(111)
+        self.fig = Figure(figsize=(5,5))
+        self.plot_rate = self.fig.add_subplot()
         self.scatter, = self.plot_rate.plot(x, v, 'r+',label = "data")
 
 
 
         self.plot_rate.set_title("TIGER {}, GEMROC {}".format(self.plotting_TIGER, self.plotting_gemroc))
-        self.plot_rate.set_ylabel("Rate [Hz]", fontsize=14)
+        self.plot_rate.set_ylabel("Efine")
 
-        self.plot_rate.set_xlabel("Threshold", fontsize=14)
+        self.plot_rate.set_xlabel("Step")
         self.plot_rate.ticklabel_format(style='sci', scilimits=(-3, 4), axis='both')
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.corn1)
         self.canvas.get_tk_widget().pack(side=BOTTOM)
@@ -294,6 +294,7 @@ class generic_scan ():
                     self.scatter.set_xdata(x)
                     self.plot_rate.set_xlim([x[0]-1,x[-1]+1])
                     self.plot_rate.set_ylim([np.min(y)-0.1*np.max(y), np.max(y)+0.1*np.max(y)])
+                    self.plot_rate.set_xlabel(f"{self.scan_key.get()}", fontsize=14)
 
                     self.canvas.draw()
                     self.canvas.flush_events()

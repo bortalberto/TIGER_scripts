@@ -91,7 +91,7 @@ class Thread_handler(Thread):
 
 
 class Thread_handler_TM(Thread):  # In order to scan during configuration is mandatory to use multithreading
-    def __init__(self, name, reader,sub_folder=".",sub_run_number=0, downsampling=1):
+    def __init__(self, name, reader,sub_folder=".",sub_run_number=0, downsampling=1, max_packets=50, max_packets_sub=200):
         Thread.__init__(self)
         self.name = name
         self.reader = reader
@@ -100,30 +100,44 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
         self.sub_folder = sub_folder
         self.sub_run_number = sub_run_number
         self.downsampling=downsampling
+        self.max_packets=max_packets
+        self.max_packets_sub=max_packets_sub
 
     def run(self):
         Totallissimi_packets=0
         Total_data_MAX_size = 2 ** 20
         Total_MAX_packets=50
-        datapath = "." + sep + "data_folder" + sep+self.sub_folder+sep + "SubRUN_{}_GEMROC_{}_TM.dat".format(self.sub_run_number, self.reader.GEMROC_ID)
-        with open(self.reader.log_path, 'a') as f:
-            f.write("{} -- Saving data from  GEMROC {} in file {}\n".format(time.ctime(), self.reader.GEMROC_ID,datapath))
         # with open(self.reader.log_path, 'a') as log_file:
         #     log_file.write("{} --Launching acquisition on GEMROC {} for {} seconds\n".format(time.ctime(),self.reader.GEMROC_ID,self.acq_time))
-        self.reader.datapath = datapath
-        with open(datapath, 'wb'):
-            pass
         data_list = []
         self.reader.start_socket()
         if self.reader.data_online_monitor:
             self.reader.send_start_packet(self.sub_folder, self.sub_run_number, datapath)
-        while True:
-            Total_Data = 0
-            Total_packets = 0
+        Total_Data = 0
+        Total_packets = 0
+
+        datapath = "." + sep + "data_folder" + sep + self.sub_folder + sep + "SubRUN_{}_GEMROC_{}_TM.dat".format(self.sub_run_number, self.reader.GEMROC_ID)
+        self.reader.datapath = datapath
+        with open(datapath, 'wb'):
+            pass
+        with open(self.reader.log_path, 'a') as f:
+            f.write("{} -- Saving data from  GEMROC {} in file {}\n".format(time.ctime(), self.reader.GEMROC_ID, datapath))
+        while Total_packets < self.max_packets:
+            total_packets_sub=0
+            if total_packets_sub>self.max_packets_sub:
+                self.sub_run_number=self.sub_run_number+1
+                datapath = "." + sep + "data_folder" + sep + self.sub_folder + sep + "SubRUN_{}_GEMROC_{}_TM.dat".format(self.sub_run_number, self.reader.GEMROC_ID)
+                self.reader.datapath = datapath
+                with open(datapath, 'wb'):
+                    pass
+                with open(self.reader.log_path, 'a') as f:
+                    f.write("{} -- Saving data from  GEMROC {} in file {}\n".format(time.ctime(), self.reader.GEMROC_ID, datapath))
+                total_packets_sub=0
             while (Total_Data < Total_data_MAX_size) and (Total_packets < Total_MAX_packets) and self.running:
                 try:
                     Total_packets += 1
                     Totallissimi_packets += 1
+                    total_packets_sub += 1
                     x = self.reader.fast_acquisition(data_list, total_packets=Totallissimi_packets, downsampling=self.downsampling)  # self.reader.fast_acquisition(data_list)
                     Total_Data += x
                     #print ("Packet from GEMROC {}".format(self.reader.GEMROC_ID))
@@ -146,7 +160,6 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
                     self.running=False
                     return 0
             self.reader.data_list = list(data_list)
-
             # with open(self.reader.log_path, 'a') as log_file:
             #     log_file.write("{} -- Closing acquisition on GEMROC {}\n".format(time.ctime(),self.reader.GEMROC_ID))
             with open(datapath, 'ab') as datafile:

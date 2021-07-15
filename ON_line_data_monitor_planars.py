@@ -72,7 +72,7 @@ class menu():
             self.button[i].grid(row=riga, column=colonna - 1)
 
         self.downsamplig_online = IntVar(self.main_win)
-        self.downsamplig_online.set(1)
+        self.downsamplig_online.set(500)
         Label(self.select_frame, text="Downsampling online monitor").pack(side=LEFT)
         Entry(self.select_frame, width=10, textvariable=self.downsamplig_online).pack(side=LEFT)
         self.error_frame = Frame(self.main_win)
@@ -585,7 +585,7 @@ class GEMROC_decoder(Thread):
             if len(self.data_buffer) == 0:
                 time.sleep(0.1)
             else:
-                time.sleep(0.0001)
+                pass
 
 
     def decode(self, pacchetto):
@@ -692,14 +692,14 @@ class GEMROC_decoder(Thread):
                     self.caller2.single_status_bit[self.GEMROC_id * 8 + 5]["text"] = ((int_x >> 59) & 0x1)
 
                 if not self.first_packet:
-                    if self.last_UDP_number != (((int_x >> 32) & 0xFFFFF) + ((int_x >> 0) & 0xFFFFFFF)) - 1:
-                        pacchetti_mancanti = (((int_x >> 32) & 0xFFFFF) + ((int_x >> 0) & 0xFFFFFFF)) - self.last_UDP_number - 1
-                        print( "Missing {} UDP packets, up to {}".format(pacchetti_mancanti, self.last_UDP_number + 1))
-                        self.write_log("Missing {} UDP packets, up to{}".format(pacchetti_mancanti, self.last_UDP_number + 1))
-                        self.log_missing_UDP(self.last_UDP_number + 1, pacchetti_mancanti)
-                        self.missing_pkt_counter += 1
-                        self.caller2.bad_blink(self.GEMROC_id)
-                    self.caller2.missing_UDP_label_list[self.GEMROC_id]["text"] = self.missing_pkt_counter
+                    # if self.last_UDP_number != (((int_x >> 32) & 0xFFFFF) + ((int_x >> 0) & 0xFFFFFFF)) - 1:
+                    #     pacchetti_mancanti = (((int_x >> 32) & 0xFFFFF) + ((int_x >> 0) & 0xFFFFFFF)) - self.last_UDP_number - 1
+                    #     print( "Missing {} UDP packets, up to {}".format(pacchetti_mancanti, self.last_UDP_number + 1))
+                    #     self.write_log("Missing {} UDP packets, up to{}".format(pacchetti_mancanti, self.last_UDP_number + 1))
+                    #     self.log_missing_UDP(self.last_UDP_number + 1, pacchetti_mancanti)
+                    #     self.missing_pkt_counter += 1
+                    #     self.caller2.bad_blink(self.GEMROC_id)
+                    # self.caller2.missing_UDP_label_list[self.GEMROC_id]["text"] = self.missing_pkt_counter
 
                     self.last_UDP_number = (((int_x >> 32) & 0xFFFFF) + ((int_x >> 0) & 0xFFFFFFF))
                     self.caller2.last_UDP_list[self.GEMROC_id]["text"] = self.last_UDP_number
