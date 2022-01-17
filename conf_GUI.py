@@ -780,7 +780,7 @@ class menu():
             ID = self.handler_list[i].GEMROC_ID
             self.GEMROC_reading_dict["GEMROC {}".format(ID)] = self.handler_list[i]
         Label(self.second_row_frame, text='GEMROC   ').grid(row=0, column=0, sticky=NW, pady=4)
-        # print self.GEMROC_reading_dict.keys()
+        # print (self.GEMROC_reading_dict.keys())
         self.select_GEMROC = OptionMenu(self.second_row_frame, self.showing_GEMROC, *sorted(self.GEMROC_reading_dict.keys(),key = find_number))
         self.select_GEMROC.grid(row=1, column=0, sticky=NW, pady=4)
         fields_options = ["DAQ configuration", "LV and diagnostic", "Global Tiger configuration", "Channel Tiger configuration"]
@@ -2321,7 +2321,6 @@ class menu():
         self.double_enable()
         self.Synch_reset(1)
         self.change_acquisition_mode(True, 0)
-        self.set_fine_thr_tuning()
         self.change_trigger_mode(value=0, to_all=True)
         self.load_thr(True, "scan", 3, 2, 0, 0, 8)
         if self.use_ecq_thr.get():
@@ -2340,6 +2339,9 @@ class menu():
         if beijing:
             self.shut_down_FEB(2,self.GEMROC_reading_dict["GEMROC 8"])
             self.shut_down_FEB(3,self.GEMROC_reading_dict["GEMROC 10"])
+        else:
+            self.set_fine_thr_tuning()
+
         self.set_pause_mode(True, 1)
         self.Launch_error_check['text'] = "Fast configuration done"
         if beijing:

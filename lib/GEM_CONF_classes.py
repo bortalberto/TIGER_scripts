@@ -816,19 +816,19 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
             raise Exception ('Problems with the time delay settings file')
       self.GEMROC_LV_conf_dict={}
       for key in  config["LV"].keys():
-          self.GEMROC_LV_conf_dict[key]=config["LV"].getint(key)
+          self.GEMROC_LV_conf_dict[key.upper()]=config["LV"].getint(key)
 
       for key in config.keys():
           if "LV." in key:
-              if f"{self.TARGET_GEMROC_ID}" in key:
+              if "{}".format(self.TARGET_GEMROC_ID) in key:
                   for key_int in config[key]:
-                      self.GEMROC_LV_conf_dict[key_int] = config[key].getint(key_int)
+                      self.GEMROC_LV_conf_dict[key_int.upper()] = config[key].getint(key_int)
 
 
-      self.FEB_PWR_EN_pattern = self.GEMROC_LV_conf_dict["FEB_PWR_EN_pattern"]
-      self.FEB_OVC_EN_pattern = self.GEMROC_LV_conf_dict["FEB_OVC_EN_pattern"]
-      self.FEB_OVV_EN_pattern = self.GEMROC_LV_conf_dict["FEB_OVV_EN_pattern"]
-      self.FEB_OVT_EN_pattern = self.GEMROC_LV_conf_dict["FEB_OVT_EN_pattern"]
+      self.FEB_PWR_EN_pattern = self.GEMROC_LV_conf_dict["FEB_PWR_EN_PATTERN"]
+      self.FEB_OVC_EN_pattern = self.GEMROC_LV_conf_dict["FEB_OVC_EN_PATTERN"]
+      self.FEB_OVV_EN_pattern = self.GEMROC_LV_conf_dict["FEB_OVV_EN_PATTERN"]
+      self.FEB_OVT_EN_pattern = self.GEMROC_LV_conf_dict["FEB_OVT_EN_PATTERN"]
       self.ROC_OVT_EN = self.GEMROC_LV_conf_dict["ROC_OVT_EN"] # 1 bit
       self.XCVR_LPBCK_TST_EN = self.GEMROC_LV_conf_dict["XCVR_LPBCK_TST_EN"] #
       self.ROC_OVT_LIMIT = self.GEMROC_LV_conf_dict["ROC_OVT_LIMIT"] # Overtemperature limit for GEMROC module; range 0..63: resolution 1 bin = 1degree C
@@ -852,7 +852,7 @@ class gemroc_cmd_LV_settings(object): # purpose: organize the GEMROC Configurati
       self.D_OVC_LIMIT_FEB3 = self.GEMROC_LV_conf_dict["D_OVC_LIMIT_FEB3"]
       self.D_OVV_LIMIT_FEB3 = self.GEMROC_LV_conf_dict["D_OVV_LIMIT_FEB3"]
       self.OVT_LIMIT_FEB3 = self.GEMROC_LV_conf_dict["OVT_LIMIT_FEB3"]
-      self.FnR_8bit_pattern = self.GEMROC_LV_conf_dict["FnR_8bit_pattern"] # acr 2019-07-25 added FnR_8bit_pattern
+      self.FnR_8bit_pattern = self.GEMROC_LV_conf_dict["FNR_8BIT_PATTERN"] # acr 2019-07-25 added FnR_8bit_pattern
       self.TIGER_for_counter = 0 #TIGER on which we count error or hits
       self.HIT_counter_disable = 0 # 1= counting errors, 0= counting hits
       self.CHANNEL_for_counter =64 #0-63 for single channel hits, 64 for chip total
