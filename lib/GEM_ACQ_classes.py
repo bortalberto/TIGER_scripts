@@ -105,11 +105,10 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
 
     def run(self):
         Totallissimi_packets=0
-        Total_data_MAX_size = 2 ** 20
         Total_MAX_packets=50
-        # with open(self.reader.log_path, 'a') as log_file:
-        #     log_file.write("{} --Launching acquisition on GEMROC {} for {} seconds\n".format(time.ctime(),self.reader.GEMROC_ID,self.acq_time))
         data_list = []
+        datapath = "." + sep + "data_folder" + sep + self.sub_folder + sep + "SubRUN_{}_GEMROC_{}_TM.dat".format(self.sub_run_number, self.reader.GEMROC_ID)
+
         self.reader.start_socket()
         if self.reader.data_online_monitor:
             self.reader.send_start_packet(self.sub_folder, self.sub_run_number, datapath)
@@ -121,19 +120,12 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
         with open(datapath, 'wb'):
             pass
         with open(self.reader.log_path, 'a') as f:
+            print("{} -- Saving data from  GEMROC {} in file {}\n".format(time.ctime(), self.reader.GEMROC_ID, datapath))
             f.write("{} -- Saving data from  GEMROC {} in file {}\n".format(time.ctime(), self.reader.GEMROC_ID, datapath))
-        while Total_packets < self.max_packets:
-            total_packets_sub=0
-            if total_packets_sub>self.max_packets_sub:
-                self.sub_run_number=self.sub_run_number+1
-                datapath = "." + sep + "data_folder" + sep + self.sub_folder + sep + "SubRUN_{}_GEMROC_{}_TM.dat".format(self.sub_run_number, self.reader.GEMROC_ID)
-                self.reader.datapath = datapath
-                with open(datapath, 'wb'):
-                    pass
-                with open(self.reader.log_path, 'a') as f:
-                    f.write("{} -- Saving data from  GEMROC {} in file {}\n".format(time.ctime(), self.reader.GEMROC_ID, datapath))
-                total_packets_sub=0
-            while (Total_Data < Total_data_MAX_size) and (Total_packets < Total_MAX_packets) and self.running:
+
+        total_packets_sub = 0
+        while (Totallissimi_packets < self.max_packets) :
+            while (Total_packets < Total_MAX_packets) and self.running:
                 try:
                     Total_packets += 1
                     Totallissimi_packets += 1
@@ -150,9 +142,8 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
                     Exception("GEMROC {} TIMED_OUT".format(self.reader.GEMROC_ID))
                     with open(self.reader.log_path, 'a') as f:
                         f.write("{} -- Finished saving data from  GEMROC {} in file {}, total packets= {}\n".format(time.ctime(), self.reader.GEMROC_ID, self.reader.datapath, Totallissimi_packets))
-                    print ("Finished saving data from  GEMROC {} in file {}, total packets= {}\n".format(self.reader.GEMROC_ID, self.reader.datapath, Totallissimi_packets))
+                    print ("Finished run{}: saving data from  GEMROC {} in file {}, total packets= {}\n".format(self.sub_folder, self.reader.GEMROC_ID, self.reader.datapath, Totallissimi_packets))
                     self.reader.dataSock.close()
-
                     if self.reader.data_online_monitor:
                         self.reader.send_end_packet(self.sub_folder, self.sub_run_number, datapath)
                         self.reader.cloning_sock.close()
@@ -160,12 +151,21 @@ class Thread_handler_TM(Thread):  # In order to scan during configuration is man
                     self.running=False
                     return 0
             self.reader.data_list = list(data_list)
-            # with open(self.reader.log_path, 'a') as log_file:
-            #     log_file.write("{} -- Closing acquisition on GEMROC {}\n".format(time.ctime(),self.reader.GEMROC_ID))
+            if total_packets_sub >= self.max_packets_sub:
+                self.sub_run_number = self.sub_run_number + 1
+                datapath = "." + sep + "data_folder" + sep + self.sub_folder + sep + "SubRUN_{}_GEMROC_{}_TM.dat".format(self.sub_run_number, self.reader.GEMROC_ID)
+                self.reader.datapath = datapath
+                with open(datapath, 'wb'):
+                    pass
+                with open(self.reader.log_path, 'a') as f:
+                    print (f"GEMROC {self.reader.GEMROC_ID}, {Totallissimi_packets/1000}k/{self.max_packets/1000}k packets")
+                    print("{} -- Saving data from  GEMROC {} in file {}\n".format(time.ctime(), self.reader.GEMROC_ID, datapath))
+                    f.write("{} -- Saving data from  GEMROC {} in file {}\n".format(time.ctime(), self.reader.GEMROC_ID, datapath))
+                total_packets_sub = 0
             with open(datapath, 'ab') as datafile:
-                # print "Saving data on file"
                 self.reader.dump_list(datafile, data_list)
                 data_list=[]
+                Total_packets=0
             if self.running==False:
                 break
         with open(datapath, 'ab') as datafile:

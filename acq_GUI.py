@@ -93,7 +93,7 @@ class menu():
 
         self.master_window.wm_title("GEMROC acquisition")
         self.restart = BooleanVar(self.master_window)
-        self.restart.set(True)
+        self.restart.set(False)
 
         self.configure_every_restart = BooleanVar(self.master_window)
         self.configure_every_restart.set(False)
@@ -106,6 +106,8 @@ class menu():
         self.online_monitor_data.set(False)
 
         self.save_conf_every_run = BooleanVar(self.master_window)
+        self.x1000 = BooleanVar(self.master_window)
+        self.x1000.set(True)
         self.simple_analysis = IntVar(self.master_window)
         self.run_analysis = IntVar(self.master_window)
         if OS == 'linux':
@@ -148,22 +150,23 @@ class menu():
 
         self.start_frame = Frame(self.master)
         self.start_frame.pack()
-        Label(self.start_frame, text="Acq time (seconds for TL, minutes for TM)").grid(row=0, column=0, sticky=NW, pady=4)
+        Label(self.start_frame, text="MAX acq time (seconds for TL, minutes for TM)").grid(row=0, column=0, sticky=NW, pady=4)
         self.time_in = Entry(self.start_frame, width=3)
-        self.time_in.insert(END, '10')
+        self.time_in.insert(END, '30')
         self.time_in.grid(row=0, column=1, sticky=NW, pady=4)
-        Label(self.start_frame, text="Events run (x1000)").grid(row=0, column=2, sticky=NW, pady=4)
+        Label(self.start_frame, text="Events run ").grid(row=0, column=2, sticky=NW, pady=4)
         self.event_max = Entry(self.start_frame, width=5)
-        self.event_max.insert(END, '100')
+        self.event_max.insert(END, '500')
         self.event_max.grid(row=0, column=3, sticky=NW, pady=4)
-        Label(self.start_frame, text="Events subrun (x1000)").grid(row=0, column=4, sticky=NW, pady=4)
+        Label(self.start_frame, text="Events subrun ").grid(row=0, column=4, sticky=NW, pady=4)
         self.event_max_sub = Entry(self.start_frame, width=5)
         self.event_max_sub.insert(END, '10')
         self.event_max_sub.grid(row=0, column=5, sticky=NW, pady=4)
-        Checkbutton(self.start_frame, text="Fast analysis", variable=self.simple_analysis).grid(row=0, column=6, sticky=NW, pady=4)
-        Checkbutton(self.start_frame, text="On run analysis", variable=self.run_analysis).grid(row=0, column=7, sticky=NW, pady=4)
-        Checkbutton(self.start_frame, text="Restart", variable=self.restart).grid(row=0, column=8, sticky=NW, pady=4)
-        Checkbutton(self.start_frame, text="configure every restart", variable=self.configure_every_restart).grid(row=0, column=9, sticky=NW, pady=4)
+        Checkbutton(self.start_frame, text="X1000", variable=self.x1000).grid(row=0, column=7, sticky=NW, pady=4)
+        Checkbutton(self.start_frame, text="Fast analysis", variable=self.simple_analysis).grid(row=0, column=8, sticky=NW, pady=4)
+        Checkbutton(self.start_frame, text="On run analysis", variable=self.run_analysis).grid(row=0, column=9, sticky=NW, pady=4)
+        Checkbutton(self.start_frame, text="Restart", variable=self.restart).grid(row=0, column=10, sticky=NW, pady=4)
+        Checkbutton(self.start_frame, text="configure every restart", variable=self.configure_every_restart).grid(row=0, column=11, sticky=NW, pady=4)
         # Checkbutton(self.start_frame, text="Save conf. at every subrun", variable=self.save_conf_every_run).grid(row=0, column=6, sticky=NW, pady=4)
         # Checkbutton(self.start_frame, text="Save GEMROC global errors at the end", variable=self.error_GEMROC).grid(row=0, column=7, sticky=NW, pady=4)
 
@@ -246,8 +249,8 @@ class menu():
             self.open_on_run_tab()
             self.online_monitor.set(True)
             self.online_monitor_data.set(True)
-            Checkbutton(self.start_frame, text="Online monitor", variable=self.online_monitor).grid(row=0, column=10, sticky=NW, pady=4)
-            Checkbutton(self.start_frame, text="Online data monitor", variable=self.online_monitor_data).grid(row=0, column=11, sticky=NW, pady=4)
+            Checkbutton(self.start_frame, text="Online monitor", variable=self.online_monitor).grid(row=0, column=12, sticky=NW, pady=4)
+            Checkbutton(self.start_frame, text="Online data monitor", variable=self.online_monitor_data).grid(row=0, column=13, sticky=NW, pady=4)
 
         # TO be restored
         # Checkbutton(self.start_frame, text="Data online monitor", variable=self.online_monitor_data).grid(row=0, column=3, sticky=NW, pady=4)
@@ -834,8 +837,12 @@ class menu():
     def check_sub_run(self):
         if glob.glob("." + sep + "data_folder" + sep + self.run_folder + sep + "ACQ_log*"):
             numbers = [int(name.split("ACQ_log")[1].split("_")[1]) for name in glob.glob("." + sep + "data_folder" + sep + self.run_folder + sep + "ACQ_log*")]
-            max = np.max(numbers)
-            self.sub_run_number = max + 1
+            max_num = np.max(numbers)
+            self.sub_run_number = max_num + 1
+            if glob.glob("." + sep + "data_folder" + sep + self.run_folder + sep + "SubRUN_*"):
+                numbers = [int(name.split("SubRUN_")[1].split("_")[1]) for name in glob.glob("." + sep + "data_folder" + sep + self.run_folder + sep + "SubRUN_*")]
+                max_num2 = np.max(numbers)
+                self.sub_run_number = max(max_num, max_num2)+1
         else:
             self.sub_run_number = 0
 
@@ -905,7 +912,7 @@ class menu():
         self.but7.config(state='disabled')
         self.but6.config(state='disabled')
         for i in range(0, len(self.GEM)):
-            if self.thread[i].isAlive():
+            if self.thread[i].is_alive():
                 self.thread[i].join()
                 self.GEM[i].__del__()
 
@@ -934,7 +941,11 @@ class menu():
                 self.thread.append(GEM_ACQ.Thread_handler("GEM ".format(i), float(self.time_acq), self.GEM[i], sub_folder=self.run_folder, sub_run_number=self.sub_run_number))
 
             else:
-                self.thread.append(GEM_ACQ.Thread_handler_TM("GEM ".format(i), self.GEM[i], sub_folder=self.run_folder, sub_run_number=self.sub_run_number, downsampling=self.downsamplig_online.get(), max_packets_sub=self.event_max_sub.get()*1000,max_packets=self.event_max.get()*1000 ))
+                if self.x1000.get():
+                    multiplier=1000
+                else:
+                    multiplier=1
+                self.thread.append(GEM_ACQ.Thread_handler_TM("GEM ".format(i), self.GEM[i], sub_folder=self.run_folder, sub_run_number=self.sub_run_number, downsampling=self.downsamplig_online.get(), max_packets_sub=int(self.event_max_sub.get())*multiplier, max_packets=int(self.event_max.get())*multiplier ))
         if not self.std_alone:
             self.error_thread = (Thread_handler_errors(self.GEMROC_reading_dict, self.GEM, self.errors_counters_810, self))
         self.GEM_to_read_last = self.GEM_to_read
@@ -1047,7 +1058,9 @@ class menu():
         :return:
         """
 
-    def stop_acq(self, auto=False, stop_log=True):
+    def stop_acq(self, auto=False, stop_log=True, new_folder=True):
+        if new_folder:
+            self.new_run_folder()
         if not auto:
             self.restart.set(False)
         self.run_analysis.set(False)
@@ -1066,19 +1079,19 @@ class menu():
             # self.refresh_8_10_counters_and_TimeOut()
         for thr in self.thread:
             thr.running = False
-        print([thr.isAlive() for thr in self.thread])
+        print([thr.is_alive() for thr in self.thread])
 
-        while True in [thr.isAlive() for thr in self.thread]:
-            print([thr.isAlive() for thr in self.thread])
+        while True in [thr.is_alive() for thr in self.thread]:
+            print([thr.is_alive() for thr in self.thread])
             print ("At least one alive thread")
             for thr in self.thread:
-                if thr.isAlive():
+                if thr.is_alive():
                     print ("Thread {} is alive, joining".format(thr.reader.GEMROC_ID))
                     thr.join(timeout=15)
-                if thr.isAlive():
+                if thr.is_alive():
                     print ("Can't join one of the threads (this time)")
                 time.sleep (0.1)
-            print([thr.isAlive() for thr in self.thread])
+            print([thr.is_alive() for thr in self.thread])
 
         for i in self.GEM:
             if i.TIMED_out == True:
@@ -1369,7 +1382,7 @@ class stopper(Thread):  #
 
             else:
                 time_max = float(self.caller.time_acq)
-            self.caller.time_label["text"] = "Acq time: {:.0f}".format(time_max-(time.time()-self.start_time))
+            self.caller.time_label["text"] = "Max acq time: {:.0f}".format(time_max-(time.time()-self.start_time))
 
             if debug:
                 print("Elapsed time {}".format(time.time() - self.start_time))

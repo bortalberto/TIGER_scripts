@@ -804,7 +804,11 @@ class noise_measure():
     def LOAD(self):
         filename = filedialog.askopenfilename(initialdir="." + sep + "noise_scan" + sep + "saves", title="Select file", filetypes=(("Noise scan files", "*.ns"), ("all files", "*.*")))
         with open(filename, 'rb') as f:
-            self.scan_matrixs = pickle.load(f)
+            try:
+                self.scan_matrixs = pickle.load(f)
+            except UnicodeDecodeError:
+                with open(filename, 'rb') as f:
+                    self.scan_matrixs = pickle.load(f, encoding='latin1' )
 
     def load_TP_settings(self, branch="T", TP=True):
         filename = "." + sep + "conf" + sep + "TP_conf.pickle"

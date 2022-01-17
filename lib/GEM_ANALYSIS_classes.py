@@ -1467,7 +1467,7 @@ def error_fit(data,TP_rate, Ebranch=True):
     for i in range (0,64):
         if ydata[i]>TP_rate*1.5:
             ydata[i]=TP_rate
-    print (ydata)
+    # print (ydata)
     xdata = np.arange(0, 64)
     #  popt, pcov = curve_fit(errorfunc, xdata, ydata[:m], method='lm', maxfev=5000)
     #  double_error_func(x, x0, x1, sig0, sig1, c0, c1)115fvb

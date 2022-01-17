@@ -217,6 +217,7 @@ class menu():
         first_row_coperations.grid(row=2, column=5, sticky=N, pady=10,columnspan=20)
         Button(first_row_coperations, text="Sync Reset to all", command=lambda : self.Synch_reset(direct_call=True), activeforeground="#f77f00").pack(side=LEFT)
         Button(first_row_coperations, text="TCAM Reset to all", command=lambda : self.TCAM_reset(to_all=True), activeforeground="#f77f00").pack(side=LEFT)
+        Button(first_row_coperations, text="Set fine thr tuning", command= self.set_fine_thr_tuning, activeforeground="#f77f00").pack(side=LEFT)
 
         Button(first_row_coperations, text="Set ext clock to all", command=lambda: self.change_clock_mode(1, 1), activeforeground="#f77f00").pack(side=LEFT)
         Button(first_row_coperations, text="Set int clock to all", command=lambda: self.change_clock_mode(1, 0), activeforeground="#f77f00").pack(side=LEFT)
@@ -2293,6 +2294,21 @@ class menu():
         if update == 2:
             self.ERROR_LED["image"] = self.icon_off
 
+    def set_fine_thr_tuning(self):
+        self.doing_something=True
+        for number, GEMROC in self.GEMROC_reading_dict.items():
+            for T in range(0, 8):
+                GEMROC.g_inst.Global_cfg_list[T]["Vcasp_Vth2"] = 60
+                GEMROC.g_inst.Global_cfg_list[T]["Vcasp_Vth"] = 60
+                GEMROC.g_inst.Global_cfg_list[T]["IPostamp"] = 25
+                if number=="GEMROC 0":
+                    if T==2 or T ==7:
+                        GEMROC.g_inst.Global_cfg_list[T]["IPostamp"] = 26
+                if number=="GEMROC 1":
+                    if T==2:
+                        GEMROC.g_inst.Global_cfg_list[T]["IPostamp"] = 26
+
+        self.doing_something=False
     def fast_configuration(self):
         self.doing_something = True
         start=time.time()
@@ -2305,6 +2321,7 @@ class menu():
         self.double_enable()
         self.Synch_reset(1)
         self.change_acquisition_mode(True, 0)
+        self.set_fine_thr_tuning()
         self.change_trigger_mode(value=0, to_all=True)
         self.load_thr(True, "scan", 3, 2, 0, 0, 8)
         if self.use_ecq_thr.get():
@@ -2317,12 +2334,16 @@ class menu():
         # self.TCAM_reset(1)
         self.Synch_reset(1)
         self.Synch_reset(1)
-        self.shut_down_FEB(2,self.GEMROC_reading_dict["GEMROC 8"])
-        self.shut_down_FEB(3,self.GEMROC_reading_dict["GEMROC 10"])
-        self.set_pause_mode(True, 1)
         self.Launch_error_check['text'] = "Fast configuration done"
 
-        self.calculate_FC_thr_caller()
+        beijing=True
+        if beijing:
+            self.shut_down_FEB(2,self.GEMROC_reading_dict["GEMROC 8"])
+            self.shut_down_FEB(3,self.GEMROC_reading_dict["GEMROC 10"])
+        self.set_pause_mode(True, 1)
+        self.Launch_error_check['text'] = "Fast configuration done"
+        if beijing:
+            self.calculate_FC_thr_caller()
         self.doing_something = False
 
     def change_trigger_mode(self, value, to_all=False):
