@@ -518,6 +518,9 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
       ## acr 2017-07-12 END   implementing a parameter array loaded from a configuration file
 
       sav_channel_dic={
+      "DisableHyst" : self.parameter_array [0],  ## DisableHyst_param
+      "T2Hyst" : self.parameter_array [1],  ## T2Hyst_param
+      "T1Hyst" : self.parameter_array [2],  ## T1Hyst_param
       "TP_disable_FE": self.parameter_array [4],  ## TP_disable_FE_param
       "Integ": self.parameter_array [7],  ## Integ_param
       "Vth_T2": self.parameter_array [10],  ## Vth_T2_param
@@ -692,6 +695,9 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
          self.cmd_word1 = ((self.Ch_DebugMode & 0x3) << 24)  + ((self.TriggerMode & 0x3) << 16)
 
       else:
+          DisableHyst=self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["DisableHyst"] & 0x1
+          T1Hyst=self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["T1Hyst"] & 0x7
+          T2Hyst=self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["T2Hyst"] & 0x7
           TP_disable_FE=self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["TP_disable_FE"] & 0x1
           Integ=self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["Integ"] & 0x1
           Vth_T2= self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["Vth_T2"] & 0x3F
@@ -708,7 +714,7 @@ class ch_reg_settings: # purpose: organize the Channel Configuration Register Se
           MinIntegTime= self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["MinIntegTime"] & 0X7F
           BranchEnableT = self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["BranchEnableT"] & 0X1  ## BranchEnableT_param
           BranchEnableEQ = self.Channel_cfg_list[self.target_TIGER_ID][self.channel_ID]["BranchEnableEQ"] & 0X1  ## BranchEnableEQ_param
-          self.cmd_word8 = ((self.DisableHyst & 0x1) << 24) + ((self.T2Hyst & 0x7) << 16) + ((self.T1Hyst & 0x7) << 8) + ((self.Ch63ObufMSB & 0x1))
+          self.cmd_word8 = ((DisableHyst & 0x1) << 24) + ((T2Hyst & 0x7) << 16) + ((T1Hyst & 0x7) << 8) + ((self.Ch63ObufMSB & 0x1))
           self.cmd_word7 = (TP_disable_FE << 24) + ((self.TDC_IB_E & 0xF) << 16) + ((self.TDC_IB_T & 0xF) << 8) + (Integ )
           self.cmd_word6 = ((self.PostAmpGain & 0x3) << 24) + ((self.FE_delay & 0x1F) << 16) + (Vth_T2 << 8) + (Vth_T1 )
           self.cmd_word5 = ((self.QTx2Enable & 0x1) << 24) + ((MaxIntegTime) << 16) + ((MinIntegTime) << 8) + ((TriggerBLatched))
