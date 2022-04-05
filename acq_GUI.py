@@ -177,7 +177,7 @@ class menu():
 
         self.but6 = Button(zero_frame, text='New run folder', command=self.new_run_folder)
         self.but6.grid(row=1, column=2, sticky=NW)
-        self.but7 = Button(zero_frame, text='Test folder', command=self.set_test_folder)
+        self.but7 = Button(zero_frame, text='Previous folder', command=self.previous_folder)
         self.but7.grid(row=1, column=3, sticky=NW)
         self.folder_label = Label(zero_frame, text="-", width=20)
         self.folder_label.grid(row=1, column=4, sticky=W)
@@ -416,6 +416,12 @@ class menu():
         last_run_number = list_number[-1]
         os.mkdir("." + sep + "data_folder" + sep + "RUN_{}".format(last_run_number + 1))
         self.set_last_folder()
+
+    def previous_folder(self):
+        current_folder = self.run_folder.split("_")[-1]
+        prev_folder=int(current_folder)-1
+        self.run_folder = "RUN_{}".format(prev_folder)
+        self.folder_label['text'] = "Folder : {}".format(self.run_folder)
 
     def set_test_folder(self):
         self.run_folder = "test_folder"
@@ -1058,7 +1064,7 @@ class menu():
         :return:
         """
 
-    def stop_acq(self, auto=False, stop_log=True, new_folder=True):
+    def stop_acq(self, auto=False, stop_log=True, new_folder=False):
         if new_folder:
             self.new_run_folder()
         if not auto:
