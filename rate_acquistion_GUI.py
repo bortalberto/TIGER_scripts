@@ -126,6 +126,7 @@ class menu():
         datapath = "." + sep + "data_folder" + sep + "acq_rate_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         fileout = open(datapath, "w+")
         fileout.write("time    gemroc    tiger    channel    rate")
+        fileout.close()
         print ("Tigers:")
         print ( range(int(self.first_tig.get()), int(self.last_tig.get())+1))
         while self.running:
@@ -146,7 +147,8 @@ class menu():
                         key,value=pipe_out.recv()
                         process.terminate()
                         key="\n{}     {}".format(acq_time, key)
-                        fileout.write(key)
+                        with open(datapath, "w+") as fileout:
+                            fileout.write(key)
                     del process_list[:]
                     del pipe_list[:]
 
