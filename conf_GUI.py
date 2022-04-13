@@ -6,6 +6,7 @@ import tkinter.font as tkfont
 import numpy as np
 from lib import GEM_COM_classes as COM_class
 import communication_error_GUI as error_GUI
+import rate_acquistion_GUI as rate_GUI
 import noise_GUI_fast as noise_GUI_fast
 import noise_GUI as noise_GUI
 import generic_scan as scan_GUI
@@ -229,6 +230,8 @@ class menu():
         Tantissime_frame.grid(row=3, column=5, sticky=N, pady=5,columnspan=20)
         Button(Tantissime_frame, text="Write configuration", command=self.load_default_config_parallel, activeforeground="#f77f00").pack(side=LEFT)
         Button(Tantissime_frame, text="Open communication error interface", command=self.open_communicaton_GUI, activeforeground="#f77f00").pack(side=LEFT)
+        Button(Tantissime_frame, text="Acquire rate", command=self.open_rate_GUI, activeforeground="#f77f00").pack(side=LEFT)
+
         Button(Tantissime_frame, text="System rate measure", command=self.open_rate_window, activeforeground="#f77f00").pack(side=LEFT)
         Button(Tantissime_frame, text="Channel rate measure", command=self.open_rate_measure, activeforeground="#f77f00").pack(side=LEFT)
         Button(Tantissime_frame, text="Run prearation (Th scah, TH EQ, Noise scan) remember EQ settings!", command=self.run_prep, activeforeground="#f77f00").pack(side=LEFT)
@@ -729,6 +732,10 @@ class menu():
     def open_communicaton_GUI(self):
         # print self.GEMROC_reading_dict
         self.conf_wind = error_GUI.menu(self.main_window, self.GEMROC_reading_dict)
+
+    def open_rate_GUI(self):
+        # print self.GEMROC_reading_dict
+        self.conf_wind = rate_GUI.menu(self.main_window, self.GEMROC_reading_dict)
 
     def runna(self):
         if DB:
