@@ -115,7 +115,6 @@ class menu():
         self.running = True
         self.pipe_in, self.pipe_out = Pipe()
         self.acq_proc=Process(target=self.rate_acquisition_process )
-        self.acq_proc.daemon = True
         self.acq_proc.start()
 
     def rate_acqisition_stop(self):
