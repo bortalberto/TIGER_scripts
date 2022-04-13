@@ -20,8 +20,8 @@ class menu():
         self.GEMROC_reading_dict=gemroc_handler
 
         self.rate_window = Toplevel(main_window)
-        Label(self.rate_window, text='Communication Errors', font=("Courier", 25)).pack()
-        self.rate_window.wm_title('Communication Errors')
+        Label(self.rate_window, text='Rate acquisition counter', font=("Courier", 25)).pack()
+        self.rate_window.wm_title('Rate acquisition counter')
         self.grid_frame=Frame(self.rate_window)
         self.grid_frame.pack()
         tot=len(self.GEMROC_reading_dict)
@@ -54,11 +54,11 @@ class menu():
                 if position==tot-1:
                     riga=3
 
-            self.GEMROC_OPENER.append(Button(self.grid_frame, text=number, command=lambda number_int=number_int: self.toggle(number_int)))
-            self.GEMROC_OPENER[i].grid(row=riga, column=int(colonna-1), sticky=NW,   pady=15)
-            self.GEMROC_rate_counters_display[number]=Label(self.grid_frame, text='----', padx=30)
-            self.GEMROC_rate_counters_display[number].grid(row=riga, column=int(colonna))
-            i+=1
+            # self.GEMROC_OPENER.append(Button(self.grid_frame, text=number, command=lambda number_int=number_int: self.toggle(number_int)))
+            # self.GEMROC_OPENER[i].grid(row=riga, column=int(colonna-1), sticky=NW,   pady=15)
+            # self.GEMROC_rate_counters_display[number]=Label(self.grid_frame, text='----', padx=30)
+            # self.GEMROC_rate_counters_display[number].grid(row=riga, column=int(colonna))
+            # i+=1
         self.second_row_frame=Frame(self.rate_window)
         self.second_row_frame.pack()
 
@@ -115,6 +115,7 @@ class menu():
         self.running = True
         self.pipe_in, self.pipe_out = Pipe()
         self.acq_proc=Process(target=self.rate_acquisition_process )
+        self.acq_proc.daemon = True
         self.acq_proc.start()
 
     def rate_acqisition_stop(self):
@@ -135,6 +136,7 @@ class menu():
                     for number, GEMROC in self.GEMROC_reading_dict.items():
                             pipe_in,pipe_out=Pipe()
                             p = Process(target=self.acquire_rate,args=(number,T,ch,pipe_in))
+                            p.daemon=True
                             process_list.append(p)
                             pipe_list.append(pipe_out)
                             p.start()
@@ -142,8 +144,7 @@ class menu():
                         process.join()
                         key,value=pipe_out.recv()
                         process.terminate()
-                        key="{}     {}".format(acq_time, key)
-                        print (key)
+                        key="{}     {}\n".format(acq_time, key)
                         fileout.write(key)
                     del process_list[:]
                     del pipe_list[:]
