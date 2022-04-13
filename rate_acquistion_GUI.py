@@ -3,7 +3,7 @@ from multiprocessing import Process,Pipe
 import time
 from lib import GEM_ANALYSIS_classes as AN_CLASS, GEM_CONF_classes as GEM_CONF
 import sys
-
+import datetime
 
 
 OS = sys.platform
@@ -71,66 +71,68 @@ class menu():
         Button(self.third_row_frame, text ='Start acq', command=self.rate_acqisition_start ).pack(side=LEFT)
         Button(self.third_row_frame, text ='Stop acq', command = self.rate_acqisition_stop).pack(side=LEFT)
 
-
-    def toggle(self, GEMROC_number):
-        sync_winz=Toplevel(self.rate_window)
-        sync_winz.wm_title(GEMROC_number)
-        Label(sync_winz, text='GEMROC {} rate counters'.format(GEMROC_number), font=("Courier", 18)).pack()
-        frame_counters=Frame(sync_winz)
-        frame_counters.pack()
-        for T in range (0,8):
-            if T<4:
-                Label(frame_counters,text="TIGER {}".format(T)).grid(row=0,column=T*2,sticky=NW,pady=10)
-                self.TIGER_rate_counters_display["GEMROC {} TIGER {}".format(GEMROC_number, T)] = Label(frame_counters, text="-----".format(T), background='white')
-                self.TIGER_rate_counters_display["GEMROC {} TIGER {}".format(GEMROC_number, T)].grid(row=0, column=T * 2 + 1, sticky=NW, pady=10)
-            else:
-                Label(frame_counters,text="TIGER {}".format(T)).grid(row=1,column=(T-4)*2,sticky=NW,pady=10)
-                self.TIGER_rate_counters_display["GEMROC {} TIGER {}".format(GEMROC_number, T)] = Label(frame_counters, text="-----".format(T), background='white')
-                self.TIGER_rate_counters_display["GEMROC {} TIGER {}".format(GEMROC_number, T)].grid(row=1, column=(T - 4) * 2 + 1, sticky=NW, pady=10)
-                #self.TIGER_error_counters_display["GEMROC {} TIGER {}".format(GEMROC_number, T)]['text']=self.TIGER_error_counters["GEMROC {} TIGER {}".format(GEMROC_number,T)]
+    #
+    # def toggle(self, GEMROC_number):
+    #     sync_winz=Toplevel(self.rate_window)
+    #     sync_winz.wm_title(GEMROC_number)
+    #     Label(sync_winz, text='GEMROC {} rate counters'.format(GEMROC_number), font=("Courier", 18)).pack()
+    #     frame_counters=Frame(sync_winz)
+    #     frame_counters.pack()
+    #     for T in range (0,8):
+    #         if T<4:
+    #             Label(frame_counters,text="TIGER {}".format(T)).grid(row=0,column=T*2,sticky=NW,pady=10)
+    #             self.TIGER_rate_counters_display["GEMROC {} TIGER {}".format(GEMROC_number, T)] = Label(frame_counters, text="-----".format(T), background='white')
+    #             self.TIGER_rate_counters_display["GEMROC {} TIGER {}".format(GEMROC_number, T)].grid(row=0, column=T * 2 + 1, sticky=NW, pady=10)
+    #         else:
+    #             Label(frame_counters,text="TIGER {}".format(T)).grid(row=1,column=(T-4)*2,sticky=NW,pady=10)
+    #             self.TIGER_rate_counters_display["GEMROC {} TIGER {}".format(GEMROC_number, T)] = Label(frame_counters, text="-----".format(T), background='white')
+    #             self.TIGER_rate_counters_display["GEMROC {} TIGER {}".format(GEMROC_number, T)].grid(row=1, column=(T - 4) * 2 + 1, sticky=NW, pady=10)
+    #             #self.TIGER_error_counters_display["GEMROC {} TIGER {}".format(GEMROC_number, T)]['text']=self.TIGER_error_counters["GEMROC {} TIGER {}".format(GEMROC_number,T)]
 
 
     def rate_acqisition_start(self):
         self.running = True
-        self.acq_proc=Process(target=self.rate_acquisition_process)
+        self.pipe_in, self.pipe_out = Pipe()
+        self.acq_proc=Process(target=self.rate_acquisition_process )
         self.acq_proc.start()
 
     def rate_acqisition_stop(self):
         self.acq_proc.terminate()
 
     def rate_acquisition_process (self):
+        start_time = time.time()
+        datapath = "." + sep + "data_folder" + sep + "acq_rate_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
+        fileout = open(datapath, "w+")
         while self.running:
-            time.sleep(1)
-            self.refresh_counters()
-
-    def rate_acquisition(self, reset=True):
-        process_list=[]
-        pipe_list=[]
-        TIGER_LIST = [0, 1, 2, 3, 4, 5, 6, 7]
-        for T in TIGER_LIST:
-            for number, GEMROC in self.GEMROC_reading_dict.items():
-                    GEMROC.GEM_COM.set_counter(int(T), 0, 0)
-                    pipe_in,pipe_out=Pipe()
-                    p = Process(target=self.acquire_errors,args=(number,T,pipe_in))
-                    process_list.append(p)
-                    pipe_list.append(pipe_out)
-                    p.start()
-            for process,pipe_out in zip(process_list,pipe_list):
-                process.join()
-                key,value=pipe_out.recv()
-                process.terminate()
-                self.TIGER_rate_counters[key] = value
-            del process_list[:]
-            del pipe_list[:]
+            process_list=[]
+            pipe_list=[]
+            TIGER_LIST = [0, 1, 2, 3, 4, 5, 6, 7]
+            for T in TIGER_LIST:
+                for ch in range(0, 64):
+                    acq_time = time.time() - start_time
+                    for number, GEMROC in self.GEMROC_reading_dict.items():
+                            pipe_in,pipe_out=Pipe()
+                            p = Process(target=self.acquire_rate,args=(number,T,ch,pipe_in))
+                            process_list.append(p)
+                            pipe_list.append(pipe_out)
+                            p.start()
+                    for process,pipe_out in zip(process_list,pipe_list):
+                        process.join()
+                        key,value=pipe_out.recv()
+                        process.terminate()
+                        key="{}     {}".format(acq_time, key)
+                        print (key)
+                    del process_list[:]
+                    del pipe_list[:]
 
 
-    def acquire_rate(self,GEMROC_num,TIGER,pipe_in,reset):
+    def acquire_rate(self,GEMROC_num,TIGER,channel,pipe_in,reset):
         GEMROC=self.GEMROC_reading_dict[GEMROC_num]
-        if reset:
-            GEMROC.GEM_COM.reset_counter()
-            time.sleep(1)
+        GEMROC.GEM_COM.set_counter(int(TIGER), 0, channel)
+        GEMROC.GEM_COM.reset_counter()
+        time.sleep(float(self.acq_time.get()))
         counter_value=GEMROC.GEM_COM.GEMROC_counter_get()
-        tiger_string="{} TIGER {}".format(GEMROC_num,TIGER)
+        tiger_string="{}    {}    {}    {}".format(GEMROC_num,TIGER,channel,counter_value)
         pipe_in.send((tiger_string,counter_value))
         pipe_in.close()
 
@@ -145,15 +147,15 @@ class menu():
 
         #
         #
-        # for number,GEMROC in self.GEMROC_reading_dict.items():
-        #     self.GEMROC_rate_counters[number]=0
-        #
-        # for key,value in self.TIGER_rate_counters.items():
-        #     number_int=int(key.split()[1])
-        #     GEMROC="GEMROC "+str(number_int)
-        #     self.GEMROC_rate_counters[GEMROC]+=int(value)
-        # for key,label in self.GEMROC_rate_counters_display.items():
-        #     label['text']=self.GEMROC_rate_counters[key]
-        # for key,label in self.TIGER_rate_counters_display.items():
-        #     #print self.TIGER_error_counters
-        #     label['text']=int(self.TIGER_rate_counters[key])
+        for number,GEMROC in self.GEMROC_reading_dict.items():
+            self.GEMROC_rate_counters[number]=0
+
+        for key,value in self.TIGER_rate_counters.items():
+            number_int=int(key.split()[1])
+            GEMROC="GEMROC "+str(number_int)
+            self.GEMROC_rate_counters[GEMROC]+=int(value)
+        for key,label in self.GEMROC_rate_counters_display.items():
+            label['text']=self.GEMROC_rate_counters[key]
+        for key,label in self.TIGER_rate_counters_display.items():
+            #print self.TIGER_error_counters
+            label['text']=int(self.TIGER_rate_counters[key])
