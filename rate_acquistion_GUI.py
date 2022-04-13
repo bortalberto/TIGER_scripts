@@ -99,10 +99,9 @@ class menu():
         self.acq_proc.terminate()
 
     def rate_acquisition_process (self):
-        print (self.running)
         while self.running:
-            print ("Ciao")
             time.sleep(1)
+            self.refresh_counters()
 
     def rate_acquisition(self, reset=True):
         process_list=[]
@@ -124,7 +123,6 @@ class menu():
             del process_list[:]
             del pipe_list[:]
 
-        self.refresh_counters()
 
     def acquire_rate(self,GEMROC_num,TIGER,pipe_in,reset):
         GEMROC=self.GEMROC_reading_dict[GEMROC_num]
