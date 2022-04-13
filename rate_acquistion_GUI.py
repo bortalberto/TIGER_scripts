@@ -66,6 +66,27 @@ class menu():
         self.acq_time = Entry(self.second_row_frame, width = 4)
         self.acq_time.pack(side=LEFT)
         self.acq_time.insert(0,0.1 )
+
+        Label(self.second_row_frame, text = 'First TIGER ').pack(side=LEFT)
+        self.first_tig = Entry(self.second_row_frame, width = 4)
+        self.first_tig.pack(side=LEFT)
+        self.first_tig.insert(0,0 )
+
+        Label(self.second_row_frame, text = 'Last tiger ').pack(side=LEFT)
+        self.last_tig = Entry(self.second_row_frame, width = 4)
+        self.last_tig.pack(side=LEFT)
+        self.last_tig.insert(0,7 )
+
+        Label(self.second_row_frame, text='First Ch ').pack(side=LEFT)
+        self.first_ch = Entry(self.second_row_frame, width=4)
+        self.first_ch.pack(side=LEFT)
+        self.first_ch.insert(0, 0)
+
+        Label(self.second_row_frame, text='Last Ch ').pack(side=LEFT)
+        self.last_ch = Entry(self.second_row_frame, width=4)
+        self.last_ch.pack(side=LEFT)
+        self.last_ch.insert(0, 63)
+
         self.third_row_frame=Frame(self.rate_window)
         self.third_row_frame.pack()
         Button(self.third_row_frame, text ='Start acq', command=self.rate_acqisition_start ).pack(side=LEFT)
@@ -103,12 +124,13 @@ class menu():
         start_time = time.time()
         datapath = "." + sep + "data_folder" + sep + "acq_rate_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         fileout = open(datapath, "w+")
+        fileout.write("time    gemroc    tiger    channel    rate")
+
         while self.running:
             process_list=[]
             pipe_list=[]
-            TIGER_LIST = [0, 1, 2, 3, 4, 5, 6, 7]
-            for T in TIGER_LIST:
-                for ch in range(0, 64):
+            for T in range(int(self.first_tig.get()), int(self.last_tig.get())+1):
+                for ch in range(int(self.first_ch.get()), int(self.last_ch.get())+1):
                     acq_time = time.time() - start_time
                     for number, GEMROC in self.GEMROC_reading_dict.items():
                             pipe_in,pipe_out=Pipe()
@@ -122,6 +144,7 @@ class menu():
                         process.terminate()
                         key="{}     {}".format(acq_time, key)
                         print (key)
+                        fileout.write(key)
                     del process_list[:]
                     del pipe_list[:]
 
@@ -132,7 +155,7 @@ class menu():
         GEMROC.GEM_COM.reset_counter()
         time.sleep(float(self.acq_time.get()))
         counter_value=GEMROC.GEM_COM.GEMROC_counter_get()
-        tiger_string="{}    {}    {}    {}".format(GEMROC_num,TIGER,channel,counter_value)
+        tiger_string="{}    {}    {}    {}".format(GEMROC.GEMROC_ID,TIGER,channel,counter_value)
         pipe_in.send((tiger_string,counter_value))
         pipe_in.close()
 
