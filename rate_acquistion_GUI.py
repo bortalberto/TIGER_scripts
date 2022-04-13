@@ -122,10 +122,12 @@ class menu():
 
     def rate_acquisition_process (self):
         start_time = time.time()
+        print ("Starting acquisition")
         datapath = "." + sep + "data_folder" + sep + "acq_rate_{}".format(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
         fileout = open(datapath, "w+")
         fileout.write("time    gemroc    tiger    channel    rate")
-
+        print ("Tigers:")
+        print ( range(int(self.first_tig.get()), int(self.last_tig.get())+1))
         while self.running:
             process_list=[]
             pipe_list=[]
