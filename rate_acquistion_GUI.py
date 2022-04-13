@@ -147,7 +147,7 @@ class menu():
                         key,value=pipe_out.recv()
                         process.terminate()
                         key="\n{}     {}".format(acq_time, key)
-                        with open(datapath, "w+") as fileout:
+                        with open(datapath, "a") as fileout:
                             fileout.write(key)
                     del process_list[:]
                     del pipe_list[:]
