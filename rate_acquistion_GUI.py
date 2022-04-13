@@ -92,11 +92,11 @@ class menu():
 
     def rate_acqisition_start(self):
         self.running = True
-        p=Process(target=self.rate_acquisition_process)
-        p.start()
+        self.acq_proc=Process(target=self.rate_acquisition_process)
+        self.acq_proc.start()
 
     def rate_acqisition_stop(self):
-        self.running = False
+        self.acq_proc.terminate()
 
     def rate_acquisition_process (self):
         print (self.running)
