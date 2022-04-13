@@ -143,7 +143,7 @@ class menu():
                         process.join()
                         key,value=pipe_out.recv()
                         process.terminate()
-                        key="{}     {}\n".format(acq_time, key)
+                        key="\n{}     {}".format(acq_time, key)
                         fileout.write(key)
                     del process_list[:]
                     del pipe_list[:]
