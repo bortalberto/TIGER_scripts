@@ -126,7 +126,7 @@ class menu():
                     del pipe_list[:]
 
 
-    def acquire_rate(self,GEMROC_num,TIGER,channel,pipe_in,reset):
+    def acquire_rate(self,GEMROC_num,TIGER,channel,pipe_in):
         GEMROC=self.GEMROC_reading_dict[GEMROC_num]
         GEMROC.GEM_COM.set_counter(int(TIGER), 0, channel)
         GEMROC.GEM_COM.reset_counter()
