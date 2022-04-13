@@ -112,7 +112,7 @@ class Database_Manager():
             }]
             if (IVT['status']['FEB{}'.format(FEB)]["TEMP[degC]"] < 117):
                 if IVT['status']['FEB{}'.format(FEB)]["TEMP[degC]"] > 47:
-                        if GEMROC_num!="GEMROC 8" and FEB!=1:
+                        if GEMROC_num!="GEMROC 8" and FEB!=1: #TODO change this point
                             FEB_to_shut_down.append(FEB)
                 if not ((GEMROC.GEM_COM.GEMROC_ID == 8 and FEB in (1, 2)) or (GEMROC.GEM_COM.GEMROC_ID == 12 and FEB in (2, 3))):
                     self.send_to_db(body)

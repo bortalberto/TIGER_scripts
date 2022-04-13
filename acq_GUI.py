@@ -96,7 +96,7 @@ class menu():
         self.restart.set(False)
 
         self.configure_every_restart = BooleanVar(self.master_window)
-        self.configure_every_restart.set(False)
+        self.configure_every_restart.set(True)
 
         self.error_GEMROC = BooleanVar(self.master_window)
         self.error_GEMROC.set(False)
@@ -107,7 +107,7 @@ class menu():
 
         self.save_conf_every_run = BooleanVar(self.master_window)
         self.x1000 = BooleanVar(self.master_window)
-        self.x1000.set(True)
+        self.x1000.set(False)
         self.simple_analysis = IntVar(self.master_window)
         self.run_analysis = IntVar(self.master_window)
         if OS == 'linux':
@@ -160,7 +160,7 @@ class menu():
         self.event_max.grid(row=0, column=3, sticky=NW, pady=4)
         Label(self.start_frame, text="Events subrun ").grid(row=0, column=4, sticky=NW, pady=4)
         self.event_max_sub = Entry(self.start_frame, width=5)
-        self.event_max_sub.insert(END, '10')
+        self.event_max_sub.insert(END, '50')
         self.event_max_sub.grid(row=0, column=5, sticky=NW, pady=4)
         Checkbutton(self.start_frame, text="X1000", variable=self.x1000).grid(row=0, column=7, sticky=NW, pady=4)
         Checkbutton(self.start_frame, text="Fast analysis", variable=self.simple_analysis).grid(row=0, column=8, sticky=NW, pady=4)
@@ -551,7 +551,7 @@ class menu():
         Entry(first_row_2, width=10, textvariable=self.minirun_folders_var).pack(side=LEFT)
 
         self.downsamplig_online = IntVar (self.master_window)
-        self.downsamplig_online.set(500)
+        self.downsamplig_online.set(1)
         Label(first_row_3, text="Downsampling online monitor").pack(side=LEFT)
         Entry(first_row_3, width=10, textvariable=self.downsamplig_online).pack(side=LEFT)
 
@@ -846,7 +846,7 @@ class menu():
             max_num = np.max(numbers)
             self.sub_run_number = max_num + 1
             if glob.glob("." + sep + "data_folder" + sep + self.run_folder + sep + "SubRUN_*"):
-                numbers = [int(name.split("SubRUN_")[1].split("_")[1]) for name in glob.glob("." + sep + "data_folder" + sep + self.run_folder + sep + "SubRUN_*")]
+                numbers = [int(name.split("SubRUN_")[1].split("_")[0]) for name in glob.glob("." + sep + "data_folder" + sep + self.run_folder + sep + "SubRUN_*")]
                 max_num2 = np.max(numbers)
                 self.sub_run_number = max(max_num, max_num2)+1
         else:
@@ -1292,7 +1292,8 @@ class Thread_handler_errors(Thread):  # In order to scan during configuration is
                                 gem_number, FEBs_to_off = pipe_out.recv()
                                 if len(FEBs_to_off)>0:
                                     for FEB in FEBs_to_off:
-                                        self.shut_down_FEB(self.GEMROC_reading_dict[gem_number].GEM_COM, FEB)
+                                        pass
+                                        # self.shut_down_FEB(self.GEMROC_reading_dict[gem_number].GEM_COM, FEB)
                             except Exception as e:
                                 print("IVT logger controller timeout: {}".format(e))
 

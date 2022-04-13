@@ -136,15 +136,24 @@ class menu():
 
 
     def refresh_counters(self):
-        for number,GEMROC in self.GEMROC_reading_dict.items():
-            self.GEMROC_rate_counters[number]=0
-
-        for key,value in self.TIGER_rate_counters.items():
-            number_int=int(key.split()[1])
-            GEMROC="GEMROC "+str(number_int)
-            self.GEMROC_rate_counters[GEMROC]+=int(value)
         for key,label in self.GEMROC_rate_counters_display.items():
-            label['text']=self.GEMROC_rate_counters[key]
+            label['text']="ciao"
+
         for key,label in self.TIGER_rate_counters_display.items():
             #print self.TIGER_error_counters
-            label['text']=int(self.TIGER_rate_counters[key])
+            label['text'] = "ciao"
+
+        #
+        #
+        # for number,GEMROC in self.GEMROC_reading_dict.items():
+        #     self.GEMROC_rate_counters[number]=0
+        #
+        # for key,value in self.TIGER_rate_counters.items():
+        #     number_int=int(key.split()[1])
+        #     GEMROC="GEMROC "+str(number_int)
+        #     self.GEMROC_rate_counters[GEMROC]+=int(value)
+        # for key,label in self.GEMROC_rate_counters_display.items():
+        #     label['text']=self.GEMROC_rate_counters[key]
+        # for key,label in self.TIGER_rate_counters_display.items():
+        #     #print self.TIGER_error_counters
+        #     label['text']=int(self.TIGER_rate_counters[key])
