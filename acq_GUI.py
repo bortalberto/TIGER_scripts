@@ -719,7 +719,7 @@ class menu():
                 if self.PMT and self.lower_PMT.get():
                     if debug:
                         print("PMT ON")
-                    self.PMT_on()
+                    self.PMT_ON()
                     time.sleep(15)
                 time.sleep(0.5)
                 self.start_acq(First_launch=False)
