@@ -546,11 +546,11 @@ class menu():
         scrollbar = Scrollbar(self.statu_tab_rows, orient=VERTICAL)
 
         self.canvas2 = Canvas(self.statu_tab_rows)
-        frame = Frame(self.canvas2, bd=1)
+        frame = Frame(self.canvas2, bd=1, bg="Red")
         scrollbar.pack(side=RIGHT, fill=Y)
         scrollbar.config(command=self.canvas2.yview)
         self.canvas2.config(yscrollcommand=scrollbar.set)
-        self.canvas2.create_window((0, 0), window=frame, anchor='nw')
+        self.canvas2.create_window((0, 0), window=frame, anchor='nw', width=800)
         frame.bind("<Configure>", self.myfunction)
         self.canvas2.pack(side=LEFT, fill=BOTH)
 
