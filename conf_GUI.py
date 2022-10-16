@@ -1283,6 +1283,7 @@ class menu():
             GEM_NAME = str(self.showing_GEMROC.get())
             File_name = filedialog.askopenfilename(initialdir="." + sep + "conf" + sep + "saves", title="Select file", filetypes=(("Channels configuration saves", "*.cs"), ("all files", "*.*")))
             self.GEMROC_reading_dict[GEM_NAME].c_inst.load_ch_conf(File_name)
+            self.LOAD_ON['state'] = 'normal'
 
     def LOAD_on_TIGER(self):
         GEMROC = self.showing_GEMROC.get()
