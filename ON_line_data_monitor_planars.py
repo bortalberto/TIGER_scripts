@@ -515,9 +515,9 @@ class analyzer():
                 self.GEMROCs_done[key]=False
             # os.system(f"/media/alb/Removibile/analisi_planari/civetta.py {run} -sf {subrun}")
             if downsampling == 1:
-                os.system(f"/media/besiii-to/Space/data_visualizer/analisi_planari/civetta.py {run} -sf {subrun}")
+                os.system(f"/media/besiii-to/Space/data_visualizer/analisi_planari/civetta.py {run} -sf {subrun} -d -a -c -c2")
             else:
-                os.system(f"/media/besiii-to/Space/data_visualizer/analisi_planari/civetta.py {run} -sf {subrun} -down {downsampling}")
+                os.system(f"/media/besiii-to/Space/data_visualizer/analisi_planari/civetta.py {run} -sf {subrun} -down {downsampling} -d -a -c -c2")
 
 
 class GEMROC_decoder(Thread):

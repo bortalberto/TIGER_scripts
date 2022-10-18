@@ -564,7 +564,7 @@ class menu():
                 if device[0] == "F":
                     string='FEB {}:    '.format(device[3])
                     for key,value in sorted(this_ROC_IVT['status'][device].items()):
-                        string += ' {}: {} ---'.format(key,value)
+                        string += ' {}: {:.2f} ---'.format(key,value)
                     Label(a, text=string,font=("TkDefaultFont",10)).pack()
                 if device[0] == 'R':
                     Label(a, text="GEMROC TEMP [degC] = {}".format(this_ROC_IVT['status']["ROC"]["TEMP"]),font=("TkDefaultFont",10)).pack()
