@@ -546,11 +546,11 @@ class menu():
         scrollbar = Scrollbar(self.statu_tab_rows, orient=VERTICAL)
 
         self.canvas2 = Canvas(self.statu_tab_rows)
-        frame = Frame(self.canvas2, bd=1)
+        frame = Frame(self.canvas2, bd=1, bg="Red")
         scrollbar.pack(side=RIGHT, fill=Y)
         scrollbar.config(command=self.canvas2.yview)
         self.canvas2.config(yscrollcommand=scrollbar.set)
-        self.canvas2.create_window((0, 0), window=frame, anchor='nw')
+        self.canvas2.create_window((0, 0), window=frame, anchor='nw', width=800)
         frame.bind("<Configure>", self.myfunction)
         self.canvas2.pack(side=LEFT, fill=BOTH)
 
@@ -567,14 +567,14 @@ class menu():
                         string += ' {}: {:.2f} ---'.format(key,value)
                     Label(a, text=string,font=("TkDefaultFont",10)).pack()
                 if device[0] == 'R':
-                    Label(a, text="GEMROC TEMP [degC] = {}".format(this_ROC_IVT['status']["ROC"]["TEMP"]),font=("TkDefaultFont",10)).pack()
+                    Label(a, text="GEMROC TEMP [degC] = {:.2f}".format(this_ROC_IVT['status']["ROC"]["TEMP"]),font=("TkDefaultFont",10)).pack()
 
             Label(a, text='---Limit flags---', font=("TkDefaultFont", 12)).pack()
             for device in sorted(this_ROC_IVT['limits'].keys()):
                 if device[0] == "F":
                     string='FEB {}:    '.format(device[3])
                     for key,value in sorted(this_ROC_IVT['limits'][device].items()):
-                        string += ' {}: {} ---'.format(key,value)
+                        string += ' {}: {:.2f} ---'.format(key,value)
                     Label(a, text=string,font=("Times",10)).pack()
                 if device[0] == 'R':
                     Label(a, text="GEMROC OVT_FLAG = {}".format(this_ROC_IVT['limits']["ROC"]["OVT_FLAG"]),font=("TkDefaultFont",10)).pack()
@@ -1183,11 +1183,13 @@ class menu():
             thr_target = StringVar(self.third_row_frame)
             thr_target.set("This TIGER")
             saveframe = Frame(self.third_row_frame)
-            saveframe.grid(row=4, column=0, sticky=W, pady=2)
+            saveframe.grid(row=5, column=0, sticky=W, pady=2)
             Button(saveframe, text="Save", command=self.SAVE).pack(side=LEFT)
             Button(saveframe, text="Load", command=self.LOAD).pack(side=LEFT)
-            self.LOAD_ON = Button(saveframe, text="Load on TIGERs (loaded file)", command=self.LOAD_on_TIGER, state='disable')
-            self.LOAD_ON.pack(side=LEFT)
+            fourth_row_frame = Frame(self.third_row_frame)
+            fourth_row_frame.grid(row=4, column=0, sticky=W, pady=2)
+            self.DIS_BUT = Button(fourth_row_frame, text="Disable channels from file", command=self.disable_channels)
+            self.DIS_BUT.pack(side=RIGHT)
             thr_frame = Frame(self.third_row_frame)
             thr_frame.grid(row=3, column=0, sticky=W, pady=2)
             Label(thr_frame, text="Sigma T").pack(side=LEFT)
